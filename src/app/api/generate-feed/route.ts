@@ -8,6 +8,7 @@ import type { Paper, ExportTheme } from "@/lib/types";
 type AnyRecord = Record<string, any>;
 
 const S2_API = "https://api.semanticscholar.org/graph/v1/paper/search";
+const S2_API_KEY = process.env.SEMANTIC_SCHOLAR_API_KEY;
 
 async function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -16,7 +17,7 @@ async function sleep(ms: number) {
 async function searchPapersWithRetry(
   query: string,
   limit = 15,
-  maxRetries = 3
+  maxRetries = 2
 ): Promise<AnyRecord[]> {
   // Truncate query to avoid overly long searches that S2 rejects
   const trimmedQuery = query.slice(0, 200);
@@ -28,33 +29,46 @@ async function searchPapersWithRetry(
       "title,abstract,url,year,citationCount,isOpenAccess,authors,venue,externalIds,journal",
   });
 
+  const headers: Record<string, string> = {};
+  if (S2_API_KEY) {
+    headers["x-api-key"] = S2_API_KEY;
+  }
+
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     if (attempt > 0) {
-      // Exponential backoff: 2s, 4s, 8s
-      const delay = Math.pow(2, attempt) * 1000;
+      // Longer backoff: 5s, 15s — S2 needs time to cool down
+      const delay = attempt === 1 ? 5000 : 15000;
       console.log(`S2 retry attempt ${attempt}, waiting ${delay}ms...`);
       await sleep(delay);
     }
 
-    const res = await fetch(`${S2_API}?${params}`);
+    try {
+      const res = await fetch(`${S2_API}?${params}`, {
+        headers,
+        signal: AbortSignal.timeout(10000),
+      });
 
-    if (res.ok) {
-      const data = (await res.json()) as AnyRecord;
-      return (data.data as AnyRecord[]) || [];
-    }
-
-    if (res.status === 429) {
-      console.warn(`S2 rate limited (429), attempt ${attempt + 1}/${maxRetries + 1}`);
-      if (attempt === maxRetries) {
-        console.warn("S2 rate limit exhausted, falling back to web search");
-        return [];
+      if (res.ok) {
+        const data = (await res.json()) as AnyRecord;
+        return (data.data as AnyRecord[]) || [];
       }
-      continue;
-    }
 
-    // Non-retryable error — still fall back gracefully
-    console.warn(`Semantic Scholar returned ${res.status}, falling back to web search`);
-    return [];
+      if (res.status === 429) {
+        console.warn(`S2 rate limited (429), attempt ${attempt + 1}/${maxRetries + 1}`);
+        if (attempt === maxRetries) {
+          console.warn("S2 rate limit exhausted, will supplement with web search");
+          return [];
+        }
+        continue;
+      }
+
+      // Non-retryable error
+      console.warn(`Semantic Scholar returned ${res.status}, will supplement with web search`);
+      return [];
+    } catch (err) {
+      console.warn(`S2 request failed (attempt ${attempt + 1}):`, err);
+      if (attempt === maxRetries) return [];
+    }
   }
 
   return [];
@@ -110,71 +124,73 @@ export async function POST(req: Request) {
     // 2. Process each paper: synthesize, verify, format
     const processedPapers: Paper[] = [];
 
-    if (papersWithAbstracts.length > 0) {
-      // -- S2 path: process academic papers --
-      for (const raw of papersWithAbstracts) {
-        if (processedPapers.length >= 12) break;
+    // -- S2 path: process academic papers --
+    for (const raw of papersWithAbstracts) {
+      if (processedPapers.length >= 12) break;
 
-        const authors =
-          (raw.authors as AnyRecord[])?.map((a) => a.name as string) || [];
-        const title = raw.title as string;
-        const abstract = raw.abstract as string;
-        const year = (raw.year as number) || 0;
-        const venue =
-          (raw.venue as string) ||
-          (raw.journal as AnyRecord)?.name ||
-          "Academic Publication";
-        const doi = (raw.externalIds as AnyRecord)?.DOI || "";
-        const citationCount = (raw.citationCount as number) || 0;
+      const authors =
+        (raw.authors as AnyRecord[])?.map((a) => a.name as string) || [];
+      const title = raw.title as string;
+      const abstract = raw.abstract as string;
+      const year = (raw.year as number) || 0;
+      const venue =
+        (raw.venue as string) ||
+        (raw.journal as AnyRecord)?.name ||
+        "Academic Publication";
+      const doi = (raw.externalIds as AnyRecord)?.DOI || "";
+      const citationCount = (raw.citationCount as number) || 0;
 
+      try {
+        const synthesis = await generateSynthesis(title, abstract, authors);
+
+        let verified = true;
         try {
-          const synthesis = await generateSynthesis(title, abstract, authors);
-
-          let verified = true;
-          try {
-            const verification = (await verifyCard(
-              abstract,
-              synthesis
-            )) as AnyRecord;
-            verified = verification.card_verified !== false;
-          } catch {
-            verified = true;
-          }
-
-          if (!verified) continue;
-
-          const apaCitation = await generateApaCitation(
-            title,
-            authors,
-            year,
-            venue as string,
-            doi as string
-          );
-
-          const credibilityScore = computeCredibilityScore(raw);
-
-          processedPapers.push({
-            id: (raw.paperId as string) || `p-${processedPapers.length}`,
-            title,
-            authors,
-            journal: venue as string,
-            year,
-            doi: doi as string,
-            peerReviewed: !!venue,
-            synthesis,
-            credibilityScore,
-            citationCount,
-            commentCount: 0,
-            apaCitation,
-          });
-        } catch (err) {
-          console.error(`Failed to process paper "${title}":`, err);
-          continue;
+          const verification = (await verifyCard(
+            abstract,
+            synthesis
+          )) as AnyRecord;
+          verified = verification.card_verified !== false;
+        } catch {
+          verified = true;
         }
+
+        if (!verified) continue;
+
+        const apaCitation = await generateApaCitation(
+          title,
+          authors,
+          year,
+          venue as string,
+          doi as string
+        );
+
+        const credibilityScore = computeCredibilityScore(raw);
+
+        processedPapers.push({
+          id: (raw.paperId as string) || `p-${processedPapers.length}`,
+          title,
+          authors,
+          journal: venue as string,
+          year,
+          doi: doi as string,
+          peerReviewed: !!venue,
+          synthesis,
+          credibilityScore,
+          citationCount,
+          commentCount: 0,
+          apaCitation,
+        });
+      } catch (err) {
+        console.error(`Failed to process paper "${title}":`, err);
+        continue;
       }
-    } else {
-      // -- Web search fallback: S2 unavailable or returned nothing --
-      console.log("No S2 results, falling back to web search via SearXNG");
+    }
+
+    // -- Web search supplement: fill remaining slots if S2 returned few results --
+    if (processedPapers.length < 6) {
+      console.log(
+        `Only ${processedPapers.length} S2 results, supplementing with web search`
+      );
       let webResults: { title: string; url: string; snippet: string; engine: string }[] = [];
       try {
         webResults = await webSearch(searchQuery, 15);
@@ -182,9 +198,15 @@ export async function POST(req: Request) {
         console.error("Web search also failed:", err);
       }
 
+      // Avoid duplicates by title
+      const existingTitles = new Set(
+        processedPapers.map((p) => p.title.toLowerCase())
+      );
+
       for (const result of webResults) {
         if (processedPapers.length >= 12) break;
         if (!result.snippet || result.snippet.length < 20) continue;
+        if (existingTitles.has(result.title.toLowerCase())) continue;
 
         const title = result.title;
         const snippet = result.snippet;
