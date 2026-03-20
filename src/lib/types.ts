@@ -22,6 +22,13 @@ export interface Comment {
   createdAt: string;
 }
 
+export interface UserPost {
+  id: string;
+  content: string;
+  title?: string;
+  createdAt: string;
+}
+
 export interface Poll {
   id: string;
   type: "multiple-choice" | "open-ended";

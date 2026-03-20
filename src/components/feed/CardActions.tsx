@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowBigUp, ArrowBigDown, MessageSquare, Share2, BookmarkPlus } from "lucide-react";
+import { ArrowBigUp, ArrowBigDown, MessageSquare, Share2, Bookmark } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -14,6 +14,7 @@ interface CardActionsProps {
   initialVoted?: boolean;
   onCommentClick?: () => void;
   onUpvote?: (paperId: string, voted: boolean) => void;
+  onBookmark?: (paperId: string, bookmarked: boolean) => void;
 }
 
 export function CardActions({
@@ -25,9 +26,11 @@ export function CardActions({
   initialVoted = false,
   onCommentClick,
   onUpvote,
+  onBookmark,
 }: CardActionsProps) {
   const [upvoted, setUpvoted] = useState(initialVoted);
   const [score, setScore] = useState(credibilityScore);
+  const [bookmarked, setBookmarked] = useState(false);
 
   async function handleUpvote(e: React.MouseEvent) {
     e.preventDefault();
@@ -45,7 +48,6 @@ export function CardActions({
         body: JSON.stringify({ paperId }),
       });
     } catch {
-      // Revert on error
       setUpvoted(!newVoted);
       setScore(credibilityScore);
     }
@@ -67,47 +69,46 @@ export function CardActions({
   function handleBookmark(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
-    toast.success("Paper bookmarked!");
+    const next = !bookmarked;
+    setBookmarked(next);
+    onBookmark?.(paperId, next);
+    toast.success(next ? "Saved" : "Removed from saved");
   }
 
-  const formattedCitations =
-    citationCount >= 1000
-      ? `${(citationCount / 1000).toFixed(1).replace(/\.0$/, "")}k`
-      : String(citationCount);
+  const fmt = (n: number) =>
+    n >= 1000 ? `${(n / 1000).toFixed(1).replace(/\.0$/, "")}k` : String(n);
 
   return (
-    <div className="flex items-center justify-between pt-3">
-      <div className="flex items-center gap-1">
-        {/* Upvote/downvote */}
-        <div className="flex items-center">
+    <div className="flex items-center justify-between mt-2 -mx-1">
+      <div className="flex items-center">
+        {/* Vote cluster */}
+        <div className="flex items-center rounded-full bg-[#f6f7f8] mr-1">
           <button
             onClick={handleUpvote}
             className={cn(
-              "flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium transition-colors",
+              "rounded-l-full p-1.5 transition-colors",
               upvoted
-                ? "text-primary"
-                : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                ? "text-[#ff4500]"
+                : "text-muted-foreground hover:text-[#ff4500] hover:bg-[#ffe9e0]"
             )}
           >
-            <ArrowBigUp
-              className={cn("h-5 w-5", upvoted && "fill-primary")}
-            />
+            <ArrowBigUp className={cn("h-5 w-5", upvoted && "fill-current")} />
           </button>
-          <span className={cn("text-xs font-medium", upvoted ? "text-primary" : "text-muted-foreground")}>
-            {score}
+          <span className={cn("text-[12px] font-bold min-w-[20px] text-center", upvoted ? "text-[#ff4500]" : "text-foreground")}>
+            {fmt(score)}
           </span>
           <button
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-            className="flex items-center rounded-full px-1 py-1 text-muted-foreground transition-colors hover:text-foreground hover:bg-accent"
+            className="rounded-r-full p-1.5 text-muted-foreground transition-colors hover:text-primary hover:bg-[#dae8f5]"
           >
             <ArrowBigDown className="h-5 w-5" />
           </button>
         </div>
 
-        {/* Comments */}
+        {/* Comment */}
         <button
           onClick={handleCommentClick}
-          className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          className="flex items-center gap-1 rounded-full bg-[#f6f7f8] px-3 py-1.5 text-[12px] font-bold text-muted-foreground transition-colors hover:bg-[#e8e8e8] mr-1"
         >
           <MessageSquare className="h-4 w-4" />
           {commentCount}
@@ -116,19 +117,24 @@ export function CardActions({
         {/* Share */}
         <button
           onClick={handleShare}
-          className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          className="flex items-center gap-1 rounded-full bg-[#f6f7f8] px-3 py-1.5 text-[12px] font-bold text-muted-foreground transition-colors hover:bg-[#e8e8e8] mr-1"
         >
           <Share2 className="h-4 w-4" />
-          {formattedCitations}
+          Share
         </button>
       </div>
 
       {/* Bookmark */}
       <button
         onClick={handleBookmark}
-        className="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+        className={cn(
+          "rounded-full p-1.5 transition-colors",
+          bookmarked
+            ? "text-primary bg-primary/10"
+            : "text-muted-foreground hover:bg-[#f6f7f8]"
+        )}
       >
-        <BookmarkPlus className="h-4 w-4" />
+        <Bookmark className={cn("h-4 w-4", bookmarked && "fill-current")} />
       </button>
     </div>
   );

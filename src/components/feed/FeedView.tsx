@@ -1,16 +1,19 @@
 "use client";
 
-import type { Paper, Poll } from "@/lib/types";
+import type { Paper, Poll, UserPost } from "@/lib/types";
 import { PaperCard } from "./PaperCard";
 import { ComposeBox } from "./ComposeBox";
 import { FeedPollCard } from "./FeedPollCard";
+import { UserPostCard } from "./UserPostCard";
 
 interface FeedViewProps {
   scrollId: string;
   papers: Paper[];
   polls: Poll[];
   searchQuery: string;
+  userPosts: UserPost[];
   onUpvote: (paperId: string, voted: boolean) => void;
+  onBookmark: (paperId: string, bookmarked: boolean) => void;
   onComment: (paperId: string) => void;
 }
 
@@ -19,7 +22,9 @@ export function FeedView({
   papers,
   polls,
   searchQuery,
+  userPosts,
   onUpvote,
+  onBookmark,
   onComment,
 }: FeedViewProps) {
   const query = searchQuery.toLowerCase();
@@ -37,21 +42,19 @@ export function FeedView({
   if (papers.length === 0) {
     return (
       <div className="px-4 py-12 text-center">
-        <p className="text-sm text-muted-foreground">
+        <p className="text-[13px] text-muted-foreground">
           No papers found. Try a different topic.
         </p>
       </div>
     );
   }
 
-  // Interleave polls into the feed - insert a poll every 3-4 papers
+  // Interleave polls into the feed
   const feedItems: { type: "paper" | "poll"; data: Paper | Poll; index: number }[] = [];
   let pollIndex = 0;
 
   filteredPapers.forEach((paper, i) => {
     feedItems.push({ type: "paper", data: paper, index: i });
-
-    // Insert a poll after every 3rd paper
     if ((i + 1) % 3 === 0 && pollIndex < polls.length) {
       feedItems.push({ type: "poll", data: polls[pollIndex], index: pollIndex });
       pollIndex++;
@@ -60,8 +63,12 @@ export function FeedView({
 
   return (
     <div>
-      {/* Compose box - "What's happening" style */}
       <ComposeBox scrollId={scrollId} />
+
+      {/* User posts at top */}
+      {userPosts.map((post) => (
+        <UserPostCard key={post.id} post={post} />
+      ))}
 
       {/* Feed items */}
       {feedItems.map((item) =>
@@ -72,6 +79,7 @@ export function FeedView({
             scrollId={scrollId}
             index={item.index}
             onUpvote={onUpvote}
+            onBookmark={onBookmark}
             onComment={onComment}
           />
         ) : (
@@ -84,7 +92,7 @@ export function FeedView({
 
       {filteredPapers.length === 0 && query && (
         <div className="px-4 py-12 text-center">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-[13px] text-muted-foreground">
             No papers match &ldquo;{searchQuery}&rdquo;
           </p>
         </div>

@@ -1,10 +1,7 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { Send, Sparkles } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { toast } from "sonner";
+import { useState } from "react";
+import { User } from "lucide-react";
 
 interface ComposeBoxProps {
   scrollId: string;
@@ -13,66 +10,52 @@ interface ComposeBoxProps {
 export function ComposeBox({ scrollId }: ComposeBoxProps) {
   const [expanded, setExpanded] = useState(false);
   const [content, setContent] = useState("");
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  function handleFocus() {
-    setExpanded(true);
-  }
-
-  async function handlePost() {
+  function handlePost() {
     if (!content.trim()) return;
-
-    // For now, just show a toast - this could be extended to create actual posts
-    toast.success("Note saved to this scroll session.");
+    // Posts are handled by the parent via CreatePostFAB or inline
     setContent("");
     setExpanded(false);
   }
 
   return (
-    <div className="border-b border-border px-4 py-3">
-      <div className="flex gap-3">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary mt-0.5">
-          <Sparkles className="h-4 w-4" />
+    <div className="border-b border-border px-4 py-2.5">
+      <div className="flex gap-2.5 items-start">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#f6f7f8] mt-0.5">
+          <User className="h-4 w-4 text-muted-foreground" />
         </div>
         <div className="flex-1">
           {expanded ? (
             <>
-              <Textarea
-                ref={textareaRef}
+              <textarea
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                placeholder="Share a thought, question, or note about your research..."
-                className="min-h-[80px] resize-none border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0"
+                placeholder="Share a thought about your research..."
+                className="w-full resize-none border-0 bg-transparent p-0 text-[14px] text-foreground placeholder:text-muted-foreground focus:outline-none min-h-[60px]"
                 autoFocus
               />
-              <div className="mt-2 flex items-center justify-end gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setExpanded(false);
-                    setContent("");
-                  }}
+              <div className="flex items-center justify-end gap-2 mt-1">
+                <button
+                  onClick={() => { setExpanded(false); setContent(""); }}
+                  className="px-3 py-1 rounded-full text-[12px] font-semibold text-muted-foreground hover:bg-[#f6f7f8] transition-colors"
                 >
                   Cancel
-                </Button>
-                <Button
-                  size="sm"
-                  className="gap-1.5"
+                </button>
+                <button
                   onClick={handlePost}
                   disabled={!content.trim()}
+                  className="px-4 py-1 rounded-full text-[12px] font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-40"
                 >
-                  <Send className="h-3.5 w-3.5" />
                   Post
-                </Button>
+                </button>
               </div>
             </>
           ) : (
             <button
-              onClick={handleFocus}
-              className="w-full rounded-full border border-border bg-muted/30 px-4 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-muted/50"
+              onClick={() => setExpanded(true)}
+              className="w-full rounded-full border border-border bg-[#f6f7f8] px-4 py-1.5 text-left text-[13px] text-muted-foreground transition-colors hover:border-[#d0d0d0]"
             >
-              Share a thought about your research...
+              Create a post
             </button>
           )}
         </div>

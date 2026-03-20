@@ -1,7 +1,6 @@
 "use client";
 
 import { Copy, Download } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
 interface ExportActionsProps {
@@ -11,7 +10,7 @@ interface ExportActionsProps {
 export function ExportActions({ text }: ExportActionsProps) {
   function handleCopy() {
     navigator.clipboard.writeText(text);
-    toast.success("Outline copied!");
+    toast.success("Copied to clipboard");
   }
 
   function handleDownload() {
@@ -22,19 +21,23 @@ export function ExportActions({ text }: ExportActionsProps) {
     a.download = "research-outline.md";
     a.click();
     URL.revokeObjectURL(url);
-    toast.success("Outline downloaded!");
+    toast.success("Downloaded");
   }
 
   return (
-    <div className="flex gap-2">
-      <Button variant="outline" size="sm" onClick={handleCopy}>
-        <Copy className="mr-1.5 h-3.5 w-3.5" />
-        Copy
-      </Button>
-      <Button variant="outline" size="sm" onClick={handleDownload}>
-        <Download className="mr-1.5 h-3.5 w-3.5" />
-        Download
-      </Button>
+    <div className="flex gap-1">
+      <button
+        onClick={handleCopy}
+        className="flex items-center gap-1 rounded-full bg-[#f6f7f8] px-3 py-1 text-[12px] font-semibold text-muted-foreground transition-colors hover:bg-[#e8e8e8]"
+      >
+        <Copy className="h-3.5 w-3.5" /> Copy
+      </button>
+      <button
+        onClick={handleDownload}
+        className="flex items-center gap-1 rounded-full bg-[#f6f7f8] px-3 py-1 text-[12px] font-semibold text-muted-foreground transition-colors hover:bg-[#e8e8e8]"
+      >
+        <Download className="h-3.5 w-3.5" /> Download
+      </button>
     </div>
   );
 }

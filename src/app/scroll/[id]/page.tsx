@@ -12,7 +12,7 @@ import { ExportView } from "@/components/export/ExportView";
 import { RightSidebar } from "@/components/shared/RightSidebar";
 import { CreatePostFAB } from "@/components/feed/CreatePostFAB";
 import { fetchScroll } from "@/lib/scroll-store";
-import type { ScrollSession, Paper, Poll } from "@/lib/types";
+import type { ScrollSession, Paper, Poll, UserPost } from "@/lib/types";
 
 const TABS = [
   { value: "feed", label: "Feed" },
@@ -30,7 +30,9 @@ export default function ScrollPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [headerVisible, setHeaderVisible] = useState(true);
   const [upvotedPapers, setUpvotedPapers] = useState<Set<string>>(new Set());
-  const [commentedPapers, setCommentedPapers] = useState<Map<string, number>>(new Map());
+  const [bookmarkedPapers, setBookmarkedPapers] = useState<Set<string>>(new Set());
+  const [commentCounts, setCommentCounts] = useState<Map<string, number>>(new Map());
+  const [userPosts, setUserPosts] = useState<UserPost[]>([]);
   const headerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -53,12 +55,9 @@ export default function ScrollPage() {
     }
 
     load();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [scrollId]);
 
-  // Observe header visibility for sticky behavior
   useEffect(() => {
     const el = headerRef.current;
     if (!el) return;
@@ -79,25 +78,38 @@ export default function ScrollPage() {
     });
   }, []);
 
+  const handleBookmark = useCallback((paperId: string, bookmarked: boolean) => {
+    setBookmarkedPapers((prev) => {
+      const next = new Set(prev);
+      if (bookmarked) next.add(paperId);
+      else next.delete(paperId);
+      return next;
+    });
+  }, []);
+
   const handleComment = useCallback((paperId: string) => {
-    setCommentedPapers((prev) => {
+    setCommentCounts((prev) => {
       const next = new Map(prev);
       next.set(paperId, (next.get(paperId) || 0) + 1);
       return next;
     });
   }, []);
 
+  const handleNewPost = useCallback((post: UserPost) => {
+    setUserPosts((prev) => [post, ...prev]);
+  }, []);
+
   if (!scroll) return null;
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen bg-[#dae0e6]">
       <Sidebar />
 
-      <div className="flex flex-1 justify-center">
+      <div className="flex flex-1 justify-center gap-0 lg:gap-6 lg:px-6 lg:py-4">
         {/* Main content column */}
-        <main className="w-full max-w-[680px] flex-1">
+        <main className="w-full max-w-[640px] flex-1 bg-background lg:rounded-t-lg overflow-hidden">
           {/* Sticky search bar */}
-          <div className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur-md">
+          <div className="sticky top-0 z-30 bg-background border-b border-border">
             <SearchBar value={searchQuery} onChange={setSearchQuery} />
           </div>
 
@@ -107,11 +119,7 @@ export default function ScrollPage() {
           </div>
 
           {/* Sticky tab nav */}
-          <div
-            className={`sticky z-20 border-b border-border bg-background/95 backdrop-blur-md ${
-              headerVisible ? "top-[57px]" : "top-[57px]"
-            }`}
-          >
+          <div className="sticky top-[49px] z-20 bg-background border-b border-border">
             <TabNav
               value={activeTab}
               onValueChange={setActiveTab}
@@ -120,36 +128,41 @@ export default function ScrollPage() {
           </div>
 
           {/* Tab content */}
-          <div className="pb-12">
+          <div className="pb-20">
             {activeTab === "feed" && (
               <FeedView
                 scrollId={scrollId}
                 papers={papers}
                 polls={polls}
                 searchQuery={searchQuery}
+                userPosts={userPosts}
                 onUpvote={handleUpvote}
+                onBookmark={handleBookmark}
                 onComment={handleComment}
               />
             )}
             {activeTab === "polls" && (
               <PollsView polls={polls} />
             )}
-            {activeTab === "export" && <ExportView scrollId={scrollId} />}
+            {activeTab === "export" && (
+              <ExportView scrollId={scrollId} papers={papers} />
+            )}
           </div>
         </main>
 
-        {/* Right sidebar - desktop only */}
+        {/* Right sidebar */}
         <RightSidebar
           scroll={scroll}
           papers={papers}
           upvotedPapers={upvotedPapers}
-          commentedPapers={commentedPapers}
+          bookmarkedPapers={bookmarkedPapers}
+          commentCounts={commentCounts}
+          userPosts={userPosts}
           scrollId={scrollId}
         />
       </div>
 
-      {/* FAB for creating posts */}
-      <CreatePostFAB scrollId={scrollId} />
+      <CreatePostFAB scrollId={scrollId} onPost={handleNewPost} />
     </div>
   );
 }

@@ -1,23 +1,24 @@
 import type { Metadata } from "next";
-import { Libre_Baskerville, DM_Sans, Geist_Mono } from "next/font/google";
+import { IBM_Plex_Sans, IBM_Plex_Mono, Noto_Sans } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
-const displayFont = Libre_Baskerville({
-  variable: "--font-display",
-  subsets: ["latin"],
-  weight: ["400", "700"],
-});
-
-const bodyFont = DM_Sans({
+const bodyFont = Noto_Sans({
   variable: "--font-body",
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
+  weight: ["400", "500", "600", "700", "800"],
 });
 
-const monoFont = Geist_Mono({
+const headingFont = IBM_Plex_Sans({
+  variable: "--font-display",
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+});
+
+const monoFont = IBM_Plex_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  weight: ["400", "500"],
 });
 
 export const metadata: Metadata = {
@@ -37,7 +38,7 @@ export default function RootLayout({
         <link rel="icon" href="/favicon.svg" type="image/svg+xml"></link>
       </head>
       <body
-        className={`${displayFont.variable} ${bodyFont.variable} ${monoFont.variable} antialiased`}
+        className={`${headingFont.variable} ${bodyFont.variable} ${monoFont.variable} antialiased`}
       >
         {children}
         <Toaster position="bottom-right" richColors />

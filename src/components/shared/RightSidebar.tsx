@@ -2,15 +2,16 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowBigUp, MessageSquare, FileText, TrendingUp, ChevronDown } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import type { ScrollSession, Paper } from "@/lib/types";
+import { ArrowBigUp, MessageSquare, FileText, Bookmark, ChevronDown, User, PenLine } from "lucide-react";
+import type { ScrollSession, Paper, UserPost } from "@/lib/types";
 
 interface RightSidebarProps {
   scroll: ScrollSession;
   papers: Paper[];
   upvotedPapers: Set<string>;
-  commentedPapers: Map<string, number>;
+  bookmarkedPapers: Set<string>;
+  commentCounts: Map<string, number>;
+  userPosts: UserPost[];
   scrollId: string;
 }
 
@@ -18,141 +19,185 @@ export function RightSidebar({
   scroll,
   papers,
   upvotedPapers,
-  commentedPapers,
+  bookmarkedPapers,
+  commentCounts,
+  userPosts,
   scrollId,
 }: RightSidebarProps) {
   const [showAllUpvoted, setShowAllUpvoted] = useState(false);
+  const [showAllBookmarked, setShowAllBookmarked] = useState(false);
 
   const upvotedList = papers.filter((p) => upvotedPapers.has(p.id));
-  const displayedUpvoted = showAllUpvoted ? upvotedList : upvotedList.slice(0, 3);
+  const bookmarkedList = papers.filter((p) => bookmarkedPapers.has(p.id));
+  const displayUpvoted = showAllUpvoted ? upvotedList : upvotedList.slice(0, 3);
+  const displayBookmarked = showAllBookmarked ? bookmarkedList : bookmarkedList.slice(0, 3);
 
   const totalCitations = papers.reduce((sum, p) => sum + p.citationCount, 0);
-  const avgCredibility = papers.length
+  const avgScore = papers.length
     ? Math.round(papers.reduce((sum, p) => sum + p.credibilityScore, 0) / papers.length)
     : 0;
 
   return (
-    <aside className="hidden w-80 shrink-0 border-l border-border lg:block">
-      <div className="sticky top-0 h-screen overflow-y-auto p-4 space-y-5">
+    <aside className="hidden w-[310px] shrink-0 lg:block">
+      <div className="sticky top-0 h-screen overflow-y-auto py-4 space-y-3">
+
         {/* Session stats */}
-        <div className="rounded-xl border border-border bg-card p-4">
-          <h3 className="text-sm font-semibold mb-3">Session Overview</h3>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-lg bg-muted/50 p-3">
-              <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
-                <FileText className="h-3.5 w-3.5" />
-                <span className="text-xs">Papers</span>
-              </div>
-              <p className="text-lg font-bold">{scroll.paperCount}</p>
-            </div>
-            <div className="rounded-lg bg-muted/50 p-3">
-              <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
-                <TrendingUp className="h-3.5 w-3.5" />
-                <span className="text-xs">Avg Score</span>
-              </div>
-              <p className="text-lg font-bold">{avgCredibility}</p>
-            </div>
-            <div className="rounded-lg bg-muted/50 p-3">
-              <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
-                <ArrowBigUp className="h-3.5 w-3.5" />
-                <span className="text-xs">Upvoted</span>
-              </div>
-              <p className="text-lg font-bold">{upvotedPapers.size}</p>
-            </div>
-            <div className="rounded-lg bg-muted/50 p-3">
-              <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
-                <MessageSquare className="h-3.5 w-3.5" />
-                <span className="text-xs">Citations</span>
-              </div>
-              <p className="text-lg font-bold">
-                {totalCitations >= 1000
-                  ? `${(totalCitations / 1000).toFixed(0)}k`
-                  : totalCitations}
-              </p>
-            </div>
+        <div className="rounded-lg border border-border bg-background p-3">
+          <div className="rounded-md bg-primary px-3 py-2 mb-3">
+            <h3 className="text-[13px] font-bold text-primary-foreground">{scroll.title}</h3>
           </div>
-          <div className="mt-3">
-            <Badge variant="secondary" className="text-xs">
-              {scroll.mode === "brainstorm" ? "Brainstorm Mode" : "Citation Finder"}
-            </Badge>
+          <div className="grid grid-cols-2 gap-2">
+            <Stat icon={<FileText className="h-3.5 w-3.5" />} label="Papers" value={scroll.paperCount} />
+            <Stat icon={<ArrowBigUp className="h-3.5 w-3.5" />} label="Avg Score" value={avgScore} />
+            <Stat icon={<ArrowBigUp className="h-3.5 w-3.5" />} label="Upvoted" value={upvotedPapers.size} />
+            <Stat icon={<MessageSquare className="h-3.5 w-3.5" />} label="Citations" value={totalCitations >= 1000 ? `${(totalCitations / 1000).toFixed(0)}k` : totalCitations} />
+          </div>
+          <div className="mt-2 pt-2 border-t border-border">
+            <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
+              {scroll.mode === "brainstorm" ? "Brainstorm" : "Citation Finder"}
+            </span>
           </div>
         </div>
 
-        {/* Upvoted papers */}
-        <div className="rounded-xl border border-border bg-card p-4">
-          <h3 className="text-sm font-semibold mb-3 flex items-center gap-1.5">
-            <ArrowBigUp className="h-4 w-4 text-primary" />
-            Upvoted Papers
-          </h3>
-          {upvotedList.length === 0 ? (
-            <p className="text-xs text-muted-foreground">
-              No upvoted papers yet. Upvote papers to save them here.
-            </p>
-          ) : (
+        {/* Your Posts */}
+        <SidebarSection
+          icon={<PenLine className="h-3.5 w-3.5 text-primary" />}
+          title="Your Posts"
+          emptyText="No posts yet. Use the compose box or + button."
+        >
+          {userPosts.length > 0 && (
+            <div className="space-y-1">
+              {userPosts.slice(0, 5).map((post) => (
+                <div key={post.id} className="rounded-md p-2 hover:bg-[#f6f7f8] transition-colors">
+                  {post.title && (
+                    <p className="text-[12px] font-semibold text-foreground line-clamp-1">{post.title}</p>
+                  )}
+                  <p className="text-[12px] text-muted-foreground line-clamp-2">{post.content}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </SidebarSection>
+
+        {/* Upvoted */}
+        <SidebarSection
+          icon={<ArrowBigUp className="h-3.5 w-3.5 text-[#ff4500]" />}
+          title="Upvoted"
+          emptyText="Upvote papers to save them here."
+        >
+          {upvotedList.length > 0 && (
             <>
-              <div className="space-y-2">
-                {displayedUpvoted.map((paper) => (
-                  <Link
-                    key={paper.id}
-                    href={`/scroll/${scrollId}/post/${paper.id}`}
-                    className="block rounded-lg p-2 transition-colors hover:bg-accent"
-                  >
-                    <p className="text-xs font-medium leading-snug line-clamp-2">
-                      {paper.title}
-                    </p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      {paper.authors[0] || "Unknown"} &middot; {paper.year}
-                    </p>
-                  </Link>
-                ))}
-              </div>
+              <PaperList papers={displayUpvoted} scrollId={scrollId} />
               {upvotedList.length > 3 && !showAllUpvoted && (
-                <button
-                  onClick={() => setShowAllUpvoted(true)}
-                  className="mt-2 flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-                >
-                  Show {upvotedList.length - 3} more
-                  <ChevronDown className="h-3 w-3" />
-                </button>
+                <ShowMore count={upvotedList.length - 3} onClick={() => setShowAllUpvoted(true)} />
               )}
             </>
           )}
-        </div>
+        </SidebarSection>
 
-        {/* Recent activity */}
-        <div className="rounded-xl border border-border bg-card p-4">
-          <h3 className="text-sm font-semibold mb-3 flex items-center gap-1.5">
-            <MessageSquare className="h-4 w-4 text-primary" />
-            Your Activity
-          </h3>
-          {commentedPapers.size === 0 ? (
-            <p className="text-xs text-muted-foreground">
-              No comments yet. Click on a paper to leave comments.
-            </p>
-          ) : (
-            <div className="space-y-2">
-              {Array.from(commentedPapers.entries()).map(([paperId, count]) => {
+        {/* Bookmarked */}
+        <SidebarSection
+          icon={<Bookmark className="h-3.5 w-3.5 text-primary" />}
+          title="Saved"
+          emptyText="Bookmark papers to save them here."
+        >
+          {bookmarkedList.length > 0 && (
+            <>
+              <PaperList papers={displayBookmarked} scrollId={scrollId} />
+              {bookmarkedList.length > 3 && !showAllBookmarked && (
+                <ShowMore count={bookmarkedList.length - 3} onClick={() => setShowAllBookmarked(true)} />
+              )}
+            </>
+          )}
+        </SidebarSection>
+
+        {/* Comments activity */}
+        <SidebarSection
+          icon={<MessageSquare className="h-3.5 w-3.5 text-primary" />}
+          title="Your Comments"
+          emptyText="Click on a paper to leave comments."
+        >
+          {commentCounts.size > 0 && (
+            <div className="space-y-1">
+              {Array.from(commentCounts.entries()).map(([paperId, count]) => {
                 const paper = papers.find((p) => p.id === paperId);
                 if (!paper) return null;
                 return (
                   <Link
                     key={paperId}
                     href={`/scroll/${scrollId}/post/${paperId}`}
-                    className="block rounded-lg p-2 transition-colors hover:bg-accent"
+                    className="block rounded-md p-2 transition-colors hover:bg-[#f6f7f8]"
                   >
-                    <p className="text-xs font-medium leading-snug line-clamp-1">
-                      {paper.title}
-                    </p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      {count} {count === 1 ? "comment" : "comments"}
-                    </p>
+                    <p className="text-[12px] font-medium text-foreground line-clamp-1">{paper.title}</p>
+                    <p className="text-[11px] text-muted-foreground">{count} {count === 1 ? "comment" : "comments"}</p>
                   </Link>
                 );
               })}
             </div>
           )}
-        </div>
+        </SidebarSection>
       </div>
     </aside>
+  );
+}
+
+function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; value: number | string }) {
+  return (
+    <div className="rounded-md bg-[#f6f7f8] p-2">
+      <div className="flex items-center gap-1 text-muted-foreground mb-0.5">
+        {icon}
+        <span className="text-[11px]">{label}</span>
+      </div>
+      <p className="text-[15px] font-bold text-foreground">{value}</p>
+    </div>
+  );
+}
+
+function SidebarSection({ icon, title, emptyText, children }: {
+  icon: React.ReactNode;
+  title: string;
+  emptyText: string;
+  children: React.ReactNode;
+}) {
+  const hasChildren = children !== undefined && children !== null && children !== false;
+  return (
+    <div className="rounded-lg border border-border bg-background p-3">
+      <h3 className="text-[12px] font-bold text-foreground mb-2 flex items-center gap-1.5 uppercase tracking-wide">
+        {icon} {title}
+      </h3>
+      {hasChildren ? children : (
+        <p className="text-[12px] text-muted-foreground">{emptyText}</p>
+      )}
+    </div>
+  );
+}
+
+function PaperList({ papers, scrollId }: { papers: Paper[]; scrollId: string }) {
+  return (
+    <div className="space-y-1">
+      {papers.map((paper) => (
+        <Link
+          key={paper.id}
+          href={`/scroll/${scrollId}/post/${paper.id}`}
+          className="block rounded-md p-2 transition-colors hover:bg-[#f6f7f8]"
+        >
+          <p className="text-[12px] font-medium text-foreground leading-snug line-clamp-2">{paper.title}</p>
+          <p className="text-[11px] text-muted-foreground mt-0.5">
+            {paper.authors[0] || "Unknown"} &middot; {paper.year}
+          </p>
+        </Link>
+      ))}
+    </div>
+  );
+}
+
+function ShowMore({ count, onClick }: { count: number; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="mt-1 flex items-center gap-1 text-[12px] font-semibold text-primary hover:underline"
+    >
+      Show {count} more <ChevronDown className="h-3 w-3" />
+    </button>
   );
 }
