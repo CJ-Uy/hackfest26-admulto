@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { Sidebar } from "@/components/shared/Sidebar";
 import { ScrollHeader } from "@/components/shared/ScrollHeader";
@@ -28,12 +28,10 @@ export default function ScrollPage() {
   const [papers, setPapers] = useState<Paper[]>([]);
   const [polls, setPolls] = useState<Poll[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [headerVisible, setHeaderVisible] = useState(true);
   const [upvotedPapers, setUpvotedPapers] = useState<Set<string>>(new Set());
   const [bookmarkedPapers, setBookmarkedPapers] = useState<Set<string>>(new Set());
   const [commentCounts, setCommentCounts] = useState<Map<string, number>>(new Map());
   const [userPosts, setUserPosts] = useState<UserPost[]>([]);
-  const headerRef = useRef<HTMLDivElement>(null);
 
   const fetchCommentCounts = useCallback(async () => {
     try {
@@ -89,17 +87,6 @@ export default function ScrollPage() {
     };
   }, [fetchCommentCounts]);
 
-  useEffect(() => {
-    const el = headerRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => setHeaderVisible(entry.isIntersecting),
-      { threshold: 0 }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [scroll]);
-
   const handleUpvote = useCallback((paperId: string, voted: boolean) => {
     setUpvotedPapers((prev) => {
       const next = new Set(prev);
@@ -138,19 +125,11 @@ export default function ScrollPage() {
 
       <div className="flex flex-1 justify-center gap-0 lg:gap-6 lg:px-6 lg:py-4">
         {/* Main content column */}
-        <main className="w-full max-w-[780px] flex-1 bg-background lg:rounded-t-lg overflow-hidden">
-          {/* Sticky search bar */}
+        <main className="w-full max-w-[780px] flex-1 bg-background lg:rounded-t-lg">
+          {/* Sticky top section: search + header + tabs */}
           <div className="sticky top-0 z-30 bg-background border-b border-border">
             <SearchBar value={searchQuery} onChange={setSearchQuery} />
-          </div>
-
-          {/* Header - scrolls away */}
-          <div ref={headerRef}>
             <ScrollHeader scroll={scroll} />
-          </div>
-
-          {/* Sticky tab nav */}
-          <div className="sticky top-[56px] z-20 bg-background border-b border-border">
             <TabNav
               value={activeTab}
               onValueChange={setActiveTab}
@@ -159,7 +138,7 @@ export default function ScrollPage() {
           </div>
 
           {/* Tab content */}
-          <div className="pb-20">
+          <div className="overflow-hidden pb-20">
             {activeTab === "feed" && (
               <FeedView
                 scrollId={scrollId}
