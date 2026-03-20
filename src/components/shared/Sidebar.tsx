@@ -37,11 +37,11 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="p-5">
+      <div className="px-4 py-3">
         <Link
           href="/"
           onClick={onNavigate}
-          className="font-heading text-xl font-bold tracking-tight text-primary"
+          className="font-heading text-[22px] font-bold tracking-tight text-primary"
         >
           Schrollar
         </Link>
@@ -49,42 +49,42 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
       <div className="px-3">
         <Link href="/onboarding" onClick={onNavigate}>
-          <Button className="w-full justify-start gap-2" size="sm">
-            <Plus className="h-4 w-4" />
-            Create New Scroll
+          <Button className="w-full justify-start gap-2 text-[15px]" size="sm">
+            <Plus className="h-3.5 w-3.5" />
+            New Scroll
           </Button>
         </Link>
       </div>
 
-      <Separator className="mx-3 my-4 w-auto" />
+      <Separator className="mx-3 my-3 w-auto" />
 
       <div className="flex-1 overflow-y-auto px-3">
-        <p className="mb-2 px-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
-          Past Scrolls
+        <p className="mb-1.5 px-2 text-[13px] font-bold tracking-wide text-muted-foreground uppercase">
+          Recent
         </p>
         {sessions.length === 0 ? (
-          <p className="px-2 text-xs text-muted-foreground">
-            No scrolls yet. Create one to get started.
+          <p className="px-2 text-[14px] text-muted-foreground">
+            No scrolls yet.
           </p>
         ) : (
-          <nav className="space-y-1">
+          <nav className="space-y-0.5">
             {sessions.map((session) => (
               <Link
                 key={session.id}
                 href={`/scroll/${session.id}`}
                 onClick={onNavigate}
                 className={cn(
-                  "flex items-start gap-2.5 rounded-md px-2 py-2 text-sm transition-colors hover:bg-accent",
-                  pathname === `/scroll/${session.id}` && "bg-accent"
+                  "flex items-start gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-[#f6f7f8]",
+                  pathname === `/scroll/${session.id}` && "bg-[#f6f7f8]"
                 )}
               >
-                <ScrollText className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                <ScrollText className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                 <div className="min-w-0">
-                  <p className="truncate font-medium leading-tight">
+                  <p className="truncate text-[14px] font-medium leading-tight text-foreground">
                     {session.title}
                   </p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    {session.paperCount} papers found
+                  <p className="text-[13px] text-muted-foreground">
+                    {session.paperCount} papers
                   </p>
                 </div>
               </Link>
@@ -126,33 +126,33 @@ export function Sidebar() {
         )}
       >
         {collapsed ? (
-          <div className="flex h-full flex-col items-center py-4">
+          <div className="flex h-full flex-col items-center py-3">
             <Button
               variant="ghost"
               size="icon"
-              className="mb-4"
+              className="mb-3 h-8 w-8"
               onClick={() => setCollapsed(false)}
             >
-              <PanelLeftOpen className="h-4 w-4" />
+              <PanelLeftOpen className="h-3.5 w-3.5" />
             </Button>
             <Link href="/onboarding">
-              <Button variant="ghost" size="icon">
-                <Plus className="h-4 w-4" />
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <Plus className="h-3.5 w-3.5" />
               </Button>
             </Link>
           </div>
         ) : (
           <>
             <SidebarContent />
-            <div className="border-t border-border p-3">
+            <div className="border-t border-border p-2">
               <Button
                 variant="ghost"
                 size="sm"
-                className="w-full justify-start gap-2 text-muted-foreground"
+                className="w-full justify-start gap-2 text-[14px] text-muted-foreground"
                 onClick={() => setCollapsed(true)}
               >
-                <PanelLeftClose className="h-4 w-4" />
-                <span className="text-xs">Collapse</span>
+                <PanelLeftClose className="h-3.5 w-3.5" />
+                Collapse
               </Button>
             </div>
           </>

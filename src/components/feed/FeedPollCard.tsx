@@ -50,15 +50,15 @@ export function FeedPollCard({ poll }: FeedPollCardProps) {
 
   return (
     <div className="border-b border-border px-4 py-3">
-      <div className="flex items-center gap-2 mb-2">
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#e8f0fe]">
-          <BarChart3 className="h-3.5 w-3.5 text-primary" />
+      <div className="flex items-center gap-2.5 mb-2">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#e8f0fe]">
+          <BarChart3 className="h-4 w-4 text-primary" />
         </div>
-        <span className="text-[13px] font-semibold text-foreground">Poll</span>
-        <span className="text-[12px] text-muted-foreground">&middot; Help refine your feed</span>
+        <span className="text-[15px] font-semibold text-foreground">Poll</span>
+        <span className="text-[14px] text-muted-foreground">&middot; Help refine your feed</span>
       </div>
 
-      <p className="text-[13px] font-semibold text-foreground mb-2">{poll.question}</p>
+      <p className="text-[15px] font-semibold text-foreground mb-2">{poll.question}</p>
 
       {poll.type === "multiple-choice" && poll.options ? (
         <div className="space-y-1.5">
@@ -68,7 +68,7 @@ export function FeedPollCard({ poll }: FeedPollCardProps) {
               onClick={() => handleSelect(option)}
               disabled={submitted}
               className={cn(
-                "w-full rounded-md border px-3 py-2 text-left text-[13px] transition-all",
+                "w-full rounded-md border px-3 py-2 text-left text-[15px] transition-all",
                 selected === option
                   ? "border-primary bg-primary/5 font-medium text-primary"
                   : submitted
@@ -87,14 +87,14 @@ export function FeedPollCard({ poll }: FeedPollCardProps) {
             onChange={(e) => setOpenAnswer(e.target.value)}
             placeholder="Type your answer..."
             disabled={submitted}
-            className="w-full rounded-md border border-border bg-transparent px-3 py-2 text-[13px] resize-none focus:border-primary focus:outline-none"
+            className="w-full rounded-md border border-border bg-transparent px-3 py-2 text-[15px] resize-none focus:border-primary focus:outline-none"
             rows={2}
           />
           {!submitted && (
             <button
               onClick={handleOpenSubmit}
               disabled={!openAnswer.trim()}
-              className="rounded-full bg-primary px-4 py-1 text-[12px] font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-40"
+              className="rounded-full bg-primary px-4 py-1.5 text-[14px] font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-40"
             >
               Submit
             </button>
@@ -103,7 +103,7 @@ export function FeedPollCard({ poll }: FeedPollCardProps) {
       )}
 
       {submitted && (
-        <p className="mt-2 text-[12px] text-muted-foreground">Response recorded</p>
+        <p className="mt-2 text-[14px] text-muted-foreground">Response recorded</p>
       )}
     </div>
   );

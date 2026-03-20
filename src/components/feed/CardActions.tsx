@@ -94,7 +94,7 @@ export function CardActions({
           >
             <ArrowBigUp className={cn("h-5 w-5", upvoted && "fill-current")} />
           </button>
-          <span className={cn("text-[12px] font-bold min-w-[20px] text-center", upvoted ? "text-[#ff4500]" : "text-foreground")}>
+          <span className={cn("text-[14px] font-bold min-w-[24px] text-center", upvoted ? "text-[#ff4500]" : "text-foreground")}>
             {fmt(score)}
           </span>
           <button
@@ -108,16 +108,16 @@ export function CardActions({
         {/* Comment */}
         <button
           onClick={handleCommentClick}
-          className="flex items-center gap-1 rounded-full bg-[#f6f7f8] px-3 py-1.5 text-[12px] font-bold text-muted-foreground transition-colors hover:bg-[#e8e8e8] mr-1"
+          className="flex items-center gap-1.5 rounded-full bg-[#f6f7f8] px-3.5 py-1.5 text-[14px] font-bold text-muted-foreground transition-colors hover:bg-[#e8e8e8] mr-1"
         >
-          <MessageSquare className="h-4 w-4" />
+          <MessageSquare className="h-4.5 w-4.5" />
           {commentCount}
         </button>
 
         {/* Share */}
         <button
           onClick={handleShare}
-          className="flex items-center gap-1 rounded-full bg-[#f6f7f8] px-3 py-1.5 text-[12px] font-bold text-muted-foreground transition-colors hover:bg-[#e8e8e8] mr-1"
+          className="flex items-center gap-1.5 rounded-full bg-[#f6f7f8] px-3.5 py-1.5 text-[14px] font-bold text-muted-foreground transition-colors hover:bg-[#e8e8e8] mr-1"
         >
           <Share2 className="h-4 w-4" />
           Share

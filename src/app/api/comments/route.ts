@@ -30,13 +30,19 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const comment = await db.comment.create({
-    data: {
-      paperId,
-      content,
-      author: author || "You",
-    },
-  });
+  const [comment] = await db.$transaction([
+    db.comment.create({
+      data: {
+        paperId,
+        content,
+        author: author || "You",
+      },
+    }),
+    db.paper.update({
+      where: { id: paperId },
+      data: { commentCount: { increment: 1 } },
+    }),
+  ]);
 
   return NextResponse.json(comment, { status: 201 });
 }

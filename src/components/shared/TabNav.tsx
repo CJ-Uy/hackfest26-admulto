@@ -16,7 +16,7 @@ export function TabNav({ value, onValueChange, tabs }: TabNavProps) {
           key={tab.value}
           onClick={() => onValueChange(tab.value)}
           className={cn(
-            "flex-1 py-2.5 text-center text-[13px] font-semibold transition-colors relative",
+            "flex-1 py-3 text-center text-[15px] font-semibold transition-colors relative",
             value === tab.value
               ? "text-foreground"
               : "text-muted-foreground hover:text-foreground hover:bg-[#f6f7f8]"

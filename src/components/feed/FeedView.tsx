@@ -12,6 +12,7 @@ interface FeedViewProps {
   polls: Poll[];
   searchQuery: string;
   userPosts: UserPost[];
+  commentCounts: Map<string, number>;
   onUpvote: (paperId: string, voted: boolean) => void;
   onBookmark: (paperId: string, bookmarked: boolean) => void;
   onComment: (paperId: string) => void;
@@ -23,6 +24,7 @@ export function FeedView({
   polls,
   searchQuery,
   userPosts,
+  commentCounts,
   onUpvote,
   onBookmark,
   onComment,
@@ -42,7 +44,7 @@ export function FeedView({
   if (papers.length === 0) {
     return (
       <div className="px-4 py-12 text-center">
-        <p className="text-[13px] text-muted-foreground">
+        <p className="text-[15px] text-muted-foreground">
           No papers found. Try a different topic.
         </p>
       </div>
@@ -78,6 +80,7 @@ export function FeedView({
             paper={item.data as Paper}
             scrollId={scrollId}
             index={item.index}
+            commentCount={commentCounts.get((item.data as Paper).id) ?? (item.data as Paper).commentCount}
             onUpvote={onUpvote}
             onBookmark={onBookmark}
             onComment={onComment}
@@ -92,7 +95,7 @@ export function FeedView({
 
       {filteredPapers.length === 0 && query && (
         <div className="px-4 py-12 text-center">
-          <p className="text-[13px] text-muted-foreground">
+          <p className="text-[15px] text-muted-foreground">
             No papers match &ldquo;{searchQuery}&rdquo;
           </p>
         </div>

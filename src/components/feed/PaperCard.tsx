@@ -9,12 +9,13 @@ interface PaperCardProps {
   paper: Paper;
   scrollId: string;
   index: number;
+  commentCount: number;
   onUpvote: (paperId: string, voted: boolean) => void;
   onBookmark: (paperId: string, bookmarked: boolean) => void;
   onComment: (paperId: string) => void;
 }
 
-export function PaperCard({ paper, scrollId, index, onUpvote, onBookmark, onComment }: PaperCardProps) {
+export function PaperCard({ paper, scrollId, index, commentCount, onUpvote, onBookmark, onComment }: PaperCardProps) {
   const router = useRouter();
 
   const primaryAuthor = paper.authors[0] ?? "Unknown";
@@ -35,28 +36,28 @@ export function PaperCard({ paper, scrollId, index, onUpvote, onBookmark, onComm
       onClick={navigateToDetail}
     >
       {/* Author row */}
-      <div className="mb-1.5 flex items-center gap-2">
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[11px] font-bold text-primary">
+      <div className="mb-2 flex items-center gap-2.5">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[13px] font-bold text-primary">
           {initial}
         </div>
         <div className="min-w-0 flex-1 flex items-baseline gap-1.5">
-          <span className="text-[13px] font-semibold text-foreground truncate">{authorDisplay}</span>
+          <span className="text-[15px] font-semibold text-foreground truncate">{authorDisplay}</span>
           {paper.peerReviewed && (
-            <BadgeCheck className="h-3.5 w-3.5 shrink-0 fill-blue-500 text-white" />
+            <BadgeCheck className="h-4 w-4 shrink-0 fill-blue-500 text-white" />
           )}
-          <span className="text-[12px] text-muted-foreground truncate">
+          <span className="text-[14px] text-muted-foreground truncate">
             {paper.journal} &middot; {paper.year}
           </span>
         </div>
       </div>
 
       {/* Title */}
-      <h3 className="font-heading text-[14px] font-bold leading-snug text-foreground mb-1">
+      <h3 className="font-heading text-[17px] font-bold leading-snug text-foreground mb-1">
         {paper.title}
       </h3>
 
       {/* Synthesis */}
-      <p className="text-[13px] leading-relaxed text-muted-foreground line-clamp-3">
+      <p className="text-[15px] leading-relaxed text-muted-foreground line-clamp-3">
         {paper.synthesis}
       </p>
 
@@ -64,7 +65,7 @@ export function PaperCard({ paper, scrollId, index, onUpvote, onBookmark, onComm
       <CardActions
         paperId={paper.id}
         credibilityScore={paper.credibilityScore}
-        commentCount={paper.commentCount}
+        commentCount={commentCount}
         citationCount={paper.citationCount}
         apaCitation={paper.apaCitation}
         initialVoted={paper.voted}

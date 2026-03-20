@@ -2,8 +2,6 @@
 
 import { useState } from "react";
 import { Send } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
 interface ReplyInputProps {
@@ -48,24 +46,22 @@ export function ReplyInput({ paperId, onCommentAdded }: ReplyInputProps) {
   }
 
   return (
-    <div className="flex items-center gap-2 rounded-lg border border-border bg-card p-3">
-      <Input
+    <div className="flex items-center gap-2 rounded-md border border-border bg-background px-3.5 py-2.5">
+      <input
         value={content}
         onChange={(e) => setContent(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="Add a comment about this paper..."
-        className="border-0 bg-transparent shadow-none focus-visible:ring-0"
+        placeholder="Add a comment..."
         disabled={loading}
+        className="flex-1 bg-transparent text-[15px] text-foreground placeholder:text-muted-foreground outline-none"
       />
-      <Button
-        size="icon"
-        variant="ghost"
-        className="shrink-0"
+      <button
         onClick={handleSubmit}
         disabled={!content.trim() || loading}
+        className="shrink-0 rounded-full p-2 text-primary transition-colors hover:bg-primary/10 disabled:opacity-30"
       >
         <Send className="h-4 w-4" />
-      </Button>
+      </button>
     </div>
   );
 }

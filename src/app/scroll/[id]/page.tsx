@@ -35,6 +35,18 @@ export default function ScrollPage() {
   const [userPosts, setUserPosts] = useState<UserPost[]>([]);
   const headerRef = useRef<HTMLDivElement>(null);
 
+  const fetchCommentCounts = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/comments/counts?scrollId=${scrollId}`);
+      if (res.ok) {
+        const counts: Record<string, number> = await res.json();
+        setCommentCounts(new Map(Object.entries(counts)));
+      }
+    } catch {
+      // ignore
+    }
+  }, [scrollId]);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -55,8 +67,27 @@ export default function ScrollPage() {
     }
 
     load();
+    fetchCommentCounts();
     return () => { cancelled = true; };
-  }, [scrollId]);
+  }, [scrollId, fetchCommentCounts]);
+
+  // Refresh comment counts when page regains visibility or focus (e.g. coming back from detail page)
+  useEffect(() => {
+    function handleVisibility() {
+      if (document.visibilityState === "visible") {
+        fetchCommentCounts();
+      }
+    }
+    function handleFocus() {
+      fetchCommentCounts();
+    }
+    document.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("focus", handleFocus);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [fetchCommentCounts]);
 
   useEffect(() => {
     const el = headerRef.current;
@@ -107,7 +138,7 @@ export default function ScrollPage() {
 
       <div className="flex flex-1 justify-center gap-0 lg:gap-6 lg:px-6 lg:py-4">
         {/* Main content column */}
-        <main className="w-full max-w-[640px] flex-1 bg-background lg:rounded-t-lg overflow-hidden">
+        <main className="w-full max-w-[780px] flex-1 bg-background lg:rounded-t-lg overflow-hidden">
           {/* Sticky search bar */}
           <div className="sticky top-0 z-30 bg-background border-b border-border">
             <SearchBar value={searchQuery} onChange={setSearchQuery} />
@@ -119,7 +150,7 @@ export default function ScrollPage() {
           </div>
 
           {/* Sticky tab nav */}
-          <div className="sticky top-[49px] z-20 bg-background border-b border-border">
+          <div className="sticky top-[56px] z-20 bg-background border-b border-border">
             <TabNav
               value={activeTab}
               onValueChange={setActiveTab}
@@ -136,6 +167,7 @@ export default function ScrollPage() {
                 polls={polls}
                 searchQuery={searchQuery}
                 userPosts={userPosts}
+                commentCounts={commentCounts}
                 onUpvote={handleUpvote}
                 onBookmark={handleBookmark}
                 onComment={handleComment}
