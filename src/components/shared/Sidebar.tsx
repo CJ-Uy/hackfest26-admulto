@@ -41,7 +41,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         <Link
           href="/"
           onClick={onNavigate}
-          className="font-heading text-[22px] font-bold tracking-tight text-primary"
+          className="font-heading text-primary text-[22px] font-bold tracking-tight"
         >
           Schrollar
         </Link>
@@ -59,11 +59,11 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       <Separator className="mx-3 my-3 w-auto" />
 
       <div className="flex-1 overflow-y-auto px-3">
-        <p className="mb-1.5 px-2 text-[13px] font-bold tracking-wide text-muted-foreground uppercase">
+        <p className="text-muted-foreground mb-1.5 px-2 text-[13px] font-bold tracking-wide uppercase">
           Recent
         </p>
         {sessions.length === 0 ? (
-          <p className="px-2 text-[14px] text-muted-foreground">
+          <p className="text-muted-foreground px-2 text-[14px]">
             No scrolls yet.
           </p>
         ) : (
@@ -75,15 +75,15 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                 onClick={onNavigate}
                 className={cn(
                   "flex items-start gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-[#f6f7f8]",
-                  pathname === `/scroll/${session.id}` && "bg-[#f6f7f8]"
+                  pathname === `/scroll/${session.id}` && "bg-[#f6f7f8]",
                 )}
               >
-                <ScrollText className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                <ScrollText className="text-muted-foreground mt-0.5 h-3.5 w-3.5 shrink-0" />
                 <div className="min-w-0">
-                  <p className="truncate text-[14px] font-medium leading-tight text-foreground">
+                  <p className="text-foreground truncate text-[14px] leading-tight font-medium">
                     {session.title}
                   </p>
-                  <p className="text-[13px] text-muted-foreground">
+                  <p className="text-muted-foreground text-[13px]">
                     {session.paperCount} papers
                   </p>
                 </div>
@@ -121,8 +121,8 @@ export function Sidebar() {
       {/* Desktop sidebar */}
       <aside
         className={cn(
-          "hidden h-screen shrink-0 border-r border-border bg-sidebar transition-all duration-300 md:sticky md:top-0 md:flex md:flex-col",
-          collapsed ? "md:w-16" : "md:w-64"
+          "border-border bg-sidebar hidden h-screen shrink-0 border-r transition-all duration-300 md:sticky md:top-0 md:flex md:flex-col",
+          collapsed ? "md:w-16" : "md:w-64",
         )}
       >
         {collapsed ? (
@@ -144,11 +144,11 @@ export function Sidebar() {
         ) : (
           <>
             <SidebarContent />
-            <div className="border-t border-border p-2">
+            <div className="border-border border-t p-2">
               <Button
                 variant="ghost"
                 size="sm"
-                className="w-full justify-start gap-2 text-[14px] text-muted-foreground"
+                className="text-muted-foreground w-full justify-start gap-2 text-[14px]"
                 onClick={() => setCollapsed(true)}
               >
                 <PanelLeftClose className="h-3.5 w-3.5" />

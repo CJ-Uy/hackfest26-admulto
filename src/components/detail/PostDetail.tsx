@@ -32,39 +32,41 @@ export function PostDetail({ paper, scrollId }: PostDetailProps) {
       {/* Back */}
       <button
         onClick={() => router.push(`/scroll/${scrollId}`)}
-        className="mb-3 flex items-center gap-1.5 text-[15px] font-semibold text-muted-foreground hover:text-foreground transition-colors"
+        className="text-muted-foreground hover:text-foreground mb-3 flex items-center gap-1.5 text-[15px] font-semibold transition-colors"
       >
         <ArrowLeft className="h-4 w-4" />
         Back to feed
       </button>
 
       {/* Paper card */}
-      <div className="rounded-lg border border-border bg-background p-5">
+      <div className="border-border bg-background rounded-lg border p-5">
         {/* Author row */}
         <div className="mb-3 flex items-center gap-2.5">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[15px] font-semibold text-primary">
+          <div className="bg-primary/10 text-primary flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[15px] font-semibold">
             {initial}
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <span className="text-[15px] font-semibold text-foreground">{authorDisplay}</span>
+              <span className="text-foreground text-[15px] font-semibold">
+                {authorDisplay}
+              </span>
               {paper.peerReviewed && (
                 <BadgeCheck className="h-4 w-4 fill-blue-500 text-white" />
               )}
             </div>
-            <p className="text-[14px] text-muted-foreground">
+            <p className="text-muted-foreground text-[14px]">
               {paper.journal}, {paper.year}
             </p>
           </div>
         </div>
 
         {/* Title */}
-        <h1 className="font-heading text-[24px] font-bold leading-snug text-foreground">
+        <h1 className="font-heading text-foreground text-[24px] leading-snug font-bold">
           {paper.title}
         </h1>
 
         {/* Synthesis */}
-        <p className="mt-2 text-[15px] leading-relaxed text-muted-foreground">
+        <p className="text-muted-foreground mt-2 text-[15px] leading-relaxed">
           {paper.synthesis}
         </p>
 
@@ -73,7 +75,7 @@ export function PostDetail({ paper, scrollId }: PostDetailProps) {
           href={doiUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-2 inline-flex items-center gap-1 text-[15px] font-semibold text-primary hover:underline"
+          className="text-primary mt-2 inline-flex items-center gap-1 text-[15px] font-semibold hover:underline"
         >
           View Full Paper
           <ExternalLink className="h-3.5 w-3.5" />

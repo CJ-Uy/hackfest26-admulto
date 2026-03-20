@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
   if (!paperId || !content) {
     return NextResponse.json(
       { error: "paperId and content required" },
-      { status: 400 }
+      { status: 400 },
     );
   }
 

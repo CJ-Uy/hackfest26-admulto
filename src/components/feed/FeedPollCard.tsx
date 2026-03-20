@@ -11,7 +11,9 @@ interface FeedPollCardProps {
 }
 
 export function FeedPollCard({ poll }: FeedPollCardProps) {
-  const [selected, setSelected] = useState<string | null>(poll.selectedAnswer ?? null);
+  const [selected, setSelected] = useState<string | null>(
+    poll.selectedAnswer ?? null,
+  );
   const [submitted, setSubmitted] = useState(!!poll.selectedAnswer);
   const [openAnswer, setOpenAnswer] = useState(poll.selectedAnswer ?? "");
 
@@ -49,16 +51,20 @@ export function FeedPollCard({ poll }: FeedPollCardProps) {
   }
 
   return (
-    <div className="border-b border-border px-4 py-3">
-      <div className="flex items-center gap-2.5 mb-2">
+    <div className="border-border border-b px-4 py-3">
+      <div className="mb-2 flex items-center gap-2.5">
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#e8f0fe]">
-          <BarChart3 className="h-4 w-4 text-primary" />
+          <BarChart3 className="text-primary h-4 w-4" />
         </div>
-        <span className="text-[15px] font-semibold text-foreground">Poll</span>
-        <span className="text-[14px] text-muted-foreground">&middot; Help refine your feed</span>
+        <span className="text-foreground text-[15px] font-semibold">Poll</span>
+        <span className="text-muted-foreground text-[14px]">
+          &middot; Help refine your feed
+        </span>
       </div>
 
-      <p className="text-[15px] font-semibold text-foreground mb-2">{poll.question}</p>
+      <p className="text-foreground mb-2 text-[15px] font-semibold">
+        {poll.question}
+      </p>
 
       {poll.type === "multiple-choice" && poll.options ? (
         <div className="space-y-1.5">
@@ -70,10 +76,10 @@ export function FeedPollCard({ poll }: FeedPollCardProps) {
               className={cn(
                 "w-full rounded-md border px-3 py-2 text-left text-[15px] transition-all",
                 selected === option
-                  ? "border-primary bg-primary/5 font-medium text-primary"
+                  ? "border-primary bg-primary/5 text-primary font-medium"
                   : submitted
                     ? "border-border text-muted-foreground cursor-default"
-                    : "border-border hover:border-primary/40 hover:bg-[#f6f7f8]"
+                    : "border-border hover:border-primary/40 hover:bg-[#f6f7f8]",
               )}
             >
               {option}
@@ -87,14 +93,14 @@ export function FeedPollCard({ poll }: FeedPollCardProps) {
             onChange={(e) => setOpenAnswer(e.target.value)}
             placeholder="Type your answer..."
             disabled={submitted}
-            className="w-full rounded-md border border-border bg-transparent px-3 py-2 text-[15px] resize-none focus:border-primary focus:outline-none"
+            className="border-border focus:border-primary w-full resize-none rounded-md border bg-transparent px-3 py-2 text-[15px] focus:outline-none"
             rows={2}
           />
           {!submitted && (
             <button
               onClick={handleOpenSubmit}
               disabled={!openAnswer.trim()}
-              className="rounded-full bg-primary px-4 py-1.5 text-[14px] font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-40"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full px-4 py-1.5 text-[14px] font-semibold disabled:opacity-40"
             >
               Submit
             </button>
@@ -103,7 +109,9 @@ export function FeedPollCard({ poll }: FeedPollCardProps) {
       )}
 
       {submitted && (
-        <p className="mt-2 text-[14px] text-muted-foreground">Response recorded</p>
+        <p className="text-muted-foreground mt-2 text-[14px]">
+          Response recorded
+        </p>
       )}
     </div>
   );

@@ -41,7 +41,7 @@ export function ModeSelector({ selected, onSelect }: ModeSelectorProps) {
               "group rounded-xl border-2 p-6 text-left transition-all",
               isSelected
                 ? "border-primary bg-primary/5 shadow-sm"
-                : "border-border hover:border-primary/40 hover:bg-accent/50"
+                : "border-border hover:border-primary/40 hover:bg-accent/50",
             )}
           >
             <div
@@ -49,16 +49,16 @@ export function ModeSelector({ selected, onSelect }: ModeSelectorProps) {
                 "mb-3 flex h-10 w-10 items-center justify-center rounded-lg transition-colors",
                 isSelected
                   ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
+                  : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary",
               )}
             >
               <Icon className="h-5 w-5" />
             </div>
             <h3 className="font-heading text-base font-bold">{mode.title}</h3>
-            <p className="mt-0.5 text-sm font-medium text-primary/70">
+            <p className="text-primary/70 mt-0.5 text-sm font-medium">
               {mode.subtitle}
             </p>
-            <p className="mt-2 text-sm text-muted-foreground">
+            <p className="text-muted-foreground mt-2 text-sm">
               {mode.description}
             </p>
           </button>

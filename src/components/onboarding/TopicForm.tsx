@@ -108,7 +108,7 @@ export function TopicForm({ mode }: TopicFormProps) {
           className="mb-1.5 block text-sm font-medium"
         >
           Description{" "}
-          <span className="text-xs text-muted-foreground">(optional)</span>
+          <span className="text-muted-foreground text-xs">(optional)</span>
         </label>
         <Textarea
           id="description"
@@ -127,7 +127,7 @@ export function TopicForm({ mode }: TopicFormProps) {
       <div>
         <label className="mb-1.5 block text-sm font-medium">
           Subfields / Interests{" "}
-          <span className="text-xs text-muted-foreground">(optional)</span>
+          <span className="text-muted-foreground text-xs">(optional)</span>
         </label>
         <div className="flex gap-2">
           <Input
@@ -150,16 +150,12 @@ export function TopicForm({ mode }: TopicFormProps) {
         {subfields.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-2">
             {subfields.map((sf) => (
-              <Badge
-                key={sf}
-                variant="secondary"
-                className="gap-1 pr-1.5"
-              >
+              <Badge key={sf} variant="secondary" className="gap-1 pr-1.5">
                 {sf}
                 <button
                   type="button"
                   onClick={() => removeSubfield(sf)}
-                  className="ml-0.5 rounded-full p-0.5 hover:bg-muted"
+                  className="hover:bg-muted ml-0.5 rounded-full p-0.5"
                 >
                   <X className="h-3 w-3" />
                 </button>
@@ -168,7 +164,7 @@ export function TopicForm({ mode }: TopicFormProps) {
           </div>
         )}
         {subfields.length === 0 && (
-          <p className="mt-1.5 text-xs text-muted-foreground">
+          <p className="text-muted-foreground mt-1.5 text-xs">
             Add subfields to narrow your research focus.
           </p>
         )}
@@ -194,13 +190,13 @@ export function TopicForm({ mode }: TopicFormProps) {
       </Button>
 
       {!mode && (
-        <p className="text-center text-xs text-muted-foreground">
+        <p className="text-muted-foreground text-center text-xs">
           Select a mode above to enable feed generation.
         </p>
       )}
 
       {loading && (
-        <p className="text-center text-xs text-muted-foreground">
+        <p className="text-muted-foreground text-center text-xs">
           Searching papers, generating summaries, and verifying claims. This may
           take a minute.
         </p>

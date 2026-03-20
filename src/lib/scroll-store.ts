@@ -31,7 +31,7 @@ export async function fetchScroll(id: string): Promise<StoredScroll | null> {
 
 export async function fetchPaperFromScroll(
   scrollId: string,
-  paperId: string
+  paperId: string,
 ): Promise<Paper | null> {
   const data = await fetchScroll(scrollId);
   if (!data) return null;

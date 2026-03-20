@@ -35,7 +35,7 @@ export function OpenEndedCard({ poll, index }: OpenEndedCardProps) {
 
   return (
     <div
-      className="animate-card-enter rounded-lg border border-border bg-card p-5"
+      className="animate-card-enter border-border bg-card rounded-lg border p-5"
       style={{ animationDelay: `${index * 80}ms` }}
     >
       <h3 className="mb-3 text-sm font-semibold">{poll.question}</h3>
@@ -61,7 +61,7 @@ export function OpenEndedCard({ poll, index }: OpenEndedCardProps) {
         </div>
       )}
       {submitted && (
-        <p className="mt-3 text-xs text-muted-foreground">Response recorded!</p>
+        <p className="text-muted-foreground mt-3 text-xs">Response recorded!</p>
       )}
     </div>
   );

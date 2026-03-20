@@ -3,7 +3,7 @@ import type { Paper, ExportTheme, Poll } from "@/lib/types";
 
 export async function GET(
   _req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
 

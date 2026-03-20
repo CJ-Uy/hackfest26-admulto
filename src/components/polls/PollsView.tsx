@@ -12,7 +12,7 @@ export function PollsView({ polls }: PollsViewProps) {
   if (polls.length === 0) {
     return (
       <div className="px-4 py-12 text-center">
-        <p className="text-sm text-muted-foreground">
+        <p className="text-muted-foreground text-sm">
           No polls available for this scroll yet.
         </p>
       </div>
@@ -21,7 +21,7 @@ export function PollsView({ polls }: PollsViewProps) {
 
   return (
     <div className="px-4 py-4">
-      <p className="mb-4 text-center text-xs text-muted-foreground">
+      <p className="text-muted-foreground mb-4 text-center text-xs">
         Help the AI understand your interests. Your responses improve your feed
         recommendations.
       </p>
@@ -31,7 +31,7 @@ export function PollsView({ polls }: PollsViewProps) {
             <PollCard key={poll.id} poll={poll} index={i} />
           ) : (
             <OpenEndedCard key={poll.id} poll={poll} index={i} />
-          )
+          ),
         )}
       </div>
     </div>

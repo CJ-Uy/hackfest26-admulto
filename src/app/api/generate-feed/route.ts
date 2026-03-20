@@ -1,4 +1,8 @@
-import { generateSynthesis, generateApaCitation, generateExportOutline } from "@/lib/ollama";
+import {
+  generateSynthesis,
+  generateApaCitation,
+  generateExportOutline,
+} from "@/lib/ollama";
 import { verifyCard } from "@/lib/grounding";
 import { webSearch } from "@/lib/search";
 import { db } from "@/lib/db";
@@ -17,9 +21,7 @@ async function sleep(ms: number) {
 async function searchPapersWithRetry(
   query: string,
   limit = 15,
-  maxRetries = 2
 ): Promise<AnyRecord[]> {
-  // Truncate query to avoid overly long searches that S2 rejects
   const trimmedQuery = query.slice(0, 200);
 
   const params = new URLSearchParams({
@@ -34,18 +36,17 @@ async function searchPapersWithRetry(
     headers["x-api-key"] = S2_API_KEY;
   }
 
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+  // Single attempt + 1 fast retry (2s backoff) — fail fast to web search
+  for (let attempt = 0; attempt <= 1; attempt++) {
     if (attempt > 0) {
-      // Longer backoff: 5s, 15s — S2 needs time to cool down
-      const delay = attempt === 1 ? 5000 : 15000;
-      console.log(`S2 retry attempt ${attempt}, waiting ${delay}ms...`);
-      await sleep(delay);
+      console.log("S2 retry attempt 1, waiting 2s...");
+      await sleep(2000);
     }
 
     try {
       const res = await fetch(`${S2_API}?${params}`, {
         headers,
-        signal: AbortSignal.timeout(10000),
+        signal: AbortSignal.timeout(8000),
       });
 
       if (res.ok) {
@@ -54,24 +55,50 @@ async function searchPapersWithRetry(
       }
 
       if (res.status === 429) {
-        console.warn(`S2 rate limited (429), attempt ${attempt + 1}/${maxRetries + 1}`);
-        if (attempt === maxRetries) {
-          console.warn("S2 rate limit exhausted, will supplement with web search");
+        console.warn(`S2 rate limited (429), attempt ${attempt + 1}/2`);
+        if (attempt === 1) {
+          console.warn("S2 rate limit exhausted, falling back to web search");
           return [];
         }
         continue;
       }
 
-      // Non-retryable error
-      console.warn(`Semantic Scholar returned ${res.status}, will supplement with web search`);
+      console.warn(
+        `Semantic Scholar returned ${res.status}, falling back to web search`,
+      );
       return [];
     } catch (err) {
       console.warn(`S2 request failed (attempt ${attempt + 1}):`, err);
-      if (attempt === maxRetries) return [];
+      if (attempt === 1) return [];
     }
   }
 
   return [];
+}
+
+const CONCURRENCY = 4;
+
+async function processInBatches<T, R>(
+  items: T[],
+  fn: (item: T) => Promise<R | null>,
+  maxResults: number,
+): Promise<R[]> {
+  const results: R[] = [];
+  for (
+    let i = 0;
+    i < items.length && results.length < maxResults;
+    i += CONCURRENCY
+  ) {
+    const batch = items.slice(i, i + CONCURRENCY);
+    const batchResults = await Promise.allSettled(batch.map(fn));
+    for (const r of batchResults) {
+      if (results.length >= maxResults) break;
+      if (r.status === "fulfilled" && r.value !== null) {
+        results.push(r.value);
+      }
+    }
+  }
+  return results;
 }
 
 function computeCredibilityScore(paper: AnyRecord): number {
@@ -114,20 +141,26 @@ export async function POST(req: Request) {
   }
 
   try {
-    // 1. Fetch papers from Semantic Scholar with retry
-    const rawPapers = await searchPapersWithRetry(searchQuery, 20);
+    // 1. Fetch S2 papers and web results in parallel
+    const [rawPapers, webResults] = await Promise.all([
+      searchPapersWithRetry(searchQuery, 20),
+      webSearch(searchQuery, 8).catch((err) => {
+        console.error("Web search failed:", err);
+        return [] as {
+          title: string;
+          url: string;
+          snippet: string;
+          engine: string;
+        }[];
+      }),
+    ]);
 
     const papersWithAbstracts = rawPapers.filter(
-      (p) => p.abstract && (p.abstract as string).length > 50
+      (p) => p.abstract && (p.abstract as string).length > 50,
     );
 
-    // 2. Process each paper: synthesize, verify, format
-    const processedPapers: Paper[] = [];
-
-    // -- S2 path: process academic papers --
-    for (const raw of papersWithAbstracts) {
-      if (processedPapers.length >= 12) break;
-
+    // 2. Process S2 papers in parallel batches
+    const processPaper = async (raw: AnyRecord): Promise<Paper | null> => {
       const authors =
         (raw.authors as AnyRecord[])?.map((a) => a.name as string) || [];
       const title = raw.title as string;
@@ -141,33 +174,36 @@ export async function POST(req: Request) {
       const citationCount = (raw.citationCount as number) || 0;
 
       try {
+        // Run synthesis and verification concurrently — start synthesis,
+        // then verify once it's done (verification depends on synthesis output)
         const synthesis = await generateSynthesis(title, abstract, authors);
 
         let verified = true;
         try {
           const verification = (await verifyCard(
             abstract,
-            synthesis
+            synthesis,
           )) as AnyRecord;
           verified = verification.card_verified !== false;
         } catch {
           verified = true;
         }
 
-        if (!verified) continue;
+        if (!verified) return null;
 
         const apaCitation = await generateApaCitation(
           title,
           authors,
           year,
           venue as string,
-          doi as string
+          doi as string,
         );
-
         const credibilityScore = computeCredibilityScore(raw);
 
-        processedPapers.push({
-          id: (raw.paperId as string) || `p-${processedPapers.length}`,
+        return {
+          id:
+            (raw.paperId as string) ||
+            `p-${Math.random().toString(36).slice(2)}`,
           title,
           authors,
           journal: venue as string,
@@ -179,52 +215,56 @@ export async function POST(req: Request) {
           citationCount,
           commentCount: 0,
           apaCitation,
-        });
+        };
       } catch (err) {
         console.error(`Failed to process paper "${title}":`, err);
-        continue;
+        return null;
       }
-    }
+    };
 
-    // -- Web search supplement: fill remaining slots if S2 returned few results --
+    const processedPapers = await processInBatches(
+      papersWithAbstracts,
+      processPaper,
+      12,
+    );
+
+    // 3. Supplement with web results if S2 yielded few papers
     if (processedPapers.length < 6) {
       console.log(
-        `Only ${processedPapers.length} S2 results, supplementing with web search`
+        `Only ${processedPapers.length} S2 results, supplementing with web search`,
       );
-      let webResults: { title: string; url: string; snippet: string; engine: string }[] = [];
-      try {
-        webResults = await webSearch(searchQuery, 15);
-      } catch (err) {
-        console.error("Web search also failed:", err);
-      }
 
-      // Avoid duplicates by title
       const existingTitles = new Set(
-        processedPapers.map((p) => p.title.toLowerCase())
+        processedPapers.map((p) => p.title.toLowerCase()),
       );
 
-      for (const result of webResults) {
-        if (processedPapers.length >= 12) break;
-        if (!result.snippet || result.snippet.length < 20) continue;
-        if (existingTitles.has(result.title.toLowerCase())) continue;
+      const eligibleWebResults = webResults.filter(
+        (r) =>
+          r.snippet &&
+          r.snippet.length >= 20 &&
+          !existingTitles.has(r.title.toLowerCase()),
+      );
 
-        const title = result.title;
-        const snippet = result.snippet;
-
+      const processWebResult = async (
+        result: (typeof webResults)[number],
+      ): Promise<Paper | null> => {
         try {
-          const synthesis = await generateSynthesis(title, snippet, []);
-
+          const synthesis = await generateSynthesis(
+            result.title,
+            result.snippet,
+            [],
+          );
           const apaCitation = await generateApaCitation(
-            title,
+            result.title,
             [],
             new Date().getFullYear(),
             result.engine || "Web",
-            result.url
+            result.url,
           );
 
-          processedPapers.push({
-            id: `web-${processedPapers.length}`,
-            title,
+          return {
+            id: `web-${Math.random().toString(36).slice(2)}`,
+            title: result.title,
             authors: [],
             journal: result.engine || "Web Source",
             year: new Date().getFullYear(),
@@ -235,15 +275,37 @@ export async function POST(req: Request) {
             citationCount: 0,
             commentCount: 0,
             apaCitation,
-          });
+          };
         } catch (err) {
-          console.error(`Failed to process web result "${title}":`, err);
-          continue;
+          console.error(`Failed to process web result "${result.title}":`, err);
+          return null;
         }
-      }
+      };
+
+      const remaining = 12 - processedPapers.length;
+      const webPapers = await processInBatches(
+        eligibleWebResults,
+        processWebResult,
+        remaining,
+      );
+      processedPapers.push(...webPapers);
     }
 
-    // 3. Generate export outline from processed papers
+    // 4. Generate export outline from processed papers
+    const fallbackOutline = (): ExportTheme[] => [
+      {
+        title: topic,
+        summary: `Research papers on ${topic}.`,
+        sources: processedPapers.map((p) => ({
+          title: p.title,
+          authors: p.authors.join(", "),
+          year: p.year,
+          keyFinding: p.synthesis.split(".")[0] + ".",
+          apaCitation: p.apaCitation,
+        })),
+      },
+    ];
+
     let exportOutline: ExportTheme[] = [];
     if (processedPapers.length > 0) {
       try {
@@ -256,37 +318,33 @@ export async function POST(req: Request) {
         }));
 
         const outlineJson = await generateExportOutline(outlineInput);
+        // Try to extract JSON — LLM sometimes wraps in markdown or adds trailing text
         const jsonMatch = outlineJson.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
-          const parsed = JSON.parse(jsonMatch[0]) as {
-            themes: ExportTheme[];
-          };
-          exportOutline = parsed.themes || [];
+          try {
+            const parsed = JSON.parse(jsonMatch[0]) as {
+              themes: ExportTheme[];
+            };
+            exportOutline = parsed.themes || [];
+          } catch {
+            // JSON was malformed — use fallback
+            console.warn("Export outline JSON was malformed, using fallback");
+            exportOutline = fallbackOutline();
+          }
+        } else {
+          exportOutline = fallbackOutline();
         }
       } catch (err) {
         console.error("Failed to generate export outline:", err);
-        exportOutline = [
-          {
-            title: topic,
-            summary: `Research papers on ${topic}.`,
-            sources: processedPapers.map((p) => ({
-              title: p.title,
-              authors: p.authors.join(", "),
-              year: p.year,
-              keyFinding: p.synthesis.split(".")[0] + ".",
-              apaCitation: p.apaCitation,
-            })),
-          },
-        ];
+        exportOutline = fallbackOutline();
       }
     }
 
-    // 4. Persist to database
+    // 5. Persist to database
     const scroll = await db.scroll.create({
       data: {
         title: topic,
-        description:
-          description || `Exploring research on ${topic}.`,
+        description: description || `Exploring research on ${topic}.`,
         mode: mode === "citationFinder" ? "citation-finder" : "brainstorm",
         date: new Date().toISOString().split("T")[0],
         paperCount: processedPapers.length,
@@ -320,13 +378,12 @@ export async function POST(req: Request) {
                       "Recent developments",
                       "Practical applications",
                       "Methodological approaches",
-                    ]
+                    ],
               ),
             },
             {
               type: "multiple-choice",
-              question:
-                "What type of research sources do you prefer?",
+              question: "What type of research sources do you prefer?",
               options: JSON.stringify([
                 "Foundational/classic papers (pre-2000)",
                 "Modern empirical studies (2000–2015)",
@@ -345,7 +402,7 @@ export async function POST(req: Request) {
       include: { papers: true },
     });
 
-    // 5. Map DB records back to API response types
+    // 6. Map DB records back to API response types
     const responsePapers: Paper[] = scroll.papers.map((p) => ({
       id: p.id,
       title: p.title,
@@ -385,7 +442,7 @@ export async function POST(req: Request) {
             ? err.message
             : "Feed generation failed. Please try again.",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

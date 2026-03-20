@@ -46,14 +46,16 @@ export function CreatePostFAB({ scrollId, onPost }: CreatePostFABProps) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
         render={
-          <button className="fixed bottom-6 right-6 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-all hover:scale-105 hover:shadow-xl active:scale-95" />
+          <button className="bg-primary text-primary-foreground fixed right-6 bottom-6 z-50 flex h-12 w-12 items-center justify-center rounded-full shadow-lg transition-all hover:scale-105 hover:shadow-xl active:scale-95" />
         }
       >
         <Plus className="h-5 w-5" />
       </DialogTrigger>
       <DialogContent className="sm:max-w-[480px]">
         <DialogHeader>
-          <DialogTitle className="font-heading text-[16px]">Create a post</DialogTitle>
+          <DialogTitle className="font-heading text-[16px]">
+            Create a post
+          </DialogTitle>
         </DialogHeader>
         <div className="space-y-3 pt-1">
           <Input
@@ -69,7 +71,12 @@ export function CreatePostFAB({ scrollId, onPost }: CreatePostFABProps) {
             className="min-h-[100px] resize-none text-[13px]"
           />
           <div className="flex justify-end gap-2">
-            <Button variant="ghost" size="sm" onClick={() => setOpen(false)} className="text-[13px]">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setOpen(false)}
+              className="text-[13px]"
+            >
               Cancel
             </Button>
             <Button

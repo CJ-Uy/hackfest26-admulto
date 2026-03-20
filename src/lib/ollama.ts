@@ -6,7 +6,7 @@ const MODEL = "qwen3:8b";
 
 async function ollamaChat(
   systemPrompt: string,
-  userPrompt: string
+  userPrompt: string,
 ): Promise<string> {
   const res = await fetch(`${OLLAMA_URL}/api/chat`, {
     method: "POST",
@@ -32,7 +32,7 @@ async function ollamaChat(
 export async function generateSynthesis(
   title: string,
   abstract: string,
-  authors: string[]
+  authors: string[],
 ): Promise<string> {
   return ollamaChat(
     "You are Schrollar's research card writer. Write a 2-3 sentence " +
@@ -42,7 +42,7 @@ export async function generateSynthesis(
     `Summarize this paper as a social media post:\n\n` +
       `Title: ${title}\n` +
       `Authors: ${authors.join(", ")}\n` +
-      `Abstract: ${abstract}`
+      `Abstract: ${abstract}`,
   );
 }
 
@@ -51,7 +51,7 @@ export async function generateApaCitation(
   authors: string[],
   year: number | null,
   journal: string,
-  doi: string
+  doi: string,
 ): Promise<string> {
   // Format authors for APA: Last, F. I., & Last, F. I.
   const formatted = authors
@@ -70,7 +70,9 @@ export async function generateApaCitation(
   const authorStr =
     formatted.length <= 2
       ? formatted.join(", & ")
-      : formatted.slice(0, -1).join(", ") + ", & " + formatted[formatted.length - 1];
+      : formatted.slice(0, -1).join(", ") +
+        ", & " +
+        formatted[formatted.length - 1];
 
   const yearStr = year ? ` (${year})` : " (n.d.)";
   const journalStr = journal ? ` ${journal}.` : "";
@@ -86,12 +88,12 @@ export async function generateExportOutline(
     year: number;
     synthesis: string;
     apaCitation: string;
-  }>
+  }>,
 ): Promise<string> {
   const paperList = papers
     .map(
       (p, i) =>
-        `[${i + 1}] "${p.title}" by ${p.authors} (${p.year})\nSummary: ${p.synthesis}\nCitation: ${p.apaCitation}`
+        `[${i + 1}] "${p.title}" by ${p.authors} (${p.year})\nSummary: ${p.synthesis}\nCitation: ${p.apaCitation}`,
     )
     .join("\n\n");
 
@@ -122,6 +124,6 @@ Rules:
 - Summaries should synthesize, not just list
 - Key findings should be specific and informative
 - Use the exact APA citations provided`,
-    `Here are the papers to organize:\n\n${paperList}`
+    `Here are the papers to organize:\n\n${paperList}`,
   );
 }

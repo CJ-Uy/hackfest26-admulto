@@ -11,7 +11,9 @@ interface PollCardProps {
 }
 
 export function PollCard({ poll, index }: PollCardProps) {
-  const [selected, setSelected] = useState<string | null>(poll.selectedAnswer ?? null);
+  const [selected, setSelected] = useState<string | null>(
+    poll.selectedAnswer ?? null,
+  );
   const [submitted, setSubmitted] = useState(!!poll.selectedAnswer);
 
   async function handleSelect(option: string) {
@@ -34,7 +36,7 @@ export function PollCard({ poll, index }: PollCardProps) {
 
   return (
     <div
-      className="animate-card-enter rounded-lg border border-border bg-card p-5"
+      className="animate-card-enter border-border bg-card rounded-lg border p-5"
       style={{ animationDelay: `${index * 80}ms` }}
     >
       <h3 className="mb-4 text-sm font-semibold">{poll.question}</h3>
@@ -47,10 +49,10 @@ export function PollCard({ poll, index }: PollCardProps) {
             className={cn(
               "w-full rounded-md border px-4 py-2.5 text-left text-sm transition-all",
               selected === option
-                ? "border-primary bg-primary/5 font-medium text-primary"
+                ? "border-primary bg-primary/5 text-primary font-medium"
                 : submitted
                   ? "border-border text-muted-foreground cursor-default"
-                  : "border-border hover:border-primary/40 hover:bg-accent"
+                  : "border-border hover:border-primary/40 hover:bg-accent",
             )}
           >
             {option}
@@ -58,7 +60,7 @@ export function PollCard({ poll, index }: PollCardProps) {
         ))}
       </div>
       {submitted && (
-        <p className="mt-3 text-xs text-muted-foreground">Response recorded!</p>
+        <p className="text-muted-foreground mt-3 text-xs">Response recorded!</p>
       )}
     </div>
   );

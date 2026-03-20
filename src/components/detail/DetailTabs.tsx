@@ -27,27 +27,34 @@ export function DetailTabs({ paperId }: DetailTabsProps) {
 
   return (
     <div>
-      <h3 className="text-[16px] font-bold text-foreground mb-3">
+      <h3 className="text-foreground mb-3 text-[16px] font-bold">
         Comments ({comments.length})
       </h3>
 
       <div className="space-y-2.5">
         {comments.map((c) => (
-          <div key={c.id} className="rounded-md border border-border bg-background p-3.5">
+          <div
+            key={c.id}
+            className="border-border bg-background rounded-md border p-3.5"
+          >
             <div className="mb-2 flex items-center gap-2">
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#f6f7f8] text-[13px] font-bold text-muted-foreground">
+              <div className="text-muted-foreground flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#f6f7f8] text-[13px] font-bold">
                 {c.author.charAt(0).toUpperCase()}
               </div>
-              <span className="text-[15px] font-semibold text-foreground">{c.author}</span>
-              <span className="text-[13px] text-muted-foreground">
+              <span className="text-foreground text-[15px] font-semibold">
+                {c.author}
+              </span>
+              <span className="text-muted-foreground text-[13px]">
                 {new Date(c.createdAt).toLocaleDateString()}
               </span>
             </div>
-            <p className="text-[15px] leading-relaxed text-foreground">{c.content}</p>
+            <p className="text-foreground text-[15px] leading-relaxed">
+              {c.content}
+            </p>
           </div>
         ))}
         {comments.length === 0 && (
-          <p className="py-6 text-center text-[15px] text-muted-foreground">
+          <p className="text-muted-foreground py-6 text-center text-[15px]">
             No comments yet. Be the first to comment!
           </p>
         )}

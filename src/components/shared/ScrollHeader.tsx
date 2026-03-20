@@ -7,18 +7,18 @@ interface ScrollHeaderProps {
 export function ScrollHeader({ scroll }: ScrollHeaderProps) {
   return (
     <div className="px-4 pt-5 pb-3">
-      <div className="flex items-center gap-2 mb-2">
-        <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-[13px] font-semibold text-primary">
+      <div className="mb-2 flex items-center gap-2">
+        <span className="bg-primary/10 text-primary inline-flex items-center rounded-full px-2.5 py-0.5 text-[13px] font-semibold">
           {scroll.mode === "brainstorm" ? "Brainstorm" : "Citation Finder"}
         </span>
-        <span className="text-[14px] text-muted-foreground">
+        <span className="text-muted-foreground text-[14px]">
           {scroll.paperCount} papers &middot; {scroll.date}
         </span>
       </div>
-      <h1 className="font-heading text-[26px] font-bold leading-tight text-foreground">
+      <h1 className="font-heading text-foreground text-[26px] leading-tight font-bold">
         {scroll.title}
       </h1>
-      <p className="mt-1.5 text-[15px] leading-snug text-muted-foreground">
+      <p className="text-muted-foreground mt-1.5 text-[15px] leading-snug">
         {scroll.description}
       </p>
     </div>

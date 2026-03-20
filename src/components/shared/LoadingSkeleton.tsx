@@ -4,10 +4,7 @@ export function FeedSkeleton() {
   return (
     <div className="mx-auto max-w-[680px] space-y-4 px-4">
       {Array.from({ length: 4 }).map((_, i) => (
-        <div
-          key={i}
-          className="rounded-lg border border-border bg-card p-5"
-        >
+        <div key={i} className="border-border bg-card rounded-lg border p-5">
           <div className="mb-3 flex items-center gap-2">
             <Skeleton className="h-8 w-8 rounded-full" />
             <Skeleton className="h-4 w-32" />

@@ -6,7 +6,7 @@ import { TopicForm } from "@/components/onboarding/TopicForm";
 
 export default function OnboardingPage() {
   const [mode, setMode] = useState<"brainstorm" | "citationFinder" | null>(
-    null
+    null,
   );
 
   return (
@@ -16,7 +16,7 @@ export default function OnboardingPage() {
           <h1 className="font-heading text-3xl font-bold tracking-tight">
             Create a Scroll
           </h1>
-          <p className="mt-2 text-sm text-muted-foreground">
+          <p className="text-muted-foreground mt-2 text-sm">
             Choose how you want to explore, then tell us your topic.
           </p>
         </div>

@@ -25,10 +25,7 @@ export async function POST(req: NextRequest) {
   const { paperId } = body as { paperId: string };
 
   if (!paperId) {
-    return NextResponse.json(
-      { error: "paperId required" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "paperId required" }, { status: 400 });
   }
 
   // Toggle: if vote exists, remove it; otherwise create it

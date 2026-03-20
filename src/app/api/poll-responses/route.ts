@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
   if (!pollId || !answer) {
     return NextResponse.json(
       { error: "pollId and answer required" },
-      { status: 400 }
+      { status: 400 },
     );
   }
 

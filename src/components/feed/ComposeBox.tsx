@@ -19,10 +19,10 @@ export function ComposeBox({ scrollId }: ComposeBoxProps) {
   }
 
   return (
-    <div className="border-b border-border px-4 py-3">
-      <div className="flex gap-2.5 items-start">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f6f7f8] mt-0.5">
-          <User className="h-4.5 w-4.5 text-muted-foreground" />
+    <div className="border-border border-b px-4 py-3">
+      <div className="flex items-start gap-2.5">
+        <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f6f7f8]">
+          <User className="text-muted-foreground h-4.5 w-4.5" />
         </div>
         <div className="flex-1">
           {expanded ? (
@@ -31,20 +31,23 @@ export function ComposeBox({ scrollId }: ComposeBoxProps) {
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 placeholder="Share a thought about your research..."
-                className="w-full resize-none border-0 bg-transparent p-0 text-[15px] text-foreground placeholder:text-muted-foreground focus:outline-none min-h-[70px]"
+                className="text-foreground placeholder:text-muted-foreground min-h-[70px] w-full resize-none border-0 bg-transparent p-0 text-[15px] focus:outline-none"
                 autoFocus
               />
-              <div className="flex items-center justify-end gap-2 mt-1">
+              <div className="mt-1 flex items-center justify-end gap-2">
                 <button
-                  onClick={() => { setExpanded(false); setContent(""); }}
-                  className="px-3.5 py-1.5 rounded-full text-[14px] font-semibold text-muted-foreground hover:bg-[#f6f7f8] transition-colors"
+                  onClick={() => {
+                    setExpanded(false);
+                    setContent("");
+                  }}
+                  className="text-muted-foreground rounded-full px-3.5 py-1.5 text-[14px] font-semibold transition-colors hover:bg-[#f6f7f8]"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handlePost}
                   disabled={!content.trim()}
-                  className="px-4 py-1.5 rounded-full text-[14px] font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-40"
+                  className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full px-4 py-1.5 text-[14px] font-semibold transition-colors disabled:opacity-40"
                 >
                   Post
                 </button>
@@ -53,7 +56,7 @@ export function ComposeBox({ scrollId }: ComposeBoxProps) {
           ) : (
             <button
               onClick={() => setExpanded(true)}
-              className="w-full rounded-full border border-border bg-[#f6f7f8] px-4 py-2 text-left text-[15px] text-muted-foreground transition-colors hover:border-[#d0d0d0]"
+              className="border-border text-muted-foreground w-full rounded-full border bg-[#f6f7f8] px-4 py-2 text-left text-[15px] transition-colors hover:border-[#d0d0d0]"
             >
               Create a post
             </button>

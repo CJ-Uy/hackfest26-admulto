@@ -7,16 +7,16 @@ export default function Home() {
     <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-6">
       {/* Background decorative elements */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 h-[500px] w-[500px] rounded-full bg-primary/5 blur-3xl" />
-        <div className="absolute -bottom-40 -left-40 h-[400px] w-[400px] rounded-full bg-primary/8 blur-3xl" />
-        <div className="absolute top-1/3 left-1/2 h-[300px] w-[300px] -translate-x-1/2 rounded-full bg-primary/3 blur-3xl" />
+        <div className="bg-primary/5 absolute -top-40 -right-40 h-[500px] w-[500px] rounded-full blur-3xl" />
+        <div className="bg-primary/8 absolute -bottom-40 -left-40 h-[400px] w-[400px] rounded-full blur-3xl" />
+        <div className="bg-primary/3 absolute top-1/3 left-1/2 h-[300px] w-[300px] -translate-x-1/2 rounded-full blur-3xl" />
       </div>
 
       {/* Content */}
       <div className="animate-fade-in relative z-10 max-w-xl text-center">
         {/* Logo mark */}
-        <div className="mx-auto mb-8 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
-          <ScrollText className="h-8 w-8 text-primary" />
+        <div className="bg-primary/10 mx-auto mb-8 flex h-16 w-16 items-center justify-center rounded-2xl">
+          <ScrollText className="text-primary h-8 w-8" />
         </div>
 
         {/* App name */}
@@ -25,10 +25,10 @@ export default function Home() {
         </h1>
 
         {/* Tagline */}
-        <p className="mx-auto mt-4 max-w-md text-lg leading-relaxed text-muted-foreground md:text-xl">
+        <p className="text-muted-foreground mx-auto mt-4 max-w-md text-lg leading-relaxed md:text-xl">
           Turn your scroll into research.
           <br />
-          <span className="font-medium text-foreground">
+          <span className="text-foreground font-medium">
             Every minute produces something useful.
           </span>
         </p>
@@ -42,7 +42,7 @@ export default function Home() {
         </Link>
 
         {/* Subtle descriptor */}
-        <p className="mt-6 text-xs text-muted-foreground/60">
+        <p className="text-muted-foreground/60 mt-6 text-xs">
           Research discovery, reimagined as a feed you already know how to use.
         </p>
       </div>

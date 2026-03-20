@@ -28,13 +28,13 @@ export function ExportActions({ text }: ExportActionsProps) {
     <div className="flex gap-1">
       <button
         onClick={handleCopy}
-        className="flex items-center gap-1 rounded-full bg-[#f6f7f8] px-3 py-1 text-[12px] font-semibold text-muted-foreground transition-colors hover:bg-[#e8e8e8]"
+        className="text-muted-foreground flex items-center gap-1 rounded-full bg-[#f6f7f8] px-3 py-1 text-[12px] font-semibold transition-colors hover:bg-[#e8e8e8]"
       >
         <Copy className="h-3.5 w-3.5" /> Copy
       </button>
       <button
         onClick={handleDownload}
-        className="flex items-center gap-1 rounded-full bg-[#f6f7f8] px-3 py-1 text-[12px] font-semibold text-muted-foreground transition-colors hover:bg-[#e8e8e8]"
+        className="text-muted-foreground flex items-center gap-1 rounded-full bg-[#f6f7f8] px-3 py-1 text-[12px] font-semibold transition-colors hover:bg-[#e8e8e8]"
       >
         <Download className="h-3.5 w-3.5" /> Download
       </button>

@@ -15,7 +15,15 @@ interface PaperCardProps {
   onComment: (paperId: string) => void;
 }
 
-export function PaperCard({ paper, scrollId, index, commentCount, onUpvote, onBookmark, onComment }: PaperCardProps) {
+export function PaperCard({
+  paper,
+  scrollId,
+  index,
+  commentCount,
+  onUpvote,
+  onBookmark,
+  onComment,
+}: PaperCardProps) {
   const router = useRouter();
 
   const primaryAuthor = paper.authors[0] ?? "Unknown";
@@ -31,33 +39,35 @@ export function PaperCard({ paper, scrollId, index, commentCount, onUpvote, onBo
 
   return (
     <article
-      className="animate-card-enter cursor-pointer border-b border-border px-4 py-3 transition-colors hover:bg-[#fafafa]"
+      className="animate-card-enter border-border cursor-pointer border-b px-4 py-3 transition-colors hover:bg-[#fafafa]"
       style={{ animationDelay: `${index * 40}ms` }}
       onClick={navigateToDetail}
     >
       {/* Author row */}
       <div className="mb-2 flex items-center gap-2.5">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[13px] font-bold text-primary">
+        <div className="bg-primary/10 text-primary flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[13px] font-bold">
           {initial}
         </div>
-        <div className="min-w-0 flex-1 flex items-baseline gap-1.5">
-          <span className="text-[15px] font-semibold text-foreground truncate">{authorDisplay}</span>
+        <div className="flex min-w-0 flex-1 items-baseline gap-1.5">
+          <span className="text-foreground truncate text-[15px] font-semibold">
+            {authorDisplay}
+          </span>
           {paper.peerReviewed && (
             <BadgeCheck className="h-4 w-4 shrink-0 fill-blue-500 text-white" />
           )}
-          <span className="text-[14px] text-muted-foreground truncate">
+          <span className="text-muted-foreground truncate text-[14px]">
             {paper.journal} &middot; {paper.year}
           </span>
         </div>
       </div>
 
       {/* Title */}
-      <h3 className="font-heading text-[17px] font-bold leading-snug text-foreground mb-1">
+      <h3 className="font-heading text-foreground mb-1 text-[17px] leading-snug font-bold">
         {paper.title}
       </h3>
 
       {/* Synthesis */}
-      <p className="text-[15px] leading-relaxed text-muted-foreground line-clamp-3">
+      <p className="text-muted-foreground line-clamp-3 text-[15px] leading-relaxed">
         {paper.synthesis}
       </p>
 

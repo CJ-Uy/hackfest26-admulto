@@ -16,15 +16,15 @@ export function TabNav({ value, onValueChange, tabs }: TabNavProps) {
           key={tab.value}
           onClick={() => onValueChange(tab.value)}
           className={cn(
-            "flex-1 py-3 text-center text-[15px] font-semibold transition-colors relative",
+            "relative flex-1 py-3 text-center text-[15px] font-semibold transition-colors",
             value === tab.value
               ? "text-foreground"
-              : "text-muted-foreground hover:text-foreground hover:bg-[#f6f7f8]"
+              : "text-muted-foreground hover:text-foreground hover:bg-[#f6f7f8]",
           )}
         >
           {tab.label}
           {value === tab.value && (
-            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[3px] w-16 rounded-full bg-primary" />
+            <div className="bg-primary absolute bottom-0 left-1/2 h-[3px] w-16 -translate-x-1/2 rounded-full" />
           )}
         </button>
       ))}
