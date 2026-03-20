@@ -1,9 +1,10 @@
-import type { Paper, ExportTheme, ScrollSession } from "@/lib/types";
+import type { Paper, ExportTheme, ScrollSession, Poll } from "@/lib/types";
 
 export interface StoredScroll {
   scroll: ScrollSession;
   papers: Paper[];
   exportOutline: ExportTheme[];
+  polls: Poll[];
 }
 
 // ---------- API-backed fetchers ----------

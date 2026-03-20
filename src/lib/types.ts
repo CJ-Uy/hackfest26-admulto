@@ -11,25 +11,15 @@ export interface Paper {
   citationCount: number;
   commentCount: number;
   apaCitation: string;
+  voted?: boolean;
 }
 
-export interface CitationComment {
+export interface Comment {
   id: string;
   paperId: string;
-  authorName: string;
-  peerReviewed: boolean;
-  relationship: "supports" | "challenges" | "extends";
-  synthesis: string;
-  journal: string;
-  year: number;
-}
-
-export interface UserComment {
-  id: string;
-  paperId: string;
-  userMessage: string;
-  aiReply: string;
-  aiReplyAuthor: string;
+  content: string;
+  author: string;
+  createdAt: string;
 }
 
 export interface Poll {
@@ -37,6 +27,7 @@ export interface Poll {
   type: "multiple-choice" | "open-ended";
   question: string;
   options?: string[];
+  selectedAnswer?: string;
 }
 
 export interface ExportSource {

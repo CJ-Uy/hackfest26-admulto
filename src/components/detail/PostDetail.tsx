@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, BadgeCheck, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -15,10 +16,17 @@ interface PostDetailProps {
 
 export function PostDetail({ paper, scrollId }: PostDetailProps) {
   const router = useRouter();
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const authorDisplay = paper.authors.join(", ");
   const initial = (paper.authors[0] ?? "U").charAt(0).toUpperCase();
-  const doiUrl = `https://doi.org/${paper.doi}`;
+  const doiUrl = paper.doi.startsWith("http")
+    ? paper.doi
+    : `https://doi.org/${paper.doi}`;
+
+  const handleCommentAdded = useCallback(() => {
+    setRefreshKey((k) => k + 1);
+  }, []);
 
   return (
     <div className="mx-auto max-w-[680px] px-4 py-6">
@@ -76,21 +84,23 @@ export function PostDetail({ paper, scrollId }: PostDetailProps) {
 
         {/* Actions */}
         <CardActions
+          paperId={paper.id}
           credibilityScore={paper.credibilityScore}
           commentCount={paper.commentCount}
           citationCount={paper.citationCount}
           apaCitation={paper.apaCitation}
+          initialVoted={paper.voted}
         />
       </div>
 
       {/* Comments section */}
-      <div className="mt-6">
+      <div className="mt-6" key={refreshKey}>
         <DetailTabs paperId={paper.id} />
       </div>
 
       {/* Reply input */}
       <div className="mt-4">
-        <ReplyInput />
+        <ReplyInput paperId={paper.id} onCommentAdded={handleCommentAdded} />
       </div>
     </div>
   );

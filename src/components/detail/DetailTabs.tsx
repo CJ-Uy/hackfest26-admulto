@@ -1,67 +1,58 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { citationComments, userComments } from "@/lib/data/comments";
-import { CitationComment } from "./CitationComment";
-import { UserComment } from "./UserComment";
+import type { Comment } from "@/lib/types";
 
 interface DetailTabsProps {
   paperId: string;
 }
 
 export function DetailTabs({ paperId }: DetailTabsProps) {
-  const [tab, setTab] = useState("all");
+  const [tab, setTab] = useState("comments");
+  const [comments, setComments] = useState<Comment[]>([]);
 
-  const citations = citationComments.filter((c) => c.paperId === paperId);
-  const userCmts = userComments.filter((c) => c.paperId === paperId);
+  useEffect(() => {
+    async function loadComments() {
+      try {
+        const res = await fetch(`/api/comments?paperId=${paperId}`);
+        if (res.ok) {
+          const data = await res.json();
+          setComments(data as Comment[]);
+        }
+      } catch {
+        // ignore
+      }
+    }
+    loadComments();
+  }, [paperId]);
 
   return (
     <Tabs value={tab} onValueChange={setTab}>
       <TabsList className="w-full">
-        <TabsTrigger value="all" className="flex-1">
-          All ({citations.length + userCmts.length})
-        </TabsTrigger>
-        <TabsTrigger value="citations" className="flex-1">
-          Citations ({citations.length})
-        </TabsTrigger>
         <TabsTrigger value="comments" className="flex-1">
-          Your Comments ({userCmts.length})
+          Comments ({comments.length})
         </TabsTrigger>
       </TabsList>
 
-      <TabsContent value="all" className="mt-4 space-y-3">
-        {citations.map((c) => (
-          <CitationComment key={c.id} comment={c} />
-        ))}
-        {userCmts.map((c) => (
-          <UserComment key={c.id} comment={c} />
-        ))}
-        {citations.length === 0 && userCmts.length === 0 && (
-          <p className="py-8 text-center text-sm text-muted-foreground">
-            No comments yet for this paper.
-          </p>
-        )}
-      </TabsContent>
-
-      <TabsContent value="citations" className="mt-4 space-y-3">
-        {citations.map((c) => (
-          <CitationComment key={c.id} comment={c} />
-        ))}
-        {citations.length === 0 && (
-          <p className="py-8 text-center text-sm text-muted-foreground">
-            No citation comments yet.
-          </p>
-        )}
-      </TabsContent>
-
       <TabsContent value="comments" className="mt-4 space-y-3">
-        {userCmts.map((c) => (
-          <UserComment key={c.id} comment={c} />
+        {comments.map((c) => (
+          <div key={c.id} className="rounded-lg border border-border bg-card p-4">
+            <div className="mb-2 flex items-center gap-2">
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold">
+                {c.author.charAt(0).toUpperCase()}
+              </div>
+              <span className="text-sm font-medium">{c.author}</span>
+              <span className="text-xs text-muted-foreground">
+                {new Date(c.createdAt).toLocaleDateString()}
+              </span>
+            </div>
+            <p className="text-sm leading-relaxed">{c.content}</p>
+          </div>
         ))}
-        {userCmts.length === 0 && (
+        {comments.length === 0 && (
           <p className="py-8 text-center text-sm text-muted-foreground">
-            No comments yet. Ask a question below!
+            No comments yet. Be the first to comment!
           </p>
         )}
       </TabsContent>

@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import type { Paper, ExportTheme } from "@/lib/types";
+import type { Paper, ExportTheme, Poll } from "@/lib/types";
 
 export async function GET(
   _req: Request,
@@ -9,14 +9,25 @@ export async function GET(
 
   const scroll = await db.scroll.findUnique({
     where: { id },
-    include: { papers: true },
+    include: {
+      papers: {
+        include: {
+          votes: { select: { id: true } },
+        },
+      },
+      polls: {
+        include: {
+          responses: { select: { answer: true } },
+        },
+      },
+    },
   });
 
   if (!scroll) {
     return Response.json({ error: "Scroll not found" }, { status: 404 });
   }
 
-  const papers: Paper[] = scroll.papers.map((p) => ({
+  const papers: (Paper & { voted: boolean })[] = scroll.papers.map((p) => ({
     id: p.id,
     title: p.title,
     authors: JSON.parse(p.authors) as string[],
@@ -29,6 +40,7 @@ export async function GET(
     citationCount: p.citationCount,
     commentCount: p.commentCount,
     apaCitation: p.apaCitation,
+    voted: p.votes.length > 0,
   }));
 
   let exportOutline: ExportTheme[] = [];
@@ -39,6 +51,14 @@ export async function GET(
       // ignore parse errors
     }
   }
+
+  const polls: Poll[] = scroll.polls.map((p) => ({
+    id: p.id,
+    type: p.type as "multiple-choice" | "open-ended",
+    question: p.question,
+    options: p.options ? (JSON.parse(p.options) as string[]) : undefined,
+    selectedAnswer: p.responses[0]?.answer ?? undefined,
+  }));
 
   return Response.json({
     scroll: {
@@ -51,5 +71,6 @@ export async function GET(
     },
     papers,
     exportOutline,
+    polls,
   });
 }

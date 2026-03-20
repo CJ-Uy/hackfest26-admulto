@@ -18,25 +18,18 @@ import {
   SheetTrigger,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { scrollSessions as mockScrollSessions } from "@/lib/data/scrolls";
 import { fetchAllScrollSessions } from "@/lib/scroll-store";
 import type { ScrollSession } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
-  const [sessions, setSessions] = useState<ScrollSession[]>(mockScrollSessions);
+  const [sessions, setSessions] = useState<ScrollSession[]>([]);
 
   useEffect(() => {
     async function load() {
       const stored = await fetchAllScrollSessions();
-      // Merge DB scrolls with mock, deduplicating by id
-      const ids = new Set(stored.map((s) => s.id));
-      const merged = [
-        ...stored,
-        ...mockScrollSessions.filter((s) => !ids.has(s.id)),
-      ];
-      setSessions(merged);
+      setSessions(stored);
     }
 
     load();
@@ -69,29 +62,35 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         <p className="mb-2 px-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
           Past Scrolls
         </p>
-        <nav className="space-y-1">
-          {sessions.map((session) => (
-            <Link
-              key={session.id}
-              href={`/scroll/${session.id}`}
-              onClick={onNavigate}
-              className={cn(
-                "flex items-start gap-2.5 rounded-md px-2 py-2 text-sm transition-colors hover:bg-accent",
-                pathname === `/scroll/${session.id}` && "bg-accent"
-              )}
-            >
-              <ScrollText className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-              <div className="min-w-0">
-                <p className="truncate font-medium leading-tight">
-                  {session.title}
-                </p>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  {session.paperCount} papers found
-                </p>
-              </div>
-            </Link>
-          ))}
-        </nav>
+        {sessions.length === 0 ? (
+          <p className="px-2 text-xs text-muted-foreground">
+            No scrolls yet. Create one to get started.
+          </p>
+        ) : (
+          <nav className="space-y-1">
+            {sessions.map((session) => (
+              <Link
+                key={session.id}
+                href={`/scroll/${session.id}`}
+                onClick={onNavigate}
+                className={cn(
+                  "flex items-start gap-2.5 rounded-md px-2 py-2 text-sm transition-colors hover:bg-accent",
+                  pathname === `/scroll/${session.id}` && "bg-accent"
+                )}
+              >
+                <ScrollText className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                <div className="min-w-0">
+                  <p className="truncate font-medium leading-tight">
+                    {session.title}
+                  </p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {session.paperCount} papers found
+                  </p>
+                </div>
+              </Link>
+            ))}
+          </nav>
+        )}
       </div>
     </div>
   );

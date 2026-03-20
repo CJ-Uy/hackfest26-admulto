@@ -307,6 +307,40 @@ export async function POST(req: Request) {
             apaCitation: p.apaCitation,
           })),
         },
+        polls: {
+          create: [
+            {
+              type: "multiple-choice",
+              question: `Which aspect of "${topic}" interests you most?`,
+              options: JSON.stringify(
+                subfields && subfields.length >= 2
+                  ? subfields.slice(0, 4)
+                  : [
+                      "Foundational theories",
+                      "Recent developments",
+                      "Practical applications",
+                      "Methodological approaches",
+                    ]
+              ),
+            },
+            {
+              type: "multiple-choice",
+              question:
+                "What type of research sources do you prefer?",
+              options: JSON.stringify([
+                "Foundational/classic papers (pre-2000)",
+                "Modern empirical studies (2000–2015)",
+                "Recent cutting-edge research (2015+)",
+                "A mix of all eras",
+              ]),
+            },
+            {
+              type: "open-ended",
+              question:
+                "What specific research question are you trying to answer?",
+            },
+          ],
+        },
       },
       include: { papers: true },
     });

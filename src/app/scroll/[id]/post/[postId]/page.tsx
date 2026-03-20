@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { Sidebar } from "@/components/shared/Sidebar";
 import { PostDetail } from "@/components/detail/PostDetail";
-import { papers as mockPapers } from "@/lib/data/papers";
 import { fetchPaperFromScroll } from "@/lib/scroll-store";
 import type { Paper } from "@/lib/types";
 
@@ -21,13 +20,7 @@ export default function PostPage() {
     async function load() {
       const stored = await fetchPaperFromScroll(scrollId, postId);
       if (cancelled) return;
-
-      if (stored) {
-        setPaper(stored);
-      } else {
-        const mock = mockPapers.find((p) => p.id === postId) ?? null;
-        setPaper(mock);
-      }
+      setPaper(stored);
       setChecked(true);
     }
 

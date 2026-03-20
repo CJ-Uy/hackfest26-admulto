@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { exportOutline as mockOutline } from "@/lib/data/export-outline";
 import { fetchScroll } from "@/lib/scroll-store";
 import { ExportActions } from "./ExportActions";
 import type { ExportTheme } from "@/lib/types";
@@ -37,8 +36,6 @@ export function ExportView({ scrollId }: ExportViewProps) {
 
       if (stored && stored.exportOutline.length > 0) {
         setOutline(stored.exportOutline);
-      } else {
-        setOutline(mockOutline);
       }
       setLoading(false);
     }
@@ -51,7 +48,7 @@ export function ExportView({ scrollId }: ExportViewProps) {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-[680px] px-4 py-12 text-center">
+      <div className="px-4 py-12 text-center">
         <p className="text-sm text-muted-foreground">Loading outline...</p>
       </div>
     );
@@ -61,7 +58,7 @@ export function ExportView({ scrollId }: ExportViewProps) {
 
   if (outline.length === 0) {
     return (
-      <div className="mx-auto max-w-[680px] px-4 py-12 text-center">
+      <div className="px-4 py-12 text-center">
         <p className="text-sm text-muted-foreground">
           No export data available yet.
         </p>
@@ -70,11 +67,10 @@ export function ExportView({ scrollId }: ExportViewProps) {
   }
 
   return (
-    <div className="mx-auto max-w-[680px] px-4">
+    <div className="px-4 py-4">
       <div className="mb-4 flex items-center justify-between">
         <p className="text-xs text-muted-foreground">
-          Your structured research outline. Generated from your scrolling
-          session — use it to jumpstart your paper.
+          Your structured research outline.
         </p>
         <ExportActions text={markdownText} />
       </div>

@@ -1,48 +1,42 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { papers as mockPapers } from "@/lib/data/papers";
-import { fetchScroll } from "@/lib/scroll-store";
-import type { Paper } from "@/lib/types";
+import type { Paper, Poll } from "@/lib/types";
 import { PaperCard } from "./PaperCard";
-import { FeedSkeleton } from "@/components/shared/LoadingSkeleton";
+import { ComposeBox } from "./ComposeBox";
+import { FeedPollCard } from "./FeedPollCard";
 
 interface FeedViewProps {
   scrollId: string;
+  papers: Paper[];
+  polls: Poll[];
+  searchQuery: string;
+  onUpvote: (paperId: string, voted: boolean) => void;
+  onComment: (paperId: string) => void;
 }
 
-export function FeedView({ scrollId }: FeedViewProps) {
-  const [loading, setLoading] = useState(true);
-  const [papers, setPapers] = useState<Paper[]>([]);
+export function FeedView({
+  scrollId,
+  papers,
+  polls,
+  searchQuery,
+  onUpvote,
+  onComment,
+}: FeedViewProps) {
+  const query = searchQuery.toLowerCase();
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function load() {
-      const stored = await fetchScroll(scrollId);
-      if (cancelled) return;
-
-      if (stored && stored.papers.length > 0) {
-        setPapers(stored.papers);
-      } else {
-        setPapers(mockPapers);
-      }
-      setLoading(false);
-    }
-
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [scrollId]);
-
-  if (loading) {
-    return <FeedSkeleton />;
-  }
+  const filteredPapers = query
+    ? papers.filter(
+        (p) =>
+          p.title.toLowerCase().includes(query) ||
+          p.synthesis.toLowerCase().includes(query) ||
+          p.authors.some((a) => a.toLowerCase().includes(query)) ||
+          p.journal.toLowerCase().includes(query)
+      )
+    : papers;
 
   if (papers.length === 0) {
     return (
-      <div className="mx-auto max-w-[680px] px-4 py-12 text-center">
+      <div className="px-4 py-12 text-center">
         <p className="text-sm text-muted-foreground">
           No papers found. Try a different topic.
         </p>
@@ -50,22 +44,51 @@ export function FeedView({ scrollId }: FeedViewProps) {
     );
   }
 
+  // Interleave polls into the feed - insert a poll every 3-4 papers
+  const feedItems: { type: "paper" | "poll"; data: Paper | Poll; index: number }[] = [];
+  let pollIndex = 0;
+
+  filteredPapers.forEach((paper, i) => {
+    feedItems.push({ type: "paper", data: paper, index: i });
+
+    // Insert a poll after every 3rd paper
+    if ((i + 1) % 3 === 0 && pollIndex < polls.length) {
+      feedItems.push({ type: "poll", data: polls[pollIndex], index: pollIndex });
+      pollIndex++;
+    }
+  });
+
   return (
-    <div className="mx-auto max-w-[680px] px-4">
-      <p className="mb-4 text-center text-xs text-muted-foreground">
-        AI-curated research papers based on your topic. Interact to refine your
-        feed.
-      </p>
-      <div className="space-y-4">
-        {papers.map((paper, i) => (
+    <div>
+      {/* Compose box - "What's happening" style */}
+      <ComposeBox scrollId={scrollId} />
+
+      {/* Feed items */}
+      {feedItems.map((item) =>
+        item.type === "paper" ? (
           <PaperCard
-            key={paper.id}
-            paper={paper}
+            key={`paper-${(item.data as Paper).id}`}
+            paper={item.data as Paper}
             scrollId={scrollId}
-            index={i}
+            index={item.index}
+            onUpvote={onUpvote}
+            onComment={onComment}
           />
-        ))}
-      </div>
+        ) : (
+          <FeedPollCard
+            key={`poll-${(item.data as Poll).id}`}
+            poll={item.data as Poll}
+          />
+        )
+      )}
+
+      {filteredPapers.length === 0 && query && (
+        <div className="px-4 py-12 text-center">
+          <p className="text-sm text-muted-foreground">
+            No papers match &ldquo;{searchQuery}&rdquo;
+          </p>
+        </div>
+      )}
     </div>
   );
 }

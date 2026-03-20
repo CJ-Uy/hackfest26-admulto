@@ -3,14 +3,11 @@
 import { useState } from "react";
 import { ModeSelector } from "@/components/onboarding/ModeSelector";
 import { TopicForm } from "@/components/onboarding/TopicForm";
-import { onboardingPresets } from "@/lib/data/onboarding";
 
 export default function OnboardingPage() {
   const [mode, setMode] = useState<"brainstorm" | "citationFinder" | null>(
     null
   );
-
-  const preset = mode ? onboardingPresets[mode] : null;
 
   return (
     <div className="flex min-h-screen items-start justify-center px-4 py-12 md:items-center md:py-0">
@@ -26,7 +23,7 @@ export default function OnboardingPage() {
 
         <ModeSelector selected={mode} onSelect={setMode} />
 
-        <TopicForm preset={preset ?? null} mode={mode} />
+        <TopicForm mode={mode} />
       </div>
     </div>
   );
