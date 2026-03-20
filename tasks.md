@@ -21,3 +21,7 @@ Tasks:
 Possible Backend Solutions:
 - First fetch a few posts, around 5
 - For the next couple of minutes, fetch more posts in the background and update the feed as they come in
+
+Frontend Issues:
+- weird sticky thingy and page scroll
+- no mobile responsiveness at all

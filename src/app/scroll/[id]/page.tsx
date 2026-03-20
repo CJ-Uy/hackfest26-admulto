@@ -29,8 +29,12 @@ export default function ScrollPage() {
   const [polls, setPolls] = useState<Poll[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [upvotedPapers, setUpvotedPapers] = useState<Set<string>>(new Set());
-  const [bookmarkedPapers, setBookmarkedPapers] = useState<Set<string>>(new Set());
-  const [commentCounts, setCommentCounts] = useState<Map<string, number>>(new Map());
+  const [bookmarkedPapers, setBookmarkedPapers] = useState<Set<string>>(
+    new Set(),
+  );
+  const [commentCounts, setCommentCounts] = useState<Map<string, number>>(
+    new Map(),
+  );
   const [userPosts, setUserPosts] = useState<UserPost[]>([]);
 
   const fetchCommentCounts = useCallback(async () => {
@@ -66,7 +70,9 @@ export default function ScrollPage() {
 
     load();
     fetchCommentCounts();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [scrollId, fetchCommentCounts]);
 
   // Refresh comment counts when page regains visibility or focus (e.g. coming back from detail page)
@@ -125,9 +131,9 @@ export default function ScrollPage() {
 
       <div className="flex flex-1 justify-center gap-0 lg:gap-6 lg:px-6 lg:py-4">
         {/* Main content column */}
-        <main className="w-full max-w-[780px] flex-1 bg-background lg:rounded-t-lg">
+        <main className="bg-background w-full max-w-[780px] flex-1 lg:rounded-t-lg">
           {/* Sticky top section: search + header + tabs */}
-          <div className="sticky top-0 z-30 bg-background border-b border-border">
+          <div className="bg-background border-border sticky top-0 z-30 border-b">
             <SearchBar value={searchQuery} onChange={setSearchQuery} />
             <ScrollHeader scroll={scroll} />
             <TabNav
@@ -152,9 +158,7 @@ export default function ScrollPage() {
                 onComment={handleComment}
               />
             )}
-            {activeTab === "polls" && (
-              <PollsView polls={polls} />
-            )}
+            {activeTab === "polls" && <PollsView polls={polls} />}
             {activeTab === "export" && (
               <ExportView scrollId={scrollId} papers={papers} />
             )}
