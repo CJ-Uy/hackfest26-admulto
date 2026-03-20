@@ -1,3 +1,19 @@
+import { webSearch } from "./search";
+
+const S2_API = "https://api.semanticscholar.org/graph/v1/paper/search";
+
+async function searchPapers(query: string, limit = 10) {
+  const params = new URLSearchParams({
+    query,
+    limit: String(limit),
+    fields: "title,abstract,url,year,citationCount,isOpenAccess,authors,tldr",
+  });
+  const res = await fetch(`${S2_API}?${params}`);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const data = (await res.json()) as Record<string, any>;
+  return (data.data as Record<string, unknown>[]) || [];
+}
+
 export async function agentQuery(userQuery: string) {
   // Step 1: Send to Qwen with tools defined
   const res = await fetch(`${process.env.OLLAMA_URL}/api/chat`, {
@@ -49,18 +65,21 @@ export async function agentQuery(userQuery: string) {
     }),
   });
 
-  const data = await res.json();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const data = (await res.json()) as Record<string, any>;
   const assistantMsg = data.message;
 
   // Step 2: If Qwen requested tool calls, execute them
   if (assistantMsg.tool_calls?.length > 0) {
-    const messages = [
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const messages: Record<string, any>[] = [
       { role: "system", content: "You are a research assistant." },
       { role: "user", content: userQuery },
       assistantMsg, // includes tool_calls
     ];
 
-    for (const toolCall of assistantMsg.tool_calls) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    for (const toolCall of assistantMsg.tool_calls as any[]) {
       const { name, arguments: args } = toolCall.function;
       let result;
 
@@ -89,7 +108,8 @@ export async function agentQuery(userQuery: string) {
       }),
     });
 
-    const finalData = await finalRes.json();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const finalData = (await finalRes.json()) as Record<string, any>;
     return finalData.message.content;
   }
 

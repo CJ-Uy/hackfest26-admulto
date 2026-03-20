@@ -29,6 +29,7 @@ export async function generateSynthesis(
     }),
   });
 
-  const data = await res.json();
-  return data.message.content;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const data = (await res.json()) as Record<string, any>;
+  return data.message.content as string;
 }

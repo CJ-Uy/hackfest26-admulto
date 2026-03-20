@@ -8,9 +8,11 @@ export async function webSearch(query: string, count = 5) {
         language: "en",
       }),
   );
-  const data = await res.json();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const data = (await res.json()) as Record<string, any>;
 
-  return data.results.slice(0, count).map((r: any) => ({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (data.results as any[]).slice(0, count).map((r: any) => ({
     title: r.title,
     url: r.url,
     snippet: r.content || "",
