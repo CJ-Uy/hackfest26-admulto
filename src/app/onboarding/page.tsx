@@ -26,7 +26,7 @@ export default function OnboardingPage() {
 
         <ModeSelector selected={mode} onSelect={setMode} />
 
-        <TopicForm preset={preset ?? null} />
+        <TopicForm preset={preset ?? null} mode={mode} />
       </div>
     </div>
   );

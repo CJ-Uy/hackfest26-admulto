@@ -1,6 +1,5 @@
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
 }
 
 datasource db {
@@ -9,4 +8,34 @@ datasource db {
 
 model User {
   id String @id @default(cuid())
+}
+
+model Scroll {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  mode        String
+  date        String
+  paperCount  Int
+  exportData  String?
+  createdAt   DateTime @default(now())
+  papers      Paper[]
+}
+
+model Paper {
+  id               String  @id @default(cuid())
+  scrollId         String
+  scroll           Scroll  @relation(fields: [scrollId], references: [id], onDelete: Cascade)
+  externalId       String?
+  title            String
+  authors          String
+  journal          String
+  year             Int
+  doi              String
+  peerReviewed     Boolean
+  synthesis        String
+  credibilityScore Int
+  citationCount    Int
+  commentCount     Int     @default(0)
+  apaCitation      String
 }

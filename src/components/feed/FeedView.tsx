@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { papers } from "@/lib/data/papers";
+import { papers as mockPapers } from "@/lib/data/papers";
+import { fetchScroll } from "@/lib/scroll-store";
+import type { Paper } from "@/lib/types";
 import { PaperCard } from "./PaperCard";
 import { FeedSkeleton } from "@/components/shared/LoadingSkeleton";
 
@@ -11,14 +13,41 @@ interface FeedViewProps {
 
 export function FeedView({ scrollId }: FeedViewProps) {
   const [loading, setLoading] = useState(true);
+  const [papers, setPapers] = useState<Paper[]>([]);
 
   useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 800);
-    return () => clearTimeout(timer);
-  }, []);
+    let cancelled = false;
+
+    async function load() {
+      const stored = await fetchScroll(scrollId);
+      if (cancelled) return;
+
+      if (stored && stored.papers.length > 0) {
+        setPapers(stored.papers);
+      } else {
+        setPapers(mockPapers);
+      }
+      setLoading(false);
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [scrollId]);
 
   if (loading) {
     return <FeedSkeleton />;
+  }
+
+  if (papers.length === 0) {
+    return (
+      <div className="mx-auto max-w-[680px] px-4 py-12 text-center">
+        <p className="text-sm text-muted-foreground">
+          No papers found. Try a different topic.
+        </p>
+      </div>
+    );
   }
 
   return (

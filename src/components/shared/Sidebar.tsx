@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -18,11 +18,29 @@ import {
   SheetTrigger,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { scrollSessions } from "@/lib/data/scrolls";
+import { scrollSessions as mockScrollSessions } from "@/lib/data/scrolls";
+import { fetchAllScrollSessions } from "@/lib/scroll-store";
+import type { ScrollSession } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
+  const [sessions, setSessions] = useState<ScrollSession[]>(mockScrollSessions);
+
+  useEffect(() => {
+    async function load() {
+      const stored = await fetchAllScrollSessions();
+      // Merge DB scrolls with mock, deduplicating by id
+      const ids = new Set(stored.map((s) => s.id));
+      const merged = [
+        ...stored,
+        ...mockScrollSessions.filter((s) => !ids.has(s.id)),
+      ];
+      setSessions(merged);
+    }
+
+    load();
+  }, []);
 
   return (
     <div className="flex h-full flex-col">
@@ -47,12 +65,12 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
       <Separator className="mx-3 my-4 w-auto" />
 
-      <div className="flex-1 px-3">
+      <div className="flex-1 overflow-y-auto px-3">
         <p className="mb-2 px-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
           Past Scrolls
         </p>
         <nav className="space-y-1">
-          {scrollSessions.map((session) => (
+          {sessions.map((session) => (
             <Link
               key={session.id}
               href={`/scroll/${session.id}`}

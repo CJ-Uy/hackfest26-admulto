@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { Sidebar } from "@/components/shared/Sidebar";
 import { ScrollHeader } from "@/components/shared/ScrollHeader";
@@ -8,7 +8,9 @@ import { TabNav } from "@/components/shared/TabNav";
 import { FeedView } from "@/components/feed/FeedView";
 import { PollsView } from "@/components/polls/PollsView";
 import { ExportView } from "@/components/export/ExportView";
-import { scrollSessions } from "@/lib/data/scrolls";
+import { scrollSessions as mockScrollSessions } from "@/lib/data/scrolls";
+import { fetchScroll } from "@/lib/scroll-store";
+import type { ScrollSession } from "@/lib/types";
 
 const TABS = [
   {
@@ -35,8 +37,32 @@ export default function ScrollPage() {
   const params = useParams();
   const scrollId = params.id as string;
   const [activeTab, setActiveTab] = useState("feed");
+  const [scroll, setScroll] = useState<ScrollSession | null>(null);
 
-  const scroll = scrollSessions.find((s) => s.id === scrollId) ?? scrollSessions[0];
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      const stored = await fetchScroll(scrollId);
+      if (cancelled) return;
+
+      if (stored) {
+        setScroll(stored.scroll);
+      } else {
+        const mock =
+          mockScrollSessions.find((s) => s.id === scrollId) ??
+          mockScrollSessions[0];
+        setScroll(mock);
+      }
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [scrollId]);
+
+  if (!scroll) return null;
 
   return (
     <div className="flex min-h-screen">
@@ -56,7 +82,7 @@ export default function ScrollPage() {
         <div className="pb-12">
           {activeTab === "feed" && <FeedView scrollId={scrollId} />}
           {activeTab === "polls" && <PollsView />}
-          {activeTab === "export" && <ExportView />}
+          {activeTab === "export" && <ExportView scrollId={scrollId} />}
         </div>
       </main>
     </div>

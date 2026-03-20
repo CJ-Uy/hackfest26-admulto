@@ -1,6 +1,8 @@
 "use client";
 
-import { exportOutline } from "@/lib/data/export-outline";
+import { useState, useEffect } from "react";
+import { exportOutline as mockOutline } from "@/lib/data/export-outline";
+import { fetchScroll } from "@/lib/scroll-store";
 import { ExportActions } from "./ExportActions";
 import type { ExportTheme } from "@/lib/types";
 
@@ -18,8 +20,54 @@ function generateMarkdown(themes: ExportTheme[]): string {
     .join("\n\n---\n\n");
 }
 
-export function ExportView() {
-  const markdownText = generateMarkdown(exportOutline);
+interface ExportViewProps {
+  scrollId: string;
+}
+
+export function ExportView({ scrollId }: ExportViewProps) {
+  const [outline, setOutline] = useState<ExportTheme[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      const stored = await fetchScroll(scrollId);
+      if (cancelled) return;
+
+      if (stored && stored.exportOutline.length > 0) {
+        setOutline(stored.exportOutline);
+      } else {
+        setOutline(mockOutline);
+      }
+      setLoading(false);
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [scrollId]);
+
+  if (loading) {
+    return (
+      <div className="mx-auto max-w-[680px] px-4 py-12 text-center">
+        <p className="text-sm text-muted-foreground">Loading outline...</p>
+      </div>
+    );
+  }
+
+  const markdownText = generateMarkdown(outline);
+
+  if (outline.length === 0) {
+    return (
+      <div className="mx-auto max-w-[680px] px-4 py-12 text-center">
+        <p className="text-sm text-muted-foreground">
+          No export data available yet.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-[680px] px-4">
@@ -32,7 +80,7 @@ export function ExportView() {
       </div>
 
       <div className="rounded-lg border border-border bg-card p-6">
-        {exportOutline.map((theme, i) => (
+        {outline.map((theme, i) => (
           <div key={theme.title} className={i > 0 ? "mt-8" : ""}>
             <h2 className="font-heading text-lg font-bold tracking-tight">
               {theme.title}
@@ -65,7 +113,7 @@ export function ExportView() {
               ))}
             </div>
 
-            {i < exportOutline.length - 1 && (
+            {i < outline.length - 1 && (
               <div className="mt-8 border-t border-border" />
             )}
           </div>
