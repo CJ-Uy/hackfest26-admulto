@@ -1,13 +1,14 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Search, AlertTriangle } from "lucide-react";
+import { Search, AlertTriangle, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Paper, Poll, UserPost } from "@/lib/types";
 import { PaperCard } from "./PaperCard";
 import { ComposeBox } from "./ComposeBox";
 import { FeedPollCard } from "./FeedPollCard";
 import { UserPostCard } from "./UserPostCard";
+import { GenerateMoreProgress } from "./GenerateMoreProgress";
 
 interface FeedViewProps {
   scrollId: string;
@@ -17,9 +18,13 @@ interface FeedViewProps {
   scrollTitle?: string;
   userPosts: UserPost[];
   commentCounts: Map<string, number>;
+  bookmarkedPapers: Set<string>;
+  isGeneratingMore?: boolean;
+  generateMoreProgress?: { step: string; papersProcessed?: number; total?: number } | null;
   onUpvote: (paperId: string, voted: boolean) => void;
   onBookmark: (paperId: string, bookmarked: boolean) => void;
   onComment: (paperId: string) => void;
+  onGenerateMore?: () => void;
 }
 
 export function FeedView({
@@ -30,9 +35,13 @@ export function FeedView({
   scrollTitle,
   userPosts,
   commentCounts,
+  bookmarkedPapers,
+  isGeneratingMore,
+  generateMoreProgress,
   onUpvote,
   onBookmark,
   onComment,
+  onGenerateMore,
 }: FeedViewProps) {
   const router = useRouter();
   const query = searchQuery.toLowerCase();
@@ -136,6 +145,7 @@ export function FeedView({
               commentCounts.get((item.data as Paper).id) ??
               (item.data as Paper).commentCount
             }
+            initialBookmarked={bookmarkedPapers.has((item.data as Paper).id)}
             onUpvote={onUpvote}
             onBookmark={onBookmark}
             onComment={onComment}
@@ -154,6 +164,27 @@ export function FeedView({
             No papers match &ldquo;{searchQuery}&rdquo;
           </p>
         </div>
+      )}
+
+      {/* Generate More */}
+      {!query && (
+        isGeneratingMore ? (
+          <GenerateMoreProgress progress={generateMoreProgress ?? null} />
+        ) : (
+          <div className="px-4 py-8 text-center">
+            <Button
+              variant="outline"
+              onClick={onGenerateMore}
+              className="gap-2"
+            >
+              <Sparkles className="h-4 w-4" />
+              Generate More Papers
+            </Button>
+            <p className="text-muted-foreground mt-2 text-[12px]">
+              Based on your interactions &amp; interests
+            </p>
+          </div>
+        )
       )}
     </div>
   );

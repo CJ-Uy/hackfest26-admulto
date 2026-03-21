@@ -56,6 +56,7 @@ export const comments = sqliteTable("comment", {
   paperId: text("paper_id")
     .notNull()
     .references(() => papers.id, { onDelete: "cascade" }),
+  parentId: text("parent_id"), // self-referential for threading
   content: text("content").notNull(),
   author: text("author").notNull().default("You"),
   isGenerated: integer("is_generated", { mode: "boolean" })
@@ -91,6 +92,7 @@ export const polls = sqliteTable("poll", {
   type: text("type").notNull(),
   question: text("question").notNull(),
   options: text("options"), // JSON stringified array or null
+  category: text("category").notNull().default("poll"), // "poll" | "fine-tune"
 });
 
 export const pollResponses = sqliteTable("poll_response", {
@@ -107,6 +109,33 @@ export const pollResponses = sqliteTable("poll_response", {
     .default(sql`(datetime('now'))`),
 });
 
+export const bookmarks = sqliteTable("bookmark", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  paperId: text("paper_id")
+    .notNull()
+    .unique()
+    .references(() => papers.id, { onDelete: "cascade" }),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`(datetime('now'))`),
+});
+
+export const userPosts = sqliteTable("user_post", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  scrollId: text("scroll_id")
+    .notNull()
+    .references(() => scrolls.id, { onDelete: "cascade" }),
+  title: text("title"),
+  content: text("content").notNull(),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`(datetime('now'))`),
+});
+
 // ────────────────────────────────────────────────
 // Relations (for Drizzle relational queries)
 // ────────────────────────────────────────────────
@@ -114,6 +143,7 @@ export const pollResponses = sqliteTable("poll_response", {
 export const scrollsRelations = relations(scrolls, ({ many }) => ({
   papers: many(papers),
   polls: many(polls),
+  userPosts: many(userPosts),
 }));
 
 export const papersRelations = relations(papers, ({ one, many }) => ({
@@ -123,13 +153,20 @@ export const papersRelations = relations(papers, ({ one, many }) => ({
   }),
   comments: many(comments),
   votes: many(votes),
+  bookmarks: many(bookmarks),
 }));
 
-export const commentsRelations = relations(comments, ({ one }) => ({
+export const commentsRelations = relations(comments, ({ one, many }) => ({
   paper: one(papers, {
     fields: [comments.paperId],
     references: [papers.id],
   }),
+  parent: one(comments, {
+    fields: [comments.parentId],
+    references: [comments.id],
+    relationName: "commentThread",
+  }),
+  replies: many(comments, { relationName: "commentThread" }),
 }));
 
 export const votesRelations = relations(votes, ({ one }) => ({
@@ -151,5 +188,19 @@ export const pollResponsesRelations = relations(pollResponses, ({ one }) => ({
   poll: one(polls, {
     fields: [pollResponses.pollId],
     references: [polls.id],
+  }),
+}));
+
+export const bookmarksRelations = relations(bookmarks, ({ one }) => ({
+  paper: one(papers, {
+    fields: [bookmarks.paperId],
+    references: [papers.id],
+  }),
+}));
+
+export const userPostsRelations = relations(userPosts, ({ one }) => ({
+  scroll: one(scrolls, {
+    fields: [userPosts.scrollId],
+    references: [scrolls.id],
   }),
 }));

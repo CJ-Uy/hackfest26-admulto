@@ -10,6 +10,7 @@ interface PaperCardProps {
   scrollId: string;
   index: number;
   commentCount: number;
+  initialBookmarked?: boolean;
   onUpvote: (paperId: string, voted: boolean) => void;
   onBookmark: (paperId: string, bookmarked: boolean) => void;
   onComment: (paperId: string) => void;
@@ -20,6 +21,7 @@ export function PaperCard({
   scrollId,
   index,
   commentCount,
+  initialBookmarked,
   onUpvote,
   onBookmark,
   onComment,
@@ -79,6 +81,7 @@ export function PaperCard({
         citationCount={paper.citationCount}
         apaCitation={paper.apaCitation}
         initialVoted={paper.voted}
+        initialBookmarked={initialBookmarked}
         onCommentClick={navigateToDetail}
         onUpvote={onUpvote}
         onBookmark={onBookmark}

@@ -17,6 +17,7 @@ export interface Paper {
 export interface Comment {
   id: string;
   paperId: string;
+  parentId?: string | null;
   content: string;
   author: string;
   createdAt: string;
@@ -27,6 +28,7 @@ export interface Comment {
     | "extends"
     | "cites"
     | "questions"
+    | "responds"
     | null;
 }
 

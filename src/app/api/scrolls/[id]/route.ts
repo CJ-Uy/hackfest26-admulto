@@ -1,7 +1,15 @@
 import { db } from "@/lib/db";
-import { scrolls, papers, votes, polls, pollResponses } from "@/lib/schema";
-import { eq } from "drizzle-orm";
-import type { Paper, ExportTheme, Poll } from "@/lib/types";
+import {
+  scrolls,
+  papers,
+  votes,
+  polls,
+  pollResponses,
+  bookmarks,
+  userPosts,
+} from "@/lib/schema";
+import { eq, desc } from "drizzle-orm";
+import type { Paper, ExportTheme, Poll, UserPost } from "@/lib/types";
 
 export async function DELETE(
   _req: Request,
@@ -36,8 +44,12 @@ export async function GET(
           votes: {
             columns: { id: true },
           },
+          bookmarks: {
+            columns: { id: true },
+          },
         },
       },
+      userPosts: true,
       polls: {
         with: {
           responses: {
@@ -52,8 +64,8 @@ export async function GET(
     return Response.json({ error: "Scroll not found" }, { status: 404 });
   }
 
-  const responsePapers: (Paper & { voted: boolean })[] = scroll.papers.map(
-    (p) => ({
+  const responsePapers: (Paper & { voted: boolean; bookmarked: boolean })[] =
+    scroll.papers.map((p) => ({
       id: p.id,
       title: p.title,
       authors: JSON.parse(p.authors) as string[],
@@ -67,8 +79,15 @@ export async function GET(
       commentCount: p.commentCount,
       apaCitation: p.apaCitation,
       voted: p.votes.length > 0,
-    }),
-  );
+      bookmarked: p.bookmarks.length > 0,
+    }));
+
+  const responseUserPosts: UserPost[] = (scroll.userPosts || []).map((up) => ({
+    id: up.id,
+    content: up.content,
+    title: up.title ?? undefined,
+    createdAt: up.createdAt,
+  }));
 
   let exportOutline: ExportTheme[] = [];
   if (scroll.exportData) {
@@ -100,5 +119,6 @@ export async function GET(
     papers: responsePapers,
     exportOutline,
     polls: responsePolls,
+    userPosts: responseUserPosts,
   });
 }

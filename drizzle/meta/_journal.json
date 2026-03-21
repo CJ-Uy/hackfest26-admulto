@@ -15,6 +15,13 @@
       "when": 1774100298816,
       "tag": "0001_certain_omega_red",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1774103914376,
+      "tag": "0002_young_scarecrow",
+      "breakpoints": true
     }
   ]
 }

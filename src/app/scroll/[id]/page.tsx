@@ -8,7 +8,7 @@ import { ScrollHeader } from "@/components/shared/ScrollHeader";
 import { TabNav } from "@/components/shared/TabNav";
 import { SearchBar } from "@/components/shared/SearchBar";
 import { FeedView } from "@/components/feed/FeedView";
-import { PollsView } from "@/components/polls/PollsView";
+import { FineTuneView } from "@/components/fine-tune/FineTuneView";
 import { ExportView } from "@/components/export/ExportView";
 import { RightSidebar } from "@/components/shared/RightSidebar";
 import { CreatePostFAB } from "@/components/feed/CreatePostFAB";
@@ -21,7 +21,7 @@ import type { ScrollSession, Paper, Poll, UserPost } from "@/lib/types";
 
 const TABS = [
   { value: "feed", label: "Feed" },
-  { value: "polls", label: "Polls" },
+  { value: "fine-tune", label: "Fine Tune" },
   { value: "export", label: "Export" },
 ];
 
@@ -42,6 +42,12 @@ export default function ScrollPage() {
     new Map(),
   );
   const [userPosts, setUserPosts] = useState<UserPost[]>([]);
+  const [isGeneratingMore, setIsGeneratingMore] = useState(false);
+  const [generateMoreProgress, setGenerateMoreProgress] = useState<{
+    step: string;
+    papersProcessed?: number;
+    total?: number;
+  } | null>(null);
 
   const fetchCommentCounts = useCallback(async () => {
     try {
@@ -66,11 +72,15 @@ export default function ScrollPage() {
         setScroll(stored.scroll);
         setPapers(stored.papers);
         setPolls(stored.polls || []);
+        setUserPosts(stored.userPosts || []);
         const voted = new Set<string>();
+        const saved = new Set<string>();
         stored.papers.forEach((p) => {
           if (p.voted) voted.add(p.id);
+          if (p.bookmarked) saved.add(p.id);
         });
         setUpvotedPapers(voted);
+        setBookmarkedPapers(saved);
       }
     }
 
@@ -104,11 +114,15 @@ export default function ScrollPage() {
             setScroll(stored.scroll);
             setPapers(stored.papers);
             setPolls(stored.polls || []);
+            setUserPosts(stored.userPosts || []);
             const voted = new Set<string>();
+            const saved = new Set<string>();
             stored.papers.forEach((p) => {
               if (p.voted) voted.add(p.id);
+              if (p.bookmarked) saved.add(p.id);
             });
             setUpvotedPapers(voted);
+            setBookmarkedPapers(saved);
           }
         }
       } catch {
@@ -172,6 +186,76 @@ export default function ScrollPage() {
   const handleNewPost = useCallback((post: UserPost) => {
     setUserPosts((prev) => [post, ...prev]);
   }, []);
+
+  // Generate More handler
+  const generateMorePollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const handleGenerateMore = useCallback(async () => {
+    setIsGeneratingMore(true);
+    setGenerateMoreProgress({ step: "searching" });
+
+    try {
+      await fetch("/api/generate-more", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scrollId }),
+      });
+
+      // Start polling for progress
+      generateMorePollingRef.current = setInterval(async () => {
+        try {
+          const res = await fetch(`/api/scrolls/${scrollId}/status`);
+          if (!res.ok) return;
+          const data = (await res.json()) as {
+            status: string;
+            progress?: string | null;
+          };
+
+          if (data.progress) {
+            try {
+              const prog = typeof data.progress === "string"
+                ? JSON.parse(data.progress)
+                : data.progress;
+              setGenerateMoreProgress(prog);
+            } catch {
+              // ignore
+            }
+          }
+
+          if (data.status === "complete") {
+            if (generateMorePollingRef.current) {
+              clearInterval(generateMorePollingRef.current);
+              generateMorePollingRef.current = null;
+            }
+            // Re-fetch full scroll data
+            const stored = await fetchScroll(scrollId);
+            if (stored) {
+              setScroll(stored.scroll);
+              setPapers(stored.papers);
+              setPolls(stored.polls || []);
+              setUserPosts(stored.userPosts || []);
+              const voted = new Set<string>();
+              const saved = new Set<string>();
+              stored.papers.forEach((p) => {
+                if (p.voted) voted.add(p.id);
+                if (p.bookmarked) saved.add(p.id);
+              });
+              setUpvotedPapers(voted);
+              setBookmarkedPapers(saved);
+            }
+            setIsGeneratingMore(false);
+            setGenerateMoreProgress(null);
+            fetchCommentCounts();
+          }
+        } catch {
+          // ignore
+        }
+      }, 2500);
+    } catch {
+      setIsGeneratingMore(false);
+      setGenerateMoreProgress(null);
+    }
+  }, [scrollId, fetchCommentCounts]);
 
   if (!scroll) {
     return (
@@ -245,12 +329,39 @@ export default function ScrollPage() {
                 scrollTitle={scroll.title}
                 userPosts={userPosts}
                 commentCounts={commentCounts}
+                bookmarkedPapers={bookmarkedPapers}
+                isGeneratingMore={isGeneratingMore}
+                generateMoreProgress={generateMoreProgress}
                 onUpvote={handleUpvote}
                 onBookmark={handleBookmark}
                 onComment={handleComment}
+                onGenerateMore={handleGenerateMore}
               />
             )}
-            {scroll.status !== "generating" && activeTab === "polls" && <PollsView polls={polls} />}
+            {scroll.status !== "generating" && activeTab === "fine-tune" && (
+              <FineTuneView
+                scrollId={scrollId}
+                onRegenerated={async () => {
+                  const stored = await fetchScroll(scrollId);
+                  if (stored) {
+                    setScroll(stored.scroll);
+                    setPapers(stored.papers);
+                    setPolls(stored.polls || []);
+                    setUserPosts(stored.userPosts || []);
+                    const voted = new Set<string>();
+                    const saved = new Set<string>();
+                    stored.papers.forEach((p) => {
+                      if (p.voted) voted.add(p.id);
+                      if (p.bookmarked) saved.add(p.id);
+                    });
+                    setUpvotedPapers(voted);
+                    setBookmarkedPapers(saved);
+                  }
+                  fetchCommentCounts();
+                  setActiveTab("feed");
+                }}
+              />
+            )}
             {scroll.status !== "generating" && activeTab === "export" && (
               <ExportView scrollId={scrollId} papers={papers} />
             )}
