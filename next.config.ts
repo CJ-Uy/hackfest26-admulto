@@ -1,8 +1,6 @@
 import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {
-  serverExternalPackages: ["@prisma/client", "@prisma/adapter-d1"],
-};
+const nextConfig: NextConfig = {};
 
 export default nextConfig;
 

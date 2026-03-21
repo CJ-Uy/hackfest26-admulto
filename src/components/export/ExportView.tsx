@@ -126,7 +126,7 @@ export function ExportView({ scrollId, papers }: ExportViewProps) {
                     <p className="text-foreground mt-1.5 text-[13px]">
                       {source.keyFinding}
                     </p>
-                    <p className="text-muted-foreground mt-1.5 break-all rounded bg-[#f6f7f8] px-2 py-1 font-mono text-[11px]">
+                    <p className="text-muted-foreground mt-1.5 rounded bg-[#f6f7f8] px-2 py-1 font-mono text-[11px] break-all">
                       {source.apaCitation}
                     </p>
                   </div>

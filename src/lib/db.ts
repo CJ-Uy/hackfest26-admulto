@@ -1,19 +1,36 @@
-import { PrismaClient } from "@prisma/client";
-import { PrismaLibSql } from "@prisma/adapter-libsql";
-import path from "node:path";
+import { drizzle } from "drizzle-orm/libsql";
+import * as schema from "./schema";
 
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
-};
+/**
+ * Creates a Drizzle ORM database client connected to Turso via libSQL.
+ *
+ * Uses TURSO_DATABASE_URL and TURSO_AUTH_TOKEN env vars.
+ * Falls back to a local file-based SQLite for development when no URL is set.
+ */
+function createDb() {
+  const url = process.env.TURSO_DATABASE_URL;
+  const authToken = process.env.TURSO_AUTH_TOKEN;
 
-function createPrisma() {
-  const dbPath = path.join(process.cwd(), "prisma", "dev.db");
-  const adapter = new PrismaLibSql({ url: `file:${dbPath}` });
-  return new PrismaClient({ adapter });
+  if (!url) {
+    // Local dev fallback — file-based SQLite
+    return drizzle({
+      connection: "file:./local.db",
+      schema,
+    });
+  }
+
+  return drizzle({
+    connection: { url, authToken },
+    schema,
+  });
 }
 
-export const db = globalForPrisma.prisma ?? createPrisma();
+const globalForDb = globalThis as unknown as {
+  db: ReturnType<typeof createDb> | undefined;
+};
+
+export const db = globalForDb.db ?? createDb();
 
 if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = db;
+  globalForDb.db = db;
 }

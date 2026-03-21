@@ -20,6 +20,14 @@ export interface Comment {
   content: string;
   author: string;
   createdAt: string;
+  isGenerated: boolean;
+  relationship?:
+    | "agrees"
+    | "disagrees"
+    | "extends"
+    | "cites"
+    | "questions"
+    | null;
 }
 
 export interface UserPost {

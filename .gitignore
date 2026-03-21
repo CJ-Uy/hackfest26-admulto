@@ -52,6 +52,5 @@ next-env.d.ts
 
 !.dev.vars.example
 
-/src/generated/prisma
-prisma/dev.db
-prisma/dev.db-journal
+local.db
+local.db-journal

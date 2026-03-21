@@ -2,7 +2,16 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Sparkles, Loader2, X } from "lucide-react";
+import {
+  Sparkles,
+  Loader2,
+  X,
+  ChevronDown,
+  Zap,
+  Brain,
+  Info,
+} from "lucide-react";
+import { GenerationProgress } from "./GenerationProgress";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -16,55 +25,31 @@ interface ProgressInfo {
   message?: string;
 }
 
+interface OllamaModel {
+  name: string;
+  size: number;
+  parameterSize?: string;
+  family?: string;
+}
+
 interface TopicFormProps {
   mode: "brainstorm" | "citationFinder" | null;
   initialTopic?: string;
 }
 
-function getProgressMessage(progress: ProgressInfo | null): string {
-  if (!progress) return "Starting...";
-  switch (progress.step) {
-    case "searching":
-      return "Searching for papers...";
-    case "processing":
-      if (progress.total && progress.total > 0) {
-        return `Generating summaries... ${progress.papersProcessed ?? 0}/${progress.total}`;
-      }
-      return "Generating summaries...";
-    case "exporting":
-      return "Organizing your research...";
-    case "error":
-      return progress.message || "Something went wrong.";
-    default:
-      return "Working...";
-  }
+function formatSize(bytes: number): string {
+  const gb = bytes / 1e9;
+  if (gb >= 1) return `${gb.toFixed(1)} GB`;
+  return `${(bytes / 1e6).toFixed(0)} MB`;
 }
 
-function getProgressPercent(progress: ProgressInfo | null): number {
-  if (!progress) return 5;
-  switch (progress.step) {
-    case "searching":
-      return 15;
-    case "processing": {
-      const base = 20;
-      const range = 60;
-      if (progress.total && progress.total > 0) {
-        return base + (range * (progress.papersProcessed ?? 0)) / progress.total;
-      }
-      return base;
-    }
-    case "exporting":
-      return 85;
-    default:
-      return 5;
-  }
-}
 
 export function TopicForm({ mode, initialTopic }: TopicFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState<ProgressInfo | null>(null);
   const [scrollId, setScrollId] = useState<string | null>(null);
+  const [submittedTopic, setSubmittedTopic] = useState("");
   const [subfields, setSubfields] = useState<string[]>([]);
   const [subfieldInput, setSubfieldInput] = useState("");
   const topicRef = useRef<HTMLInputElement>(null);
@@ -116,6 +101,26 @@ export function TopicForm({ mode, initialTopic }: TopicFormProps) {
     return stopPolling;
   }, [scrollId, router, stopPolling]);
 
+  // Advanced settings
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [models, setModels] = useState<OllamaModel[]>([]);
+  const [fastModel, setFastModel] = useState("");
+  const [smartModel, setSmartModel] = useState("");
+  const [modelsLoaded, setModelsLoaded] = useState(false);
+
+  useEffect(() => {
+    if (advancedOpen && !modelsLoaded) {
+      fetch("/api/ollama-models")
+        .then((r) => r.json())
+        .then((data: unknown) => {
+          const typedData = data as { models: OllamaModel[] };
+          setModels(typedData.models);
+          setModelsLoaded(true);
+        })
+        .catch(() => setModelsLoaded(true));
+    }
+  }, [advancedOpen, modelsLoaded]);
+
   function addSubfield() {
     const val = subfieldInput.trim();
     if (val && !subfields.includes(val)) {
@@ -146,6 +151,7 @@ export function TopicForm({ mode, initialTopic }: TopicFormProps) {
     const topic = topicRef.current?.value?.trim();
     if (!topic) return;
 
+    setSubmittedTopic(topic);
     setLoading(true);
     setProgress({ step: "searching" });
 
@@ -158,6 +164,8 @@ export function TopicForm({ mode, initialTopic }: TopicFormProps) {
           description: descRef.current?.value?.trim() || undefined,
           subfields: subfields.length > 0 ? subfields : undefined,
           mode: mode || "brainstorm",
+          fastModel: fastModel || undefined,
+          smartModel: smartModel || undefined,
         }),
       });
 
@@ -180,7 +188,14 @@ export function TopicForm({ mode, initialTopic }: TopicFormProps) {
     }
   }
 
-  const progressPercent = getProgressPercent(progress);
+  if (loading) {
+    return (
+      <GenerationProgress
+        progress={progress}
+        topic={submittedTopic || "your topic"}
+      />
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit} className="mt-8 space-y-5">
@@ -270,43 +285,132 @@ export function TopicForm({ mode, initialTopic }: TopicFormProps) {
         )}
       </div>
 
+      {/* Advanced Settings */}
+      <div className="border-border rounded-lg border">
+        <button
+          type="button"
+          onClick={() => setAdvancedOpen(!advancedOpen)}
+          className="text-muted-foreground hover:text-foreground flex w-full items-center justify-between px-4 py-3 text-sm font-medium transition-colors"
+        >
+          <span className="flex items-center gap-2">
+            <Zap className="h-3.5 w-3.5" />
+            Advanced Settings
+          </span>
+          <ChevronDown
+            className={`h-4 w-4 transition-transform duration-200 ${
+              advancedOpen ? "rotate-180" : ""
+            }`}
+          />
+        </button>
+
+        {advancedOpen && (
+          <div className="border-border space-y-4 border-t px-4 py-4">
+            {/* Info banner */}
+            <div className="bg-muted/50 flex items-start gap-2 rounded-md p-3">
+              <Info className="text-muted-foreground mt-0.5 h-3.5 w-3.5 shrink-0" />
+              <p className="text-muted-foreground text-xs leading-relaxed">
+                Choose which Ollama models to use. <strong>Fast model</strong>{" "}
+                handles paper summaries (many calls, speed matters).{" "}
+                <strong>Smart model</strong> handles comments and outlines
+                (fewer calls, quality matters).
+              </p>
+            </div>
+
+            {models.length === 0 && !modelsLoaded && (
+              <div className="flex items-center justify-center gap-2 py-4">
+                <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
+                <span className="text-muted-foreground text-sm">
+                  Loading models from Ollama...
+                </span>
+              </div>
+            )}
+
+            {models.length === 0 && modelsLoaded && (
+              <p className="text-muted-foreground py-2 text-center text-sm">
+                Could not connect to Ollama. Make sure it&apos;s running on{" "}
+                <code className="bg-muted rounded px-1 text-xs">
+                  localhost:11434
+                </code>
+              </p>
+            )}
+
+            {models.length > 0 && (
+              <>
+                {/* Fast Model */}
+                <div>
+                  <label className="mb-1.5 flex items-center gap-1.5 text-sm font-medium">
+                    <Zap className="h-3.5 w-3.5 text-amber-500" />
+                    Fast Model
+                    <span className="text-muted-foreground text-xs font-normal">
+                      (summaries & citations)
+                    </span>
+                  </label>
+                  <select
+                    value={fastModel}
+                    onChange={(e) => setFastModel(e.target.value)}
+                    disabled={loading}
+                    className="border-border bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm"
+                  >
+                    <option value="">Default (phi4-mini:3.8b)</option>
+                    {models.map((m) => (
+                      <option key={`fast-${m.name}`} value={m.name}>
+                        {m.name} ({formatSize(m.size)}
+                        {m.parameterSize ? ` · ${m.parameterSize}` : ""})
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-muted-foreground mt-1 text-xs">
+                    Smaller = faster. Called 12+ times per feed.
+                  </p>
+                </div>
+
+                {/* Smart Model */}
+                <div>
+                  <label className="mb-1.5 flex items-center gap-1.5 text-sm font-medium">
+                    <Brain className="h-3.5 w-3.5 text-purple-500" />
+                    Smart Model
+                    <span className="text-muted-foreground text-xs font-normal">
+                      (comments & outlines)
+                    </span>
+                  </label>
+                  <select
+                    value={smartModel}
+                    onChange={(e) => setSmartModel(e.target.value)}
+                    disabled={loading}
+                    className="border-border bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm"
+                  >
+                    <option value="">Default (llama3:8b)</option>
+                    {models.map((m) => (
+                      <option key={`smart-${m.name}`} value={m.name}>
+                        {m.name} ({formatSize(m.size)}
+                        {m.parameterSize ? ` · ${m.parameterSize}` : ""})
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-muted-foreground mt-1 text-xs">
+                    Bigger = better quality. Called 12 times per feed.
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+
       <Button
         type="submit"
         size="lg"
         className="w-full gap-2"
         disabled={loading || !mode}
       >
-        {loading ? (
-          <>
-            <Loader2 className="h-4 w-4 animate-spin" />
-            {getProgressMessage(progress)}
-          </>
-        ) : (
-          <>
-            <Sparkles className="h-4 w-4" />
-            Generate My Feed
-          </>
-        )}
+        <Sparkles className="h-4 w-4" />
+        Generate My Feed
       </Button>
 
       {!mode && (
         <p className="text-muted-foreground text-center text-xs">
           Select a mode above to enable feed generation.
         </p>
-      )}
-
-      {loading && (
-        <div className="space-y-2">
-          <div className="bg-muted h-2 w-full overflow-hidden rounded-full">
-            <div
-              className="bg-primary h-full rounded-full transition-all duration-500 ease-out"
-              style={{ width: `${progressPercent}%` }}
-            />
-          </div>
-          <p className="text-muted-foreground text-center text-xs">
-            {getProgressMessage(progress)}
-          </p>
-        </div>
       )}
     </form>
   );

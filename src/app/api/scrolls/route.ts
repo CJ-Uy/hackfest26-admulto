@@ -1,17 +1,19 @@
 import { db } from "@/lib/db";
+import { scrolls } from "@/lib/schema";
+import { desc } from "drizzle-orm";
 
 export async function GET() {
-  const scrolls = await db.scroll.findMany({
-    orderBy: { createdAt: "desc" },
-    select: {
-      id: true,
-      title: true,
-      description: true,
-      mode: true,
-      date: true,
-      paperCount: true,
-    },
-  });
+  const result = await db
+    .select({
+      id: scrolls.id,
+      title: scrolls.title,
+      description: scrolls.description,
+      mode: scrolls.mode,
+      date: scrolls.date,
+      paperCount: scrolls.paperCount,
+    })
+    .from(scrolls)
+    .orderBy(desc(scrolls.createdAt));
 
-  return Response.json(scrolls);
+  return Response.json(result);
 }
