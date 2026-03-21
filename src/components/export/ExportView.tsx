@@ -89,7 +89,7 @@ export function ExportView({ scrollId, papers }: ExportViewProps) {
 
   return (
     <div className="px-4 py-4">
-      <div className="mb-3 flex items-center justify-between">
+      <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-muted-foreground text-[12px]">
           {hasOutline
             ? "AI-generated research outline"
@@ -115,7 +115,7 @@ export function ExportView({ scrollId, papers }: ExportViewProps) {
                 {theme.sources.map((source) => (
                   <div
                     key={source.title}
-                    className="border-border rounded-md border p-3"
+                    className="border-border min-w-0 rounded-md border p-3"
                   >
                     <p className="text-foreground text-[13px] font-semibold">
                       {source.title}
@@ -126,7 +126,7 @@ export function ExportView({ scrollId, papers }: ExportViewProps) {
                     <p className="text-foreground mt-1.5 text-[13px]">
                       {source.keyFinding}
                     </p>
-                    <p className="text-muted-foreground mt-1.5 rounded bg-[#f6f7f8] px-2 py-1 font-mono text-[11px]">
+                    <p className="text-muted-foreground mt-1.5 break-all rounded bg-[#f6f7f8] px-2 py-1 font-mono text-[11px]">
                       {source.apaCitation}
                     </p>
                   </div>
