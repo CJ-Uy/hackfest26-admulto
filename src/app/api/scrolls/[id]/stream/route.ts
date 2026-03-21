@@ -30,7 +30,7 @@ export async function GET(
           });
 
           if (!scroll) {
-            send("error", { message: "Scroll not found" });
+            send("error", { message: "Schroll not found" });
             controller.close();
             return true;
           }
@@ -39,7 +39,10 @@ export async function GET(
           const currentStatus = scroll.status || "";
 
           // Only send when something changed
-          if (currentProgress !== lastProgress || currentStatus !== lastStatus) {
+          if (
+            currentProgress !== lastProgress ||
+            currentStatus !== lastStatus
+          ) {
             lastProgress = currentProgress;
             lastStatus = currentStatus;
 
@@ -89,15 +92,18 @@ export async function GET(
       await poll();
 
       // Safety timeout: close after 5 minutes
-      setTimeout(() => {
-        clearInterval(interval);
-        try {
-          send("error", { message: "Stream timeout" });
-          controller.close();
-        } catch {
-          // already closed
-        }
-      }, 5 * 60 * 1000);
+      setTimeout(
+        () => {
+          clearInterval(interval);
+          try {
+            send("error", { message: "Stream timeout" });
+            controller.close();
+          } catch {
+            // already closed
+          }
+        },
+        5 * 60 * 1000,
+      );
     },
   });
 

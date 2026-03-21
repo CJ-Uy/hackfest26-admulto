@@ -13,7 +13,7 @@ import { db } from "@/lib/db";
 import { scrolls, papers, comments, polls } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import type { Paper, ExportTheme } from "@/lib/types";
-import { getPdf, deletePdfs } from "@/lib/r2";
+import { getPdf } from "@/lib/r2";
 import { extractPdfContent, pdfToRawPaper } from "@/lib/pdf-extract";
 import {
   safeEmbed,
@@ -99,15 +99,12 @@ export async function POST(req: Request) {
   setModels(body.fastModel, body.smartModel);
 
   const hasPdfs = pdfKeys && pdfKeys.length > 0;
-  const effectiveSourceMode = hasPdfs ? (sourceMode || "include") : undefined;
+  const effectiveSourceMode = hasPdfs ? sourceMode || "include" : undefined;
   const isOnlySources = effectiveSourceMode === "only_sources";
 
   // Topic is required unless only_sources mode
   if (!topic && !isOnlySources) {
-    return Response.json(
-      { error: "Topic is required" },
-      { status: 400 },
-    );
+    return Response.json({ error: "Topic is required" }, { status: 400 });
   }
 
   try {
@@ -118,12 +115,24 @@ export async function POST(req: Request) {
       .insert(scrolls)
       .values({
         title: scrollTitle,
-        description: description || (topic ? `Exploring research on ${topic}.` : "Feed from uploaded PDF sources."),
-        mode: "default",
+        description:
+          description ||
+          (topic
+            ? `Exploring research on ${topic}.`
+            : "Feed from uploaded PDF sources."),
+        mode: isOnlySources
+          ? "pdf_only"
+          : effectiveSourceMode === "context_only"
+            ? "pdf_context"
+            : hasPdfs
+              ? "pdf_include"
+              : "research",
         date: new Date().toISOString().split("T")[0],
         paperCount: 0,
         status: "generating",
-        progress: JSON.stringify({ step: hasPdfs ? "extracting" : "searching" }),
+        progress: JSON.stringify({
+          step: hasPdfs ? "extracting" : "searching",
+        }),
       })
       .returning();
 
@@ -177,7 +186,12 @@ export async function POST(req: Request) {
 
         // ── Step 1: Search for papers (skip if only_sources) ──
         let academicPapers: RawPaper[] = [];
-        let webResults: { title: string; url: string; snippet: string; engine: string }[] = [];
+        let webResults: {
+          title: string;
+          url: string;
+          snippet: string;
+          engine: string;
+        }[] = [];
 
         if (!isOnlySources) {
           await updateProgress(scrollId, "searching");
@@ -189,7 +203,7 @@ export async function POST(req: Request) {
 
           [academicPapers, webResults] = await Promise.all([
             searchPapers(searchQuery, 20),
-            webSearch(searchQuery, 8).catch((err) => {
+            webSearch(searchQuery, 15).catch((err) => {
               console.error("Web search failed:", err);
               return [] as typeof webResults;
             }),
@@ -212,7 +226,9 @@ export async function POST(req: Request) {
         await updateProgress(scrollId, "ranking");
 
         // Embed the query for relevance ranking
-        const queryText = [topic, description, ...(subfields || [])].filter(Boolean).join(" ");
+        const queryText = [topic, description, ...(subfields || [])]
+          .filter(Boolean)
+          .join(" ");
         const queryEmbedding = queryText ? await safeEmbed(queryText) : null;
 
         // Store query embedding on scroll
@@ -238,7 +254,11 @@ export async function POST(req: Request) {
         }
 
         // Rank by relevance: PDF similarity (if PDFs) or query similarity
-        if (hasPdfs && pdfPapers.some((p) => p.embedding) && effectiveSourceMode !== "only_sources") {
+        if (
+          hasPdfs &&
+          pdfPapers.some((p) => p.embedding) &&
+          effectiveSourceMode !== "only_sources"
+        ) {
           // For PDF modes: rank academic papers by similarity to uploaded PDFs
           const pdfEmbeddings = pdfPapers
             .map((p) => p.embedding)
@@ -258,7 +278,9 @@ export async function POST(req: Request) {
                 if (!paper.embedding) return { paper, score: 0 };
                 const maxSim = Math.max(
                   ...pdfEmbeddings.map((pe) => {
-                    let dot = 0, magA = 0, magB = 0;
+                    let dot = 0,
+                      magA = 0,
+                      magB = 0;
                     for (let i = 0; i < pe.length; i++) {
                       dot += pe[i] * paper.embedding![i];
                       magA += pe[i] * pe[i];
@@ -310,9 +332,7 @@ export async function POST(req: Request) {
         // 2. Process academic papers — synthesis + verification
         let papersProcessed = 0;
 
-        const processPaper = async (
-          raw: RawPaper,
-        ): Promise<Paper | null> => {
+        const processPaper = async (raw: RawPaper): Promise<Paper | null> => {
           try {
             // For context_only mode, prepend PDF context to the synthesis prompt
             const contextPrefix =
@@ -396,8 +416,12 @@ export async function POST(req: Request) {
           });
         }
 
-        // 3. Supplement with web results (fill up to 12 total) — skip if only_sources
-        if (!isOnlySources && webResults.length > 0 && processedPapers.length < 12) {
+        // 3. Supplement with web results (always fill up to 12 total) — skip if only_sources
+        if (
+          !isOnlySources &&
+          webResults.length > 0 &&
+          processedPapers.length < 12
+        ) {
           console.log(
             `${processedPapers.length} academic results, supplementing with ${webResults.length} web results`,
           );
@@ -490,8 +514,7 @@ export async function POST(req: Request) {
                     synthesis: p.synthesis,
                     apaCitation: p.apaCitation,
                   }));
-                  const outlineJson =
-                    await generateExportOutline(outlineInput);
+                  const outlineJson = await generateExportOutline(outlineInput);
                   const jsonMatch = outlineJson.match(/\{[\s\S]*\}/);
                   if (jsonMatch) {
                     try {
@@ -539,11 +562,7 @@ export async function POST(req: Request) {
           if (processedPapers.length < 2) return rawComments;
 
           const commentBatchSize = 3;
-          for (
-            let i = 0;
-            i < processedPapers.length;
-            i += commentBatchSize
-          ) {
+          for (let i = 0; i < processedPapers.length; i += commentBatchSize) {
             const batch = processedPapers.slice(i, i + commentBatchSize);
             const batchPromises = batch.map(async (paper, batchIdx) => {
               const paperIdx = i + batchIdx;
@@ -618,8 +637,13 @@ export async function POST(req: Request) {
                       paperComments.get(processedPapers.indexOf(p)) || []
                     ).length,
                     apaCitation: p.apaCitation,
-                    isUserUpload: (p as Paper & { isUserUpload?: boolean }).isUserUpload || false,
+                    isUserUpload:
+                      (p as Paper & { isUserUpload?: boolean }).isUserUpload ||
+                      false,
                     embedding: p.embedding ? JSON.stringify(p.embedding) : null,
+                    groundingData: p.groundingData
+                      ? JSON.stringify(p.groundingData)
+                      : null,
                   })),
                 )
                 .returning()
@@ -690,7 +714,7 @@ export async function POST(req: Request) {
           },
         ]);
 
-        // Mark scroll as complete
+        // Mark scroll as complete (store PDF keys for later access)
         await db
           .update(scrolls)
           .set({
@@ -698,21 +722,13 @@ export async function POST(req: Request) {
             exportData: JSON.stringify(exportOutline),
             status: "complete",
             progress: null,
+            ...(hasPdfs ? { pdfKeys: JSON.stringify(pdfKeys) } : {}),
           })
           .where(eq(scrolls.id, scrollId));
 
         console.log(
           `Feed generation complete for scroll ${scrollId}: ${processedPapers.length} papers`,
         );
-
-        // Cleanup uploaded PDFs from R2
-        if (hasPdfs) {
-          try {
-            await deletePdfs(pdfKeys);
-          } catch (err) {
-            console.warn("Failed to cleanup PDFs from R2:", err);
-          }
-        }
       } catch (err) {
         console.error(
           `Background feed generation failed for ${scrollId}:`,
@@ -725,21 +741,10 @@ export async function POST(req: Request) {
             progress: JSON.stringify({
               step: "error",
               message:
-                err instanceof Error
-                  ? err.message
-                  : "Feed generation failed",
+                err instanceof Error ? err.message : "Feed generation failed",
             }),
           })
           .where(eq(scrolls.id, scrollId));
-
-        // Cleanup even on error
-        if (hasPdfs) {
-          try {
-            await deletePdfs(pdfKeys);
-          } catch {
-            // ignore cleanup errors
-          }
-        }
       }
     });
 

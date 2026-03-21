@@ -1,4 +1,13 @@
-export async function verifyCard(sourceText: string, synthesis: string) {
+export interface GroundingResult {
+  card_verified: boolean;
+  claims: { claim: string; entailment_score: number; passed: boolean }[];
+  summary: string;
+}
+
+export async function verifyCard(
+  sourceText: string,
+  synthesis: string,
+): Promise<GroundingResult> {
   const res = await fetch(`${process.env.DEBERTA_URL}/verify`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

@@ -73,15 +73,18 @@ export async function GET(
       const interval = setInterval(poll, 2000);
 
       // Safety timeout: close after 30 minutes
-      setTimeout(() => {
-        clearInterval(interval);
-        try {
-          send("timeout", { message: "Stream timeout" });
-          controller.close();
-        } catch {
-          // already closed
-        }
-      }, 30 * 60 * 1000);
+      setTimeout(
+        () => {
+          clearInterval(interval);
+          try {
+            send("timeout", { message: "Stream timeout" });
+            controller.close();
+          } catch {
+            // already closed
+          }
+        },
+        30 * 60 * 1000,
+      );
     },
   });
 

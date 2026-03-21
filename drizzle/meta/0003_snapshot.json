@@ -33,9 +33,7 @@
       "indexes": {
         "bookmark_paper_id_unique": {
           "name": "bookmark_paper_id_unique",
-          "columns": [
-            "paper_id"
-          ],
+          "columns": ["paper_id"],
           "isUnique": true
         }
       },
@@ -44,12 +42,8 @@
           "name": "bookmark_paper_id_paper_id_fk",
           "tableFrom": "bookmark",
           "tableTo": "paper",
-          "columnsFrom": [
-            "paper_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["paper_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -134,12 +128,8 @@
           "name": "comment_paper_id_paper_id_fk",
           "tableFrom": "comment",
           "tableTo": "paper",
-          "columnsFrom": [
-            "paper_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["paper_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -147,12 +137,8 @@
           "name": "comment_user_post_id_user_post_id_fk",
           "tableFrom": "comment",
           "tableTo": "user_post",
-          "columnsFrom": [
-            "user_post_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_post_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -270,12 +256,8 @@
           "name": "paper_scroll_id_scroll_id_fk",
           "tableFrom": "paper",
           "tableTo": "scroll",
-          "columnsFrom": [
-            "scroll_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["scroll_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -320,9 +302,7 @@
       "indexes": {
         "poll_response_poll_id_unique": {
           "name": "poll_response_poll_id_unique",
-          "columns": [
-            "poll_id"
-          ],
+          "columns": ["poll_id"],
           "isUnique": true
         }
       },
@@ -331,12 +311,8 @@
           "name": "poll_response_poll_id_poll_id_fk",
           "tableFrom": "poll_response",
           "tableTo": "poll",
-          "columnsFrom": [
-            "poll_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["poll_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -398,12 +374,8 @@
           "name": "poll_scroll_id_scroll_id_fk",
           "tableFrom": "poll",
           "tableTo": "scroll",
-          "columnsFrom": [
-            "scroll_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["scroll_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -548,12 +520,8 @@
           "name": "user_post_scroll_id_scroll_id_fk",
           "tableFrom": "user_post",
           "tableTo": "scroll",
-          "columnsFrom": [
-            "scroll_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["scroll_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -616,9 +584,7 @@
       "indexes": {
         "vote_paper_id_unique": {
           "name": "vote_paper_id_unique",
-          "columns": [
-            "paper_id"
-          ],
+          "columns": ["paper_id"],
           "isUnique": true
         }
       },
@@ -627,12 +593,8 @@
           "name": "vote_paper_id_paper_id_fk",
           "tableFrom": "vote",
           "tableTo": "paper",
-          "columnsFrom": [
-            "paper_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["paper_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }

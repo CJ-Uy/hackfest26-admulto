@@ -23,10 +23,10 @@ export function UserPostDetail({ post, scrollId }: UserPostDetailProps) {
   const timeAgo = getTimeAgo(new Date(post.createdAt));
 
   return (
-    <div className="mx-auto max-w-[780px] px-4 py-4">
+    <div className="mx-auto max-w-[780px] px-4 pt-14 pb-4 md:pt-4">
       {/* Back */}
       <button
-        onClick={() => router.push(`/scroll/${scrollId}`)}
+        onClick={() => router.push(`/schroll/${scrollId}`)}
         className="text-muted-foreground hover:text-foreground mb-3 flex items-center gap-1.5 text-[15px] font-semibold transition-colors"
       >
         <ArrowLeft className="h-4 w-4" />
@@ -61,7 +61,7 @@ export function UserPostDetail({ post, scrollId }: UserPostDetailProps) {
         </p>
 
         {/* Comment count */}
-        <div className="mt-4 flex items-center gap-1.5 text-muted-foreground text-[14px]">
+        <div className="text-muted-foreground mt-4 flex items-center gap-1.5 text-[14px]">
           <MessageSquare className="h-4 w-4" />
           <span>{post.commentCount} comments</span>
         </div>
@@ -74,10 +74,7 @@ export function UserPostDetail({ post, scrollId }: UserPostDetailProps) {
 
       {/* Reply */}
       <div className="mt-3">
-        <ReplyInput
-          userPostId={post.id}
-          onCommentAdded={handleCommentAdded}
-        />
+        <ReplyInput userPostId={post.id} onCommentAdded={handleCommentAdded} />
       </div>
     </div>
   );

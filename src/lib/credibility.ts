@@ -17,8 +17,7 @@ export function getCredibilityTier(score: number): {
   if (score >= 70)
     return {
       label: "Credible",
-      description:
-        "Strong citation record or published in a recognized venue.",
+      description: "Strong citation record or published in a recognized venue.",
       color: "text-blue-400",
       bg: "bg-blue-100",
       textOnBg: "text-blue-700",

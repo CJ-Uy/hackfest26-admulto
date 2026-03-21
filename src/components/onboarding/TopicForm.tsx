@@ -80,9 +80,7 @@ function estimateGenerationTime(params: {
 
   // Paper count estimate
   const paperCount =
-    sourceMode === "only_sources"
-      ? pdfCount
-      : Math.min(12, pdfCount + 12);
+    sourceMode === "only_sources" ? pdfCount : Math.min(12, pdfCount + 12);
 
   // Per-paper synthesis
   const fastMult = getModelMultiplier(fastModel);
@@ -138,13 +136,14 @@ export function TopicForm({ initialTopic }: TopicFormProps) {
 
         if (data.status === "complete") {
           stopPolling();
-          router.push(`/scroll/${scrollId}`);
+          router.push(`/schroll/${scrollId}`);
         } else if (data.status === "error") {
           stopPolling();
           setLoading(false);
           setScrollId(null);
           toast.error(
-            data.progress?.message || "Feed generation failed. Please try again.",
+            data.progress?.message ||
+              "Feed generation failed. Please try again.",
           );
         } else {
           setProgress(data.progress);
@@ -278,16 +277,13 @@ export function TopicForm({ initialTopic }: TopicFormProps) {
   return (
     <form onSubmit={handleSubmit} className="mt-8 space-y-6">
       {/* ── PDF Sources ── */}
-      <div className="rounded-xl border border-border p-4 space-y-4">
+      <div className="border-border space-y-4 rounded-xl border p-4">
         <div className="flex items-center justify-between">
-          <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
-            <FileUp className="h-4 w-4 text-primary" />
+          <label className="flex cursor-pointer items-center gap-2 text-sm font-medium">
+            <FileUp className="text-primary h-4 w-4" />
             Upload your own PDF sources
           </label>
-          <Switch
-            checked={pdfEnabled}
-            onCheckedChange={setPdfEnabled}
-          />
+          <Switch checked={pdfEnabled} onCheckedChange={setPdfEnabled} />
         </div>
 
         {pdfEnabled && (
@@ -300,7 +296,7 @@ export function TopicForm({ initialTopic }: TopicFormProps) {
 
             {doneFiles.length > 0 && (
               <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground">
+                <p className="text-muted-foreground text-sm font-medium">
                   How should your sources be used?
                 </p>
                 <div className="space-y-2">
@@ -325,7 +321,7 @@ export function TopicForm({ initialTopic }: TopicFormProps) {
                   ).map((opt) => (
                     <label
                       key={opt.value}
-                      className={`flex items-start gap-3 rounded-lg border px-3 py-2.5 cursor-pointer transition-colors ${
+                      className={`flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-2.5 transition-colors ${
                         sourceMode === opt.value
                           ? "border-primary bg-primary/5"
                           : "border-border hover:border-primary/40"
@@ -337,7 +333,7 @@ export function TopicForm({ initialTopic }: TopicFormProps) {
                         value={opt.value}
                         checked={sourceMode === opt.value}
                         onChange={() => setSourceMode(opt.value)}
-                        className="mt-0.5 accent-primary"
+                        className="accent-primary mt-0.5"
                       />
                       <div>
                         <p className="text-sm font-medium">{opt.label}</p>
@@ -361,7 +357,9 @@ export function TopicForm({ initialTopic }: TopicFormProps) {
           {topicRequired ? (
             <span className="text-destructive">*</span>
           ) : (
-            <span className="text-muted-foreground text-xs">(optional — auto-derived from PDFs)</span>
+            <span className="text-muted-foreground text-xs">
+              (optional — auto-derived from PDFs)
+            </span>
           )}
         </label>
         <Input
@@ -551,9 +549,9 @@ export function TopicForm({ initialTopic }: TopicFormProps) {
       </div>
 
       {/* ── Estimated Time ── */}
-      <div className="flex items-center gap-2 rounded-lg bg-muted/50 px-4 py-3">
-        <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
-        <p className="text-sm text-muted-foreground">
+      <div className="bg-muted/50 flex items-center gap-2 rounded-lg px-4 py-3">
+        <Clock className="text-muted-foreground h-4 w-4 shrink-0" />
+        <p className="text-muted-foreground text-sm">
           Estimated time:{" "}
           <span className="text-foreground font-medium">
             {estimate.min === estimate.max
@@ -561,7 +559,7 @@ export function TopicForm({ initialTopic }: TopicFormProps) {
               : `${estimate.min}–${estimate.max} min`}
           </span>
           {pdfEnabled && doneFiles.length > 0 && (
-            <span className="text-xs ml-2">
+            <span className="ml-2 text-xs">
               ({doneFiles.length} PDF{doneFiles.length !== 1 ? "s" : ""}
               {sourceMode === "only_sources" ? ", no external search" : ""})
             </span>

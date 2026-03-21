@@ -11,7 +11,12 @@ interface ReplyInputProps {
   onCommentAdded?: (commentId?: string) => void;
 }
 
-export function ReplyInput({ paperId, userPostId, parentId, onCommentAdded }: ReplyInputProps) {
+export function ReplyInput({
+  paperId,
+  userPostId,
+  parentId,
+  onCommentAdded,
+}: ReplyInputProps) {
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(false);
 

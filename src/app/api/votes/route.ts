@@ -20,23 +20,34 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { paperId } = body as { paperId: string };
+  const { paperId, value } = body as { paperId: string; value?: number };
 
   if (!paperId) {
     return NextResponse.json({ error: "paperId required" }, { status: 400 });
   }
 
-  // Toggle: if vote exists, remove it; otherwise create it
+  const voteValue = value === -1 ? -1 : 1;
+
+  // Toggle: if vote exists with same value, remove it; otherwise upsert
   const existing = await db.query.votes.findFirst({
     where: eq(votes.paperId, paperId),
   });
 
   if (existing) {
-    await db.delete(votes).where(eq(votes.id, existing.id));
-    return NextResponse.json({ voted: false, paperId });
+    if (existing.value === voteValue) {
+      // Same vote again → toggle off
+      await db.delete(votes).where(eq(votes.id, existing.id));
+      return NextResponse.json({ voted: false, value: 0, paperId });
+    }
+    // Different vote → update
+    await db
+      .update(votes)
+      .set({ value: voteValue })
+      .where(eq(votes.id, existing.id));
+    return NextResponse.json({ voted: true, value: voteValue, paperId });
   }
 
-  await db.insert(votes).values({ paperId, value: 1 });
+  await db.insert(votes).values({ paperId, value: voteValue });
 
-  return NextResponse.json({ voted: true, paperId });
+  return NextResponse.json({ voted: true, value: voteValue, paperId });
 }

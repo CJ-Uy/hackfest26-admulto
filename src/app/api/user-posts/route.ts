@@ -3,7 +3,10 @@ import { after } from "next/server";
 import { db } from "@/lib/db";
 import { userPosts, papers, comments } from "@/lib/schema";
 import { eq, desc } from "drizzle-orm";
-import { generateWebInformedComments, generatePostComments } from "@/lib/ollama";
+import {
+  generateWebInformedComments,
+  generatePostComments,
+} from "@/lib/ollama";
 import { webSearch } from "@/lib/search";
 
 export async function GET(req: NextRequest) {
@@ -19,6 +22,26 @@ export async function GET(req: NextRequest) {
     .orderBy(desc(userPosts.createdAt));
 
   return NextResponse.json(result);
+}
+
+export async function DELETE(req: NextRequest) {
+  const postId = req.nextUrl.searchParams.get("id");
+  if (!postId) {
+    return NextResponse.json({ error: "id required" }, { status: 400 });
+  }
+
+  const post = await db.query.userPosts.findFirst({
+    where: eq(userPosts.id, postId),
+  });
+
+  if (!post) {
+    return NextResponse.json({ error: "Post not found" }, { status: 404 });
+  }
+
+  // Delete user post (cascade removes comments)
+  await db.delete(userPosts).where(eq(userPosts.id, postId));
+
+  return NextResponse.json({ success: true });
 }
 
 export async function POST(req: NextRequest) {
@@ -65,17 +88,30 @@ export async function POST(req: NextRequest) {
       const topic = scroll?.title || "";
 
       // Web search based on the post content for informed comments
-      let aiComments: Array<{ author: string; content: string; relationship: string }> = [];
+      let aiComments: Array<{
+        author: string;
+        content: string;
+        relationship: string;
+      }> = [];
 
       try {
-        const searchQuery = title ? `${title} ${content.slice(0, 100)}` : content.slice(0, 150);
+        const searchQuery = title
+          ? `${title} ${content.slice(0, 100)}`
+          : content.slice(0, 150);
         const webResults = await webSearch(searchQuery, 4);
 
         if (webResults.length > 0) {
-          aiComments = await generateWebInformedComments(content, webResults, topic);
+          aiComments = await generateWebInformedComments(
+            content,
+            webResults,
+            topic,
+          );
         }
       } catch (err) {
-        console.error("[user-posts] Web search failed, falling back to paper context:", err);
+        console.error(
+          "[user-posts] Web search failed, falling back to paper context:",
+          err,
+        );
       }
 
       // Fallback: use paper context if web search didn't produce results
@@ -92,7 +128,11 @@ export async function POST(req: NextRequest) {
           authors: JSON.parse(p.authors) as string[],
         }));
 
-        aiComments = await generatePostComments(content, paperContexts.slice(0, 3), topic);
+        aiComments = await generatePostComments(
+          content,
+          paperContexts.slice(0, 3),
+          topic,
+        );
       }
 
       if (aiComments.length === 0) return;

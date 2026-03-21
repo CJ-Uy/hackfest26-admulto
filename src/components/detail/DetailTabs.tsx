@@ -11,15 +11,26 @@ import {
   Bot,
   Reply,
   Loader2,
+  Sparkles,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import { useCommentStream } from "@/hooks/useCommentStream";
 import type { Comment } from "@/lib/types";
+
+interface ScrollPaperRef {
+  id: string;
+  title: string;
+  authors: string[];
+  doi: string;
+}
 
 interface DetailTabsProps {
   paperId?: string;
   userPostId?: string;
   scrollId: string;
+  scrollPapers?: ScrollPaperRef[];
 }
 
 const relationshipConfig: Record<
@@ -83,7 +94,9 @@ function TypingIndicator({ depth = 0 }: { depth?: number }) {
   return (
     <div
       className="border-border bg-muted/30 my-2 flex items-center gap-3 rounded-md border p-3.5"
-      style={{ marginLeft: depth > 0 ? `${Math.min(depth, 4) * 2}rem` : "2rem" }}
+      style={{
+        marginLeft: depth > 0 ? `${Math.min(depth, 4) * 2}rem` : "2rem",
+      }}
     >
       <div className="bg-primary/10 text-primary flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[12px] font-bold">
         <Bot className="h-3.5 w-3.5" />
@@ -174,19 +187,22 @@ function InlineReplyInput({
       >
         {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Reply"}
       </button>
-      <button
-        onClick={onCancel}
-        className="text-muted-foreground text-[13px]"
-      >
+      <button onClick={onCancel} className="text-muted-foreground text-[13px]">
         Cancel
       </button>
     </div>
   );
 }
 
-export function DetailTabs({ paperId, userPostId, scrollId }: DetailTabsProps) {
+export function DetailTabs({
+  paperId,
+  userPostId,
+  scrollId,
+  scrollPapers = [],
+}: DetailTabsProps) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [generatingComments, setGeneratingComments] = useState(false);
   // Track comment IDs that are waiting for AI replies (typing indicator)
   const [waitingForReply, setWaitingForReply] = useState<Set<string>>(
     new Set(),
@@ -262,6 +278,52 @@ export function DetailTabs({ paperId, userPostId, scrollId }: DetailTabsProps) {
     }, 90000);
   }
 
+  // Find the source paper for a generated comment by matching author name
+  function findSourcePaper(authorName: string): ScrollPaperRef | undefined {
+    return scrollPapers.find((p) => {
+      const firstAuthor = p.authors[0];
+      if (!firstAuthor) return false;
+      return (
+        authorName === `${firstAuthor} et al.` || authorName === firstAuthor
+      );
+    });
+  }
+
+  async function handleDeleteComment(commentId: string) {
+    try {
+      const res = await fetch(`/api/comments?id=${commentId}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        setComments((prev) =>
+          prev.filter((c) => c.id !== commentId && c.parentId !== commentId),
+        );
+        toast.success("Comment deleted");
+      } else {
+        toast.error("Failed to delete comment");
+      }
+    } catch {
+      toast.error("Failed to delete comment");
+    }
+  }
+
+  async function handleGenerateComments() {
+    if (generatingComments) return;
+    setGeneratingComments(true);
+    try {
+      await fetch(`/api/scrolls/${scrollId}/generate-comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paperId }),
+      });
+      toast.success("Generating new comments...");
+    } catch {
+      toast.error("Failed to generate comments");
+    } finally {
+      setGeneratingComments(false);
+    }
+  }
+
   // Build thread structure
   const generated = comments.filter((c) => c.isGenerated && !c.parentId);
   const userComments = comments.filter((c) => !c.isGenerated && !c.parentId);
@@ -288,67 +350,97 @@ export function DetailTabs({ paperId, userPostId, scrollId }: DetailTabsProps) {
   function renderComment(c: Comment, depth = 0) {
     const replies = getReplies(c.id);
     const isWaiting = waitingForReply.has(c.id);
-    // Cap visual indentation at 4 levels to avoid tiny columns
     const indent = Math.min(depth, 4) * 2;
 
     return (
       <div key={c.id}>
         <div
-          className={`border-border rounded-md border p-3.5 ${
-            c.isGenerated ? "bg-muted/30" : "bg-background"
-          } ${depth > 0 ? "mt-2" : ""}`}
+          className={cn(
+            "rounded-lg border p-3.5 transition-colors",
+            c.isGenerated
+              ? "border-border bg-muted/30"
+              : "border-border bg-background hover:bg-[#fafafa]",
+            depth > 0 && "mt-2",
+          )}
           style={depth > 0 ? { marginLeft: `${indent}rem` } : undefined}
         >
-          {/* Thread line indicator for deep nesting */}
           {depth > 1 && (
             <div className="text-muted-foreground mb-1 text-[11px]">
               ↳ replying to thread
             </div>
           )}
+          {/* Author row */}
           <div className="mb-2 flex items-center gap-2">
             <div
-              className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[12px] font-bold ${
+              className={cn(
+                "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[12px] font-bold",
                 c.isGenerated
                   ? "bg-primary/10 text-primary"
-                  : "bg-[#f6f7f8] text-muted-foreground"
-              }`}
+                  : "text-muted-foreground bg-[#f6f7f8]",
+              )}
             >
-              {c.author.charAt(0).toUpperCase()}
+              {c.isGenerated ? (
+                <Bot className="h-3.5 w-3.5" />
+              ) : (
+                c.author.charAt(0).toUpperCase()
+              )}
             </div>
-            <span
-              className={`text-[${c.isGenerated ? "14" : "15"}px] text-foreground font-semibold`}
-            >
-              {c.author}
-            </span>
-            {c.relationship && (
-              <RelationshipBadge relationship={c.relationship} />
-            )}
-            {!c.isGenerated && (
-              <span className="text-muted-foreground text-[13px]">
-                {new Date(c.createdAt).toLocaleDateString()}
+            <div className="flex min-w-0 flex-1 items-center gap-1.5">
+              {(() => {
+                const sourcePaper = c.isGenerated
+                  ? findSourcePaper(c.author)
+                  : undefined;
+                return sourcePaper ? (
+                  <a
+                    href={`/schroll/${scrollId}/post/${sourcePaper.id}`}
+                    onClick={(e) => e.stopPropagation()}
+                    className="text-primary truncate text-[14px] font-semibold hover:underline"
+                    title={sourcePaper.title}
+                  >
+                    {c.author}
+                  </a>
+                ) : (
+                  <span className="text-foreground truncate text-[14px] font-semibold">
+                    {c.author}
+                  </span>
+                );
+              })()}
+              {c.relationship && (
+                <RelationshipBadge relationship={c.relationship} />
+              )}
+              <span className="text-muted-foreground shrink-0 text-[12px]">
+                {c.isGenerated
+                  ? "AI"
+                  : new Date(c.createdAt).toLocaleDateString()}
               </span>
-            )}
+            </div>
           </div>
-          <p
-            className={`text-foreground text-[${c.isGenerated ? "14" : "15"}px] leading-relaxed`}
-          >
+
+          {/* Content */}
+          <p className="text-foreground text-[14px] leading-relaxed">
             {c.content}
           </p>
 
-          {/* Reply button — available on all comments */}
-          <button
-            onClick={() => setReplyingTo(c.id)}
-            className="text-muted-foreground hover:text-primary mt-2 flex items-center gap-1 text-[13px] transition-colors"
-          >
-            <Reply className="h-3 w-3" />
-            Reply
-          </button>
+          {/* Actions */}
+          <div className="mt-2.5 flex items-center gap-1">
+            <button
+              onClick={() => setReplyingTo(c.id)}
+              className="text-muted-foreground hover:text-primary flex items-center gap-1 rounded-full px-2.5 py-1 text-[12px] font-medium transition-colors hover:bg-[#f6f7f8]"
+            >
+              <Reply className="h-3 w-3" />
+              Reply
+            </button>
+            <button
+              onClick={() => handleDeleteComment(c.id)}
+              className="text-muted-foreground flex items-center gap-1 rounded-full px-2.5 py-1 text-[12px] font-medium transition-colors hover:bg-red-50 hover:text-red-500"
+            >
+              <Trash2 className="h-3 w-3" />
+            </button>
+          </div>
         </div>
 
-        {/* Nested replies — recursive rendering */}
         {replies.map((r) => renderComment(r, depth + 1))}
 
-        {/* Inline reply input */}
         {replyingTo === c.id && (
           <InlineReplyInput
             paperId={paperId}
@@ -360,7 +452,6 @@ export function DetailTabs({ paperId, userPostId, scrollId }: DetailTabsProps) {
           />
         )}
 
-        {/* Typing indicator while waiting for AI reply */}
         {isWaiting && <TypingIndicator depth={depth + 1} />}
       </div>
     );
@@ -371,10 +462,24 @@ export function DetailTabs({ paperId, userPostId, scrollId }: DetailTabsProps) {
       {/* AI-generated "reactions" from other papers */}
       {generated.length > 0 && (
         <div className="mb-5">
-          <h3 className="text-foreground mb-3 flex items-center gap-2 text-[16px] font-bold">
-            <Bot className="text-muted-foreground h-4 w-4" />
-            What other researchers say ({generated.length})
-          </h3>
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="text-foreground flex items-center gap-2 text-[16px] font-bold">
+              <Bot className="text-muted-foreground h-4 w-4" />
+              What other researchers say ({generated.length})
+            </h3>
+            {paperId && (
+              <button
+                onClick={handleGenerateComments}
+                disabled={generatingComments}
+                className="text-muted-foreground hover:text-primary flex items-center gap-1.5 rounded-full bg-[#f6f7f8] px-3 py-1.5 text-[13px] font-semibold transition-colors hover:bg-[#e8e8e8] disabled:opacity-50"
+              >
+                <Sparkles
+                  className={`h-3.5 w-3.5 ${generatingComments ? "animate-spin" : ""}`}
+                />
+                Generate more
+              </button>
+            )}
+          </div>
 
           <div className="space-y-2.5">
             {generated.map((c) => renderComment(c))}

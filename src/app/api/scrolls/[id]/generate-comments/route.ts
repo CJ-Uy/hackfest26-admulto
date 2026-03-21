@@ -11,10 +11,19 @@ import { generateSocialComments } from "@/lib/ollama";
  * the scroll to simulate an active research discussion.
  */
 export async function POST(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id: scrollId } = await params;
+
+  // Accept optional paperId to target a specific paper
+  let requestedPaperId: string | null = null;
+  try {
+    const body = (await req.json()) as { paperId?: string };
+    requestedPaperId = body?.paperId || null;
+  } catch {
+    // No body or invalid JSON — that's fine, pick randomly
+  }
 
   try {
     // Get all papers in this scroll
@@ -27,8 +36,15 @@ export async function POST(
       return Response.json({ generated: 0 });
     }
 
-    // Pick a random target paper
-    const targetIdx = Math.floor(Math.random() * scrollPapers.length);
+    // Pick target paper: use requested paperId or random
+    let targetIdx: number;
+    if (requestedPaperId) {
+      const idx = scrollPapers.findIndex((p) => p.id === requestedPaperId);
+      targetIdx =
+        idx >= 0 ? idx : Math.floor(Math.random() * scrollPapers.length);
+    } else {
+      targetIdx = Math.floor(Math.random() * scrollPapers.length);
+    }
     const target = scrollPapers[targetIdx];
     const targetAuthors = JSON.parse(target.authors) as string[];
 
@@ -62,7 +78,10 @@ export async function POST(
         .sort((a, b) => a.commentCount - b.commentCount)[0];
 
       if (!paperWithFewest || paperWithFewest.commentCount >= 20) {
-        return Response.json({ generated: 0, reason: "all papers have enough comments" });
+        return Response.json({
+          generated: 0,
+          reason: "all papers have enough comments",
+        });
       }
 
       // Recurse with the paper with fewest comments as target
@@ -151,7 +170,9 @@ export async function POST(
   } catch (err) {
     console.error("Failed to generate background comments:", err);
     return Response.json(
-      { error: err instanceof Error ? err.message : "Comment generation failed" },
+      {
+        error: err instanceof Error ? err.message : "Comment generation failed",
+      },
       { status: 500 },
     );
   }

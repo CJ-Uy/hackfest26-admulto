@@ -1,7 +1,13 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Search, FileText, Sparkles, CheckCircle2, BookOpen } from "lucide-react";
+import {
+  Search,
+  FileText,
+  Sparkles,
+  CheckCircle2,
+  BookOpen,
+} from "lucide-react";
 
 interface ProgressInfo {
   step: string;
@@ -98,11 +104,12 @@ export function GenerateMoreProgress({ progress }: GenerateMoreProgressProps) {
     return () => clearInterval(interval);
   }, []);
 
-  const showPaperCount = progress?.step === "processing" && (progress.total ?? 0) > 0;
+  const showPaperCount =
+    progress?.step === "processing" && (progress.total ?? 0) > 0;
   const percent = getProgressPercent(progress);
 
   return (
-    <div className="border-border mx-4 my-6 rounded-xl border p-5 animate-in fade-in duration-500">
+    <div className="border-border animate-in fade-in mx-4 my-6 rounded-xl border p-5 duration-500">
       {/* Header */}
       <div className="mb-4 flex items-center gap-2">
         <div className="relative h-2 w-2">
@@ -149,17 +156,23 @@ export function GenerateMoreProgress({ progress }: GenerateMoreProgressProps) {
                 {isDone ? (
                   <CheckCircle2 className="h-3.5 w-3.5" />
                 ) : (
-                  <Icon className={`h-3.5 w-3.5 ${isActive ? "animate-pulse" : ""}`} />
+                  <Icon
+                    className={`h-3.5 w-3.5 ${isActive ? "animate-pulse" : ""}`}
+                  />
                 )}
               </div>
               <div className="flex-1">
                 <p className="text-[13px] font-medium">
                   {step.label}
                   {isDone && (
-                    <span className="text-primary ml-1.5 text-[11px]">Done</span>
+                    <span className="text-primary ml-1.5 text-[11px]">
+                      Done
+                    </span>
                   )}
                 </p>
-                <p className="text-muted-foreground text-[11px]">{step.detail}</p>
+                <p className="text-muted-foreground text-[11px]">
+                  {step.detail}
+                </p>
               </div>
               {isActive && (
                 <div className="border-primary/30 border-t-primary h-4 w-4 animate-spin rounded-full border-2" />

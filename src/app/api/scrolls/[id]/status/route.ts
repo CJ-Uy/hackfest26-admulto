@@ -14,7 +14,7 @@ export async function GET(
     });
 
     if (!scroll) {
-      return Response.json({ error: "Scroll not found" }, { status: 404 });
+      return Response.json({ error: "Schroll not found" }, { status: 404 });
     }
 
     return Response.json({

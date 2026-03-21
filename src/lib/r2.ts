@@ -7,9 +7,7 @@
 
 async function getBucket(): Promise<R2Bucket | null> {
   try {
-    const { getCloudflareContext } = await import(
-      "@opennextjs/cloudflare"
-    );
+    const { getCloudflareContext } = await import("@opennextjs/cloudflare");
     const ctx = await getCloudflareContext();
     return (ctx.env as { PDF_BUCKET?: R2Bucket }).PDF_BUCKET ?? null;
   } catch {

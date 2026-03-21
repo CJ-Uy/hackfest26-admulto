@@ -11,9 +11,15 @@ interface PaperCardProps {
   index: number;
   commentCount: number;
   initialBookmarked?: boolean;
+  initialDownvoted?: boolean;
   onUpvote: (paperId: string, voted: boolean) => void;
+  onDownvote?: (paperId: string, downvoted: boolean) => void;
   onBookmark: (paperId: string, bookmarked: boolean) => void;
   onComment: (paperId: string) => void;
+  onGenerateComments?: (paperId: string) => void;
+  onDelete?: (paperId: string) => void;
+  hasNewComments?: boolean;
+  onClearNewComment?: () => void;
 }
 
 export function PaperCard({
@@ -22,9 +28,15 @@ export function PaperCard({
   index,
   commentCount,
   initialBookmarked,
+  initialDownvoted,
   onUpvote,
+  onDownvote,
   onBookmark,
   onComment,
+  onGenerateComments,
+  onDelete,
+  hasNewComments,
+  onClearNewComment,
 }: PaperCardProps) {
   const router = useRouter();
 
@@ -36,7 +48,8 @@ export function PaperCard({
   const initial = primaryAuthor.charAt(0).toUpperCase();
 
   function navigateToDetail() {
-    router.push(`/scroll/${scrollId}/post/${paper.id}`);
+    onClearNewComment?.();
+    router.push(`/schroll/${scrollId}/post/${paper.id}`);
   }
 
   return (
@@ -81,10 +94,15 @@ export function PaperCard({
         citationCount={paper.citationCount}
         apaCitation={paper.apaCitation}
         initialVoted={paper.voted}
+        initialDownvoted={initialDownvoted ?? paper.downvoted}
         initialBookmarked={initialBookmarked}
         onCommentClick={navigateToDetail}
         onUpvote={onUpvote}
+        onDownvote={onDownvote}
         onBookmark={onBookmark}
+        onGenerateComments={onGenerateComments}
+        onDelete={onDelete}
+        hasNewComments={hasNewComments}
       />
     </article>
   );

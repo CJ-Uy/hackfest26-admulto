@@ -44,6 +44,39 @@ export async function GET(req: NextRequest) {
   );
 }
 
+export async function DELETE(req: NextRequest) {
+  const commentId = req.nextUrl.searchParams.get("id");
+  if (!commentId) {
+    return NextResponse.json({ error: "id required" }, { status: 400 });
+  }
+
+  const comment = await db.query.comments.findFirst({
+    where: eq(comments.id, commentId),
+  });
+
+  if (!comment) {
+    return NextResponse.json({ error: "Comment not found" }, { status: 404 });
+  }
+
+  // Delete the comment (cascade will remove child replies)
+  await db.delete(comments).where(eq(comments.id, commentId));
+
+  // Decrement comment count on the parent entity
+  if (comment.userPostId) {
+    await db
+      .update(userPosts)
+      .set({ commentCount: sql`MAX(${userPosts.commentCount} - 1, 0)` })
+      .where(eq(userPosts.id, comment.userPostId));
+  } else {
+    await db
+      .update(papers)
+      .set({ commentCount: sql`MAX(${papers.commentCount} - 1, 0)` })
+      .where(eq(papers.id, comment.paperId));
+  }
+
+  return NextResponse.json({ success: true });
+}
+
 export async function POST(req: NextRequest) {
   const body = await req.json();
   const { paperId, userPostId, content, author, parentId } = body as {
@@ -74,7 +107,10 @@ export async function POST(req: NextRequest) {
       .limit(1);
 
     if (post.length === 0) {
-      return NextResponse.json({ error: "User post not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "User post not found" },
+        { status: 404 },
+      );
     }
 
     const scrollPapers = await db
@@ -84,7 +120,10 @@ export async function POST(req: NextRequest) {
       .limit(1);
 
     if (scrollPapers.length === 0) {
-      return NextResponse.json({ error: "No papers in scroll" }, { status: 400 });
+      return NextResponse.json(
+        { error: "No papers in scroll" },
+        { status: 400 },
+      );
     }
 
     resolvedPaperId = scrollPapers[0].id;
@@ -156,23 +195,32 @@ export async function POST(req: NextRequest) {
           .where(eq(comments.id, parentId))
           .limit(1);
 
-        if (parentComment?.isGenerated) {
-          // The user is replying to an AI comment — pick a DIFFERENT paper
-          // to create the back-and-forth debate
-          const otherPapers = await db
-            .select()
-            .from(papers)
-            .where(eq(papers.scrollId, p.scrollId));
+        // Get all papers in this scroll for candidate selection
+        const otherPapers = await db
+          .select()
+          .from(papers)
+          .where(eq(papers.scrollId, p.scrollId));
 
-          // Find a paper whose author is different from the parent comment's author
-          const candidate = otherPapers.find((op) => {
+        if (parentComment?.isGenerated) {
+          // The user is replying to an AI comment — find the paper that the
+          // parent comment represents (by matching author name), then pick a
+          // DIFFERENT paper to create the back-and-forth debate
+          const parentPaper = otherPapers.find((op) => {
             const authors = JSON.parse(op.authors) as string[];
-            const authorName = authors[0]
-              ? `${authors[0]} et al.`
-              : op.title;
-            return authorName !== parentComment.author && op.id !== p.id;
+            const authorName = authors[0] ? `${authors[0]} et al.` : op.title;
+            return authorName === parentComment.author;
           });
 
+          const excludeId = parentPaper?.id ?? p.id;
+          const candidate = otherPapers.find((op) => op.id !== excludeId);
+
+          if (candidate) {
+            replyPaper = candidate;
+          }
+        } else {
+          // User is replying to a human comment — pick any paper different
+          // from the post's paper to bring in a fresh perspective
+          const candidate = otherPapers.find((op) => op.id !== p.id);
           if (candidate) {
             replyPaper = candidate;
           }
@@ -180,8 +228,9 @@ export async function POST(req: NextRequest) {
       }
 
       const parsedAuthors = JSON.parse(replyPaper.authors) as string[];
-      replyAuthor =
-        parsedAuthors[0] ? `${parsedAuthors[0]} et al.` : replyPaper.title;
+      replyAuthor = parsedAuthors[0]
+        ? `${parsedAuthors[0]} et al.`
+        : replyPaper.title;
 
       if (resolvedUserPostId) {
         // Reply on a user post — use web search for context

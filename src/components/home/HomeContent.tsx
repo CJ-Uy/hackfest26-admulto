@@ -52,9 +52,9 @@ export function HomeContent({ scrolls: initialScrolls }: HomeContentProps) {
     setDeleting(false);
     if (ok) {
       setScrolls((prev) => prev.filter((s) => s.id !== deleteTarget.id));
-      toast.success("Scroll deleted");
+      toast.success("Schroll deleted");
     } else {
-      toast.error("Failed to delete scroll");
+      toast.error("Failed to delete schroll");
     }
     setDeleteTarget(null);
   }
@@ -78,13 +78,14 @@ export function HomeContent({ scrolls: initialScrolls }: HomeContentProps) {
                       Your Research Feed
                     </h1>
                     <p className="text-muted-foreground mt-0.5 text-[14px]">
-                      {scrolls.length} {scrolls.length === 1 ? "scroll" : "scrolls"} created
+                      {scrolls.length}{" "}
+                      {scrolls.length === 1 ? "schroll" : "schrolls"} created
                     </p>
                   </div>
                   <Link href="/onboarding">
                     <Button className="gap-2">
                       <Plus className="h-4 w-4" />
-                      New Scroll
+                      New Schroll
                     </Button>
                   </Link>
                 </div>
@@ -97,7 +98,7 @@ export function HomeContent({ scrolls: initialScrolls }: HomeContentProps) {
                     key={scroll.id}
                     className="group animate-card-enter cursor-pointer px-4 py-4 transition-colors hover:bg-[#fafafa]"
                     style={{ animationDelay: `${i * 40}ms` }}
-                    onClick={() => router.push(`/scroll/${scroll.id}`)}
+                    onClick={() => router.push(`/schroll/${scroll.id}`)}
                   >
                     <div className="flex items-start gap-3">
                       {/* Icon */}
@@ -118,9 +119,15 @@ export function HomeContent({ scrolls: initialScrolls }: HomeContentProps) {
                             </div>
                           )}
                           <span className="bg-primary/10 text-primary shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold">
-                            {scroll.mode === "brainstorm"
-                              ? "Brainstorm"
-                              : "Citation Finder"}
+                            {scroll.mode === "pdf_only"
+                              ? "PDF Only"
+                              : scroll.mode === "pdf_context"
+                                ? "PDF + Research"
+                                : scroll.mode === "pdf_include"
+                                  ? "PDF + Research"
+                                  : scroll.mode === "brainstorm"
+                                    ? "Brainstorm"
+                                    : "Research"}
                           </span>
                         </div>
 
@@ -175,14 +182,14 @@ export function HomeContent({ scrolls: initialScrolls }: HomeContentProps) {
                 </h1>
 
                 <p className="text-muted-foreground mx-auto mt-3 max-w-md text-[15px] leading-relaxed">
-                  Turn your scroll into research. Create your first scroll to
+                  Turn your schroll into research. Create your first schroll to
                   discover papers in a social-media-style feed.
                 </p>
 
                 <Link href="/onboarding" className="mt-8 inline-block">
                   <Button size="lg" className="gap-2 px-8 text-base">
                     <Sparkles className="h-4 w-4" />
-                    Create Your First Scroll
+                    Create Your First Schroll
                     <ArrowRight className="h-4 w-4" />
                   </Button>
                 </Link>
@@ -207,13 +214,15 @@ export function HomeContent({ scrolls: initialScrolls }: HomeContentProps) {
                 </h3>
               </div>
               <p className="text-muted-foreground text-[14px] leading-relaxed">
-                Discover academic papers through an AI-powered social media feed.
-                Upvote, comment, and fine-tune your research experience.
+                Discover academic papers through an AI-powered social media
+                feed. Upvote, comment, and fine-tune your research experience.
               </p>
               <div className="border-border mt-3 border-t pt-3">
                 <div className="grid grid-cols-2 gap-2">
                   <div className="rounded-md bg-[#f6f7f8] p-2.5">
-                    <p className="text-muted-foreground text-[13px]">Scrolls</p>
+                    <p className="text-muted-foreground text-[13px]">
+                      Schrolls
+                    </p>
                     <p className="text-foreground text-[18px] font-bold">
                       {scrolls.length}
                     </p>
@@ -231,7 +240,7 @@ export function HomeContent({ scrolls: initialScrolls }: HomeContentProps) {
             {/* Quick start */}
             {!hasScrolls && (
               <div className="border-border bg-background rounded-lg border p-4">
-                <h4 className="text-foreground mb-2 text-[13px] font-bold uppercase tracking-wide">
+                <h4 className="text-foreground mb-2 text-[13px] font-bold tracking-wide uppercase">
                   Getting Started
                 </h4>
                 <ol className="text-muted-foreground space-y-2 text-[14px]">
@@ -269,10 +278,10 @@ export function HomeContent({ scrolls: initialScrolls }: HomeContentProps) {
       >
         <DialogContent showCloseButton={false}>
           <DialogHeader>
-            <DialogTitle>Delete scroll</DialogTitle>
+            <DialogTitle>Delete schroll</DialogTitle>
             <DialogDescription>
               Are you sure you want to delete &ldquo;{deleteTarget?.title}
-              &rdquo;? This will permanently remove the scroll and all its
+              &rdquo;? This will permanently remove the schroll and all its
               papers, comments, and votes.
             </DialogDescription>
           </DialogHeader>

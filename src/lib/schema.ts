@@ -24,6 +24,7 @@ export const scrolls = sqliteTable("scroll", {
   status: text("status").notNull().default("complete"),
   progress: text("progress"),
   queryEmbedding: text("query_embedding"), // JSON-stringified embedding of the search query
+  pdfKeys: text("pdf_keys"), // JSON-stringified array of R2 keys for uploaded PDFs
   createdAt: text("created_at")
     .notNull()
     .default(sql`(datetime('now'))`),
@@ -52,6 +53,7 @@ export const papers = sqliteTable("paper", {
     .notNull()
     .default(sql`0`),
   embedding: text("embedding"), // JSON-stringified 768-dim float array from nomic-embed-text
+  groundingData: text("grounding_data"), // JSON-stringified DeBERTa verification result
 });
 
 export const comments = sqliteTable("comment", {

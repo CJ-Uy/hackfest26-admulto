@@ -7,13 +7,24 @@ import type { Paper } from "@/lib/types";
 import { CardActions } from "@/components/feed/CardActions";
 import { DetailTabs } from "./DetailTabs";
 import { ReplyInput } from "./ReplyInput";
+import { GroundingPanel } from "./GroundingPanel";
 
 interface PostDetailProps {
   paper: Paper;
   scrollId: string;
+  scrollPapers?: {
+    id: string;
+    title: string;
+    authors: string[];
+    doi: string;
+  }[];
 }
 
-export function PostDetail({ paper, scrollId }: PostDetailProps) {
+export function PostDetail({
+  paper,
+  scrollId,
+  scrollPapers = [],
+}: PostDetailProps) {
   const router = useRouter();
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -28,10 +39,10 @@ export function PostDetail({ paper, scrollId }: PostDetailProps) {
   }, []);
 
   return (
-    <div className="mx-auto max-w-[780px] px-4 py-4">
+    <div className="mx-auto max-w-[780px] px-4 pt-14 pb-4 md:pt-4">
       {/* Back */}
       <button
-        onClick={() => router.push(`/scroll/${scrollId}`)}
+        onClick={() => router.push(`/schroll/${scrollId}`)}
         className="text-muted-foreground hover:text-foreground mb-3 flex items-center gap-1.5 text-[15px] font-semibold transition-colors"
       >
         <ArrowLeft className="h-4 w-4" />
@@ -81,6 +92,9 @@ export function PostDetail({ paper, scrollId }: PostDetailProps) {
           <ExternalLink className="h-3.5 w-3.5" />
         </a>
 
+        {/* Grounding verification */}
+        {paper.groundingData && <GroundingPanel data={paper.groundingData} />}
+
         {/* Actions */}
         <CardActions
           paperId={paper.id}
@@ -94,7 +108,11 @@ export function PostDetail({ paper, scrollId }: PostDetailProps) {
 
       {/* Comments */}
       <div className="mt-4" key={refreshKey}>
-        <DetailTabs paperId={paper.id} scrollId={scrollId} />
+        <DetailTabs
+          paperId={paper.id}
+          scrollId={scrollId}
+          scrollPapers={scrollPapers}
+        />
       </div>
 
       {/* Reply */}

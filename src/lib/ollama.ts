@@ -161,7 +161,8 @@ export async function generateReplyComment(
   userComment: string,
   threadContext?: string[],
 ): Promise<string> {
-  const authorStr = paperContext.authors.slice(0, 2).join(", ") || "the authors";
+  const authorStr =
+    paperContext.authors.slice(0, 2).join(", ") || "the authors";
   const threadStr = threadContext?.length
     ? `\n\nPrevious messages in this thread:\n${threadContext.map((m, i) => `${i + 1}. ${m}`).join("\n")}`
     : "";
@@ -244,10 +245,7 @@ export async function generateWebInformedComments(
 
   const sourceList = webResults
     .slice(0, 4)
-    .map(
-      (r, i) =>
-        `[Source ${i + 1}] "${r.title}"\nKey info: ${r.snippet}`,
-    )
+    .map((r, i) => `[Source ${i + 1}] "${r.title}"\nKey info: ${r.snippet}`)
     .join("\n\n");
 
   const prompt = `A user posted this on a research feed about "${topic}":

@@ -1,7 +1,13 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Search, FileText, Sparkles, CheckCircle2, BookOpen } from "lucide-react";
+import {
+  Search,
+  FileText,
+  Sparkles,
+  CheckCircle2,
+  BookOpen,
+} from "lucide-react";
 
 interface ProgressInfo {
   step: string;
@@ -65,11 +71,17 @@ const FUN_FACTS = [
   "Nature and Science have rejection rates above 90%.",
 ];
 
-export function GenerationProgress({ progress, topic, hasPdfs }: GenerationProgressProps) {
+export function GenerationProgress({
+  progress,
+  topic,
+  hasPdfs,
+}: GenerationProgressProps) {
   const visibleSteps = hasPdfs
     ? STEPS
     : STEPS.filter((s) => !(s as { pdfOnly?: boolean }).pdfOnly);
-  const currentStepIdx = visibleSteps.findIndex((s) => s.key === (progress?.step || "searching"));
+  const currentStepIdx = visibleSteps.findIndex(
+    (s) => s.key === (progress?.step || "searching"),
+  );
   const effectiveIdx = currentStepIdx >= 0 ? currentStepIdx : 0;
   const [factIndex, setFactIndex] = useState(() =>
     Math.floor(Math.random() * FUN_FACTS.length),
@@ -100,9 +112,10 @@ export function GenerationProgress({ progress, topic, hasPdfs }: GenerationProgr
 
   const minutes = Math.floor(elapsed / 60);
   const seconds = elapsed % 60;
-  const timeStr = minutes > 0
-    ? `${minutes}m ${seconds.toString().padStart(2, "0")}s`
-    : `${seconds}s`;
+  const timeStr =
+    minutes > 0
+      ? `${minutes}m ${seconds.toString().padStart(2, "0")}s`
+      : `${seconds}s`;
 
   // Paper processing sub-progress
   const papersProcessed = progress?.papersProcessed ?? 0;
@@ -110,18 +123,21 @@ export function GenerationProgress({ progress, topic, hasPdfs }: GenerationProgr
   const showPaperCount = progress?.step === "processing" && totalPapers > 0;
 
   return (
-    <div className="mt-8 space-y-8 animate-in fade-in duration-500">
+    <div className="animate-in fade-in mt-8 space-y-8 duration-500">
       {/* Header */}
-      <div className="text-center space-y-2">
-        <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary">
+      <div className="space-y-2 text-center">
+        <div className="bg-primary/10 text-primary inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium">
           <div className="relative h-2 w-2">
-            <div className="absolute inset-0 rounded-full bg-primary animate-ping" />
-            <div className="relative rounded-full h-2 w-2 bg-primary" />
+            <div className="bg-primary absolute inset-0 animate-ping rounded-full" />
+            <div className="bg-primary relative h-2 w-2 rounded-full" />
           </div>
           Generating your feed
         </div>
         <p className="text-muted-foreground text-sm">
-          Researching <span className="text-foreground font-medium">&ldquo;{topic}&rdquo;</span>
+          Researching{" "}
+          <span className="text-foreground font-medium">
+            &ldquo;{topic}&rdquo;
+          </span>
         </p>
       </div>
 
@@ -157,12 +173,14 @@ export function GenerationProgress({ progress, topic, hasPdfs }: GenerationProgr
                 {isDone ? (
                   <CheckCircle2 className="h-4 w-4" />
                 ) : (
-                  <Icon className={`h-4 w-4 ${isActive ? "animate-pulse" : ""}`} />
+                  <Icon
+                    className={`h-4 w-4 ${isActive ? "animate-pulse" : ""}`}
+                  />
                 )}
               </div>
 
               {/* Text */}
-              <div className="flex-1 min-w-0">
+              <div className="min-w-0 flex-1">
                 <p
                   className={`text-sm font-medium ${
                     isPending ? "text-muted-foreground" : "text-foreground"
@@ -170,17 +188,19 @@ export function GenerationProgress({ progress, topic, hasPdfs }: GenerationProgr
                 >
                   {step.label}
                   {isDone && (
-                    <span className="text-primary ml-2 text-xs font-normal">Done</span>
+                    <span className="text-primary ml-2 text-xs font-normal">
+                      Done
+                    </span>
                   )}
                 </p>
-                <p className="text-muted-foreground text-xs truncate">
+                <p className="text-muted-foreground truncate text-xs">
                   {step.detail}
                 </p>
               </div>
 
               {/* Paper count badge */}
               {isActive && showPaperCount && (
-                <div className="shrink-0 tabular-nums text-xs font-medium text-primary bg-primary/10 rounded-full px-2.5 py-1">
+                <div className="text-primary bg-primary/10 shrink-0 rounded-full px-2.5 py-1 text-xs font-medium tabular-nums">
                   {papersProcessed}/{totalPapers}
                 </div>
               )}
@@ -188,7 +208,7 @@ export function GenerationProgress({ progress, topic, hasPdfs }: GenerationProgr
               {/* Active spinner */}
               {isActive && (
                 <div className="shrink-0">
-                  <div className="h-5 w-5 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
+                  <div className="border-primary/30 border-t-primary h-5 w-5 animate-spin rounded-full border-2" />
                 </div>
               )}
             </div>
@@ -200,28 +220,28 @@ export function GenerationProgress({ progress, topic, hasPdfs }: GenerationProgr
       <div className="space-y-2">
         <div className="bg-muted h-1.5 w-full overflow-hidden rounded-full">
           <div
-            className="bg-primary h-full rounded-full transition-all duration-700 ease-out relative overflow-hidden"
+            className="bg-primary relative h-full overflow-hidden rounded-full transition-all duration-700 ease-out"
             style={{ width: `${getProgressPercent(progress)}%` }}
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent animate-shimmer" />
+            <div className="animate-shimmer absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent" />
           </div>
         </div>
-        <div className="flex justify-between text-xs text-muted-foreground">
+        <div className="text-muted-foreground flex justify-between text-xs">
           <span>{getProgressPercent(progress)}%</span>
           <span>{timeStr} elapsed</span>
         </div>
       </div>
 
       {/* Fun fact card */}
-      <div className="rounded-xl border border-border/50 bg-muted/30 px-4 py-3">
+      <div className="border-border/50 bg-muted/30 rounded-xl border px-4 py-3">
         <div className="flex items-start gap-3">
-          <BookOpen className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-          <div className="space-y-1 min-w-0">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+          <BookOpen className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
+          <div className="min-w-0 space-y-1">
+            <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
               Did you know?
             </p>
             <p
-              className={`text-sm text-foreground/80 transition-opacity duration-400 ${
+              className={`text-foreground/80 text-sm transition-opacity duration-400 ${
                 factVisible ? "opacity-100" : "opacity-0"
               }`}
             >

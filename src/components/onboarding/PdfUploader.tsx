@@ -23,7 +23,11 @@ function formatFileSize(bytes: number): string {
   return `${Math.round(bytes / 1e3)} KB`;
 }
 
-export function PdfUploader({ files, onFilesChange, disabled }: PdfUploaderProps) {
+export function PdfUploader({
+  files,
+  onFilesChange,
+  disabled,
+}: PdfUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
 
@@ -80,7 +84,9 @@ export function PdfUploader({ files, onFilesChange, disabled }: PdfUploaderProps
         onFilesChange(updatedFiles);
       } catch (err) {
         toast.error(
-          err instanceof Error ? err.message : "Upload failed. Please try again.",
+          err instanceof Error
+            ? err.message
+            : "Upload failed. Please try again.",
         );
         // Mark as error
         const errorFiles = allFiles.map((f) =>
@@ -122,12 +128,12 @@ export function PdfUploader({ files, onFilesChange, disabled }: PdfUploaderProps
             : "border-border hover:border-primary/40 hover:bg-accent/50"
         } ${disabled ? "pointer-events-none opacity-50" : ""}`}
       >
-        <Upload className="h-8 w-8 text-muted-foreground" />
+        <Upload className="text-muted-foreground h-8 w-8" />
         <div>
           <p className="text-sm font-medium">
             Drop PDF files here or click to browse
           </p>
-          <p className="text-muted-foreground text-xs mt-1">
+          <p className="text-muted-foreground mt-1 text-xs">
             Max 10MB per file, 50MB total
           </p>
         </div>
@@ -151,17 +157,17 @@ export function PdfUploader({ files, onFilesChange, disabled }: PdfUploaderProps
           {files.map((file, i) => (
             <div
               key={`${file.filename}-${i}`}
-              className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 px-3 py-2"
+              className="border-border bg-muted/30 flex items-center gap-3 rounded-lg border px-3 py-2"
             >
               {file.status === "uploading" ? (
-                <Loader2 className="h-4 w-4 animate-spin text-primary shrink-0" />
+                <Loader2 className="text-primary h-4 w-4 shrink-0 animate-spin" />
               ) : file.status === "error" ? (
-                <AlertCircle className="h-4 w-4 text-destructive shrink-0" />
+                <AlertCircle className="text-destructive h-4 w-4 shrink-0" />
               ) : (
-                <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                <FileText className="text-muted-foreground h-4 w-4 shrink-0" />
               )}
-              <div className="flex-1 min-w-0">
-                <p className="text-sm truncate">{file.filename}</p>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm">{file.filename}</p>
                 <p className="text-muted-foreground text-xs">
                   {formatFileSize(file.size)}
                 </p>
@@ -170,7 +176,7 @@ export function PdfUploader({ files, onFilesChange, disabled }: PdfUploaderProps
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="h-7 w-7 p-0 shrink-0"
+                className="h-7 w-7 shrink-0 p-0"
                 onClick={(e) => {
                   e.stopPropagation();
                   removeFile(i);

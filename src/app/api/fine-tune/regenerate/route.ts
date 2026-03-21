@@ -49,6 +49,23 @@ export async function POST(req: Request) {
     return Response.json({ error: "scrollId required" }, { status: 400 });
   }
 
+  // Verify fine-tune responses exist before starting regeneration
+  const existingResponses = await db
+    .select({ id: pollResponses.id })
+    .from(pollResponses)
+    .innerJoin(polls, eq(pollResponses.pollId, polls.id))
+    .where(and(eq(polls.scrollId, scrollId), eq(polls.category, "fine-tune")));
+
+  if (existingResponses.length === 0) {
+    return Response.json(
+      {
+        error:
+          "Please answer at least one fine-tune question before regenerating",
+      },
+      { status: 400 },
+    );
+  }
+
   // Mark as regenerating
   await db
     .update(scrolls)
@@ -83,10 +100,7 @@ export async function POST(req: Request) {
           .from(comments)
           .innerJoin(papers, eq(comments.paperId, papers.id))
           .where(
-            and(
-              eq(papers.scrollId, scrollId),
-              eq(comments.isGenerated, false),
-            ),
+            and(eq(papers.scrollId, scrollId), eq(comments.isGenerated, false)),
           )
       ).map((r) => r.paperId);
 
@@ -146,10 +160,7 @@ export async function POST(req: Request) {
         .from(pollResponses)
         .innerJoin(polls, eq(pollResponses.pollId, polls.id))
         .where(
-          and(
-            eq(polls.scrollId, scrollId),
-            eq(polls.category, "fine-tune"),
-          ),
+          and(eq(polls.scrollId, scrollId), eq(polls.category, "fine-tune")),
         );
 
       // Enrich the search query with fine-tune answers
@@ -170,7 +181,13 @@ export async function POST(req: Request) {
       const [academicPapers, webResults] = await Promise.all([
         searchPapers(searchQuery, 15),
         webSearch(searchQuery, 6).catch(
-          () => [] as { title: string; url: string; snippet: string; engine: string }[],
+          () =>
+            [] as {
+              title: string;
+              url: string;
+              snippet: string;
+              engine: string;
+            }[],
         ),
       ]);
 
@@ -185,16 +202,22 @@ export async function POST(req: Request) {
         .from(papers)
         .where(eq(papers.scrollId, scrollId));
       const existingEmbeddings = existingPaperRows
-        .map((r) => (r.embedding ? JSON.parse(r.embedding) as number[] : null))
+        .map((r) =>
+          r.embedding ? (JSON.parse(r.embedding) as number[]) : null,
+        )
         .filter((e): e is number[] => !!e);
 
       // Embed new candidates
       const needsEmb = newAcademic.filter((p) => !p.embedding);
       if (needsEmb.length > 0) {
-        const texts = needsEmb.map((p) => `${p.title}. ${p.abstract.slice(0, 500)}`);
+        const texts = needsEmb.map(
+          (p) => `${p.title}. ${p.abstract.slice(0, 500)}`,
+        );
         const embs = await safeEmbedBatch(texts);
         if (embs) {
-          needsEmb.forEach((p, i) => { p.embedding = embs[i]; });
+          needsEmb.forEach((p, i) => {
+            p.embedding = embs[i];
+          });
         }
       }
 
@@ -219,10 +242,7 @@ export async function POST(req: Request) {
             queryEmbedding,
             withEmb.map((p) => p.embedding!),
           );
-          newAcademic = [
-            ...ranked.map((r) => withEmb[r.index]),
-            ...withoutEmb,
-          ];
+          newAcademic = [...ranked.map((r) => withEmb[r.index]), ...withoutEmb];
         }
       }
 
@@ -264,8 +284,8 @@ export async function POST(req: Request) {
         });
       }
 
-      // Supplement with web
-      if (processedPapers.length < 4) {
+      // Supplement with web results to fill remaining slots
+      if (processedPapers.length < total) {
         const eligibleWeb = webResults.filter(
           (r) =>
             r.snippet?.length >= 20 &&
@@ -305,6 +325,9 @@ export async function POST(req: Request) {
               commentCount: (paperComments.get(idx) || []).length,
               apaCitation: p.apaCitation,
               embedding: p.embedding ? JSON.stringify(p.embedding) : null,
+              groundingData: p.groundingData
+                ? JSON.stringify(p.groundingData)
+                : null,
             })),
           )
           .returning();

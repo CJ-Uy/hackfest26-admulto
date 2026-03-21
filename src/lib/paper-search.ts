@@ -232,10 +232,7 @@ async function searchSemanticScholar(
 
 // ─── Unified search across all sources ────────────────────────────────────
 
-import {
-  safeEmbedBatch,
-  deduplicateByEmbedding,
-} from "@/lib/embeddings";
+import { safeEmbedBatch, deduplicateByEmbedding } from "@/lib/embeddings";
 
 // Source priority for dedup: prefer OpenAlex > S2 > CrossRef
 const SOURCE_PRIORITY: Record<string, number> = {
@@ -278,9 +275,7 @@ export async function searchPapers(
     allPapers.push(paper);
   }
 
-  console.log(
-    `[paper-search] After title dedup: ${allPapers.length} papers`,
-  );
+  console.log(`[paper-search] After title dedup: ${allPapers.length} papers`);
 
   // Second pass: embedding-based semantic dedup (catches near-duplicates)
   const embeddingTexts = allPapers.map(
@@ -297,18 +292,15 @@ export async function searchPapers(
     }
 
     // Semantic dedup: remove papers with >0.92 similarity, keeping higher-priority source
-    const keepIndices = deduplicateByEmbedding(
-      embeddings,
-      0.92,
-      (a, b) => {
-        // Prefer by: citation count first, then source priority
-        const citDiff = (allPapers[a].citationCount || 0) - (allPapers[b].citationCount || 0);
-        if (citDiff !== 0) return citDiff > 0 ? a : b;
-        const priA = SOURCE_PRIORITY[allPapers[a].source] ?? 99;
-        const priB = SOURCE_PRIORITY[allPapers[b].source] ?? 99;
-        return priA <= priB ? a : b;
-      },
-    );
+    const keepIndices = deduplicateByEmbedding(embeddings, 0.92, (a, b) => {
+      // Prefer by: citation count first, then source priority
+      const citDiff =
+        (allPapers[a].citationCount || 0) - (allPapers[b].citationCount || 0);
+      if (citDiff !== 0) return citDiff > 0 ? a : b;
+      const priA = SOURCE_PRIORITY[allPapers[a].source] ?? 99;
+      const priB = SOURCE_PRIORITY[allPapers[b].source] ?? 99;
+      return priA <= priB ? a : b;
+    });
 
     merged = keepIndices.map((i) => allPapers[i]);
     console.log(

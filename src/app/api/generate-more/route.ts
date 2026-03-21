@@ -63,7 +63,15 @@ export async function POST(req: Request) {
       // 2. Search for new papers
       const [academicPapers, webResults] = await Promise.all([
         searchPapers(searchQuery, 15),
-        webSearch(searchQuery, 6).catch(() => [] as { title: string; url: string; snippet: string; engine: string }[]),
+        webSearch(searchQuery, 6).catch(
+          () =>
+            [] as {
+              title: string;
+              url: string;
+              snippet: string;
+              engine: string;
+            }[],
+        ),
       ]);
 
       // Filter out papers already in the scroll (title match)
@@ -77,16 +85,22 @@ export async function POST(req: Request) {
         .from(papers)
         .where(eq(papers.scrollId, scrollId));
       const existingEmbeddings = existingPaperRows
-        .map((r) => (r.embedding ? JSON.parse(r.embedding) as number[] : null))
+        .map((r) =>
+          r.embedding ? (JSON.parse(r.embedding) as number[]) : null,
+        )
         .filter((e): e is number[] => !!e);
 
       // Embed new candidates that don't already have embeddings
       const needsEmb = newAcademic.filter((p) => !p.embedding);
       if (needsEmb.length > 0) {
-        const texts = needsEmb.map((p) => `${p.title}. ${p.abstract.slice(0, 500)}`);
+        const texts = needsEmb.map(
+          (p) => `${p.title}. ${p.abstract.slice(0, 500)}`,
+        );
         const embs = await safeEmbedBatch(texts);
         if (embs) {
-          needsEmb.forEach((p, i) => { p.embedding = embs[i]; });
+          needsEmb.forEach((p, i) => {
+            p.embedding = embs[i];
+          });
         }
       }
 
@@ -119,10 +133,7 @@ export async function POST(req: Request) {
             queryEmbedding,
             withEmb.map((p) => p.embedding!),
           );
-          newAcademic = [
-            ...ranked.map((r) => withEmb[r.index]),
-            ...withoutEmb,
-          ];
+          newAcademic = [...ranked.map((r) => withEmb[r.index]), ...withoutEmb];
         }
       }
 
@@ -170,8 +181,8 @@ export async function POST(req: Request) {
         });
       }
 
-      // 4. Supplement with web results if too few
-      if (processedPapers.length < 4) {
+      // 4. Supplement with web results to fill remaining slots
+      if (processedPapers.length < 8) {
         const eligibleWeb = webResults.filter(
           (r) =>
             r.snippet &&
@@ -212,6 +223,9 @@ export async function POST(req: Request) {
               commentCount: (paperComments.get(idx) || []).length,
               apaCitation: p.apaCitation,
               embedding: p.embedding ? JSON.stringify(p.embedding) : null,
+              groundingData: p.groundingData
+                ? JSON.stringify(p.groundingData)
+                : null,
             })),
           )
           .returning();

@@ -12,8 +12,15 @@ export interface Paper {
   commentCount: number;
   apaCitation: string;
   voted?: boolean;
+  downvoted?: boolean;
   isUserUpload?: boolean;
   embedding?: number[]; // nomic-embed-text embedding for semantic similarity
+  bookmarked?: boolean;
+  groundingData?: {
+    card_verified: boolean;
+    claims: { claim: string; entailment_score: number; passed: boolean }[];
+    summary: string;
+  } | null;
 }
 
 export interface Comment {
@@ -73,6 +80,7 @@ export interface ScrollSession {
   paperCount: number;
   mode: string;
   status?: "generating" | "complete" | "error";
+  pdfKeys?: string[];
 }
 
 export interface OnboardingPreset {

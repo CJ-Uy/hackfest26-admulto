@@ -55,12 +55,12 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
     setDeleting(false);
     if (ok) {
       setSessions((prev) => prev.filter((s) => s.id !== deleteTarget.id));
-      toast.success("Scroll deleted");
-      if (pathname === `/scroll/${deleteTarget.id}`) {
+      toast.success("Schroll deleted");
+      if (pathname === `/schroll/${deleteTarget.id}`) {
         router.push("/");
       }
     } else {
-      toast.error("Failed to delete scroll");
+      toast.error("Failed to delete schroll");
     }
     setDeleteTarget(null);
   }
@@ -81,7 +81,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         <Link href="/onboarding" onClick={onNavigate}>
           <Button className="w-full justify-start gap-2 text-[15px]" size="sm">
             <Plus className="h-3.5 w-3.5" />
-            New Scroll
+            New Schroll
           </Button>
         </Link>
       </div>
@@ -94,7 +94,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         </p>
         {sessions.length === 0 ? (
           <p className="text-muted-foreground px-2 text-[14px]">
-            No scrolls yet.
+            No schrolls yet.
           </p>
         ) : (
           <nav className="space-y-0.5">
@@ -103,11 +103,11 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                 key={session.id}
                 className={cn(
                   "group flex items-start gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-[#f6f7f8]",
-                  pathname === `/scroll/${session.id}` && "bg-[#f6f7f8]",
+                  pathname === `/schroll/${session.id}` && "bg-[#f6f7f8]",
                 )}
               >
                 <Link
-                  href={`/scroll/${session.id}`}
+                  href={`/schroll/${session.id}`}
                   onClick={onNavigate}
                   className="flex min-w-0 flex-1 items-start gap-2"
                 >
@@ -146,10 +146,10 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       >
         <DialogContent showCloseButton={false}>
           <DialogHeader>
-            <DialogTitle>Delete scroll</DialogTitle>
+            <DialogTitle>Delete schroll</DialogTitle>
             <DialogDescription>
               Are you sure you want to delete &ldquo;{deleteTarget?.title}
-              &rdquo;? This will permanently remove the scroll and all its
+              &rdquo;? This will permanently remove the schroll and all its
               papers, comments, and votes.
             </DialogDescription>
           </DialogHeader>

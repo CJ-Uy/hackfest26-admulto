@@ -22,7 +22,7 @@ export async function DELETE(
   });
 
   if (!scroll) {
-    return Response.json({ error: "Scroll not found" }, { status: 404 });
+    return Response.json({ error: "Schroll not found" }, { status: 404 });
   }
 
   await db.delete(scrolls).where(eq(scrolls.id, id));
@@ -42,7 +42,7 @@ export async function GET(
       papers: {
         with: {
           votes: {
-            columns: { id: true },
+            columns: { id: true, value: true },
           },
           bookmarks: {
             columns: { id: true },
@@ -61,26 +61,31 @@ export async function GET(
   });
 
   if (!scroll) {
-    return Response.json({ error: "Scroll not found" }, { status: 404 });
+    return Response.json({ error: "Schroll not found" }, { status: 404 });
   }
 
-  const responsePapers: (Paper & { voted: boolean; bookmarked: boolean })[] =
-    scroll.papers.map((p) => ({
-      id: p.id,
-      title: p.title,
-      authors: JSON.parse(p.authors) as string[],
-      journal: p.journal,
-      year: p.year,
-      doi: p.doi,
-      peerReviewed: p.peerReviewed,
-      synthesis: p.synthesis,
-      credibilityScore: p.credibilityScore,
-      citationCount: p.citationCount,
-      commentCount: p.commentCount,
-      apaCitation: p.apaCitation,
-      voted: p.votes.length > 0,
-      bookmarked: p.bookmarks.length > 0,
-    }));
+  const responsePapers: (Paper & {
+    voted: boolean;
+    downvoted: boolean;
+    bookmarked: boolean;
+  })[] = scroll.papers.map((p) => ({
+    id: p.id,
+    title: p.title,
+    authors: JSON.parse(p.authors) as string[],
+    journal: p.journal,
+    year: p.year,
+    doi: p.doi,
+    peerReviewed: p.peerReviewed,
+    synthesis: p.synthesis,
+    credibilityScore: p.credibilityScore,
+    citationCount: p.citationCount,
+    commentCount: p.commentCount,
+    apaCitation: p.apaCitation,
+    voted: p.votes.length > 0 && p.votes[0].value === 1,
+    downvoted: p.votes.length > 0 && p.votes[0].value === -1,
+    bookmarked: p.bookmarks.length > 0,
+    groundingData: p.groundingData ? JSON.parse(p.groundingData) : null,
+  }));
 
   const responseUserPosts: UserPost[] = (scroll.userPosts || []).map((up) => ({
     id: up.id,
@@ -116,6 +121,9 @@ export async function GET(
       paperCount: scroll.paperCount,
       mode: scroll.mode,
       status: scroll.status,
+      pdfKeys: scroll.pdfKeys
+        ? (JSON.parse(scroll.pdfKeys) as string[])
+        : undefined,
     },
     papers: responsePapers,
     exportOutline,

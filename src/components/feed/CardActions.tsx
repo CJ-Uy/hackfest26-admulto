@@ -7,6 +7,8 @@ import {
   MessageSquare,
   Share2,
   Bookmark,
+  Sparkles,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -25,10 +27,15 @@ interface CardActionsProps {
   citationCount: number;
   apaCitation: string;
   initialVoted?: boolean;
+  initialDownvoted?: boolean;
   initialBookmarked?: boolean;
   onCommentClick?: () => void;
   onUpvote?: (paperId: string, voted: boolean) => void;
+  onDownvote?: (paperId: string, downvoted: boolean) => void;
   onBookmark?: (paperId: string, bookmarked: boolean) => void;
+  onGenerateComments?: (paperId: string) => void;
+  onDelete?: (paperId: string) => void;
+  hasNewComments?: boolean;
 }
 
 export function CardActions({
@@ -38,12 +45,19 @@ export function CardActions({
   citationCount,
   apaCitation,
   initialVoted = false,
+  initialDownvoted = false,
   initialBookmarked = false,
   onCommentClick,
   onUpvote,
+  onDownvote,
   onBookmark,
+  onGenerateComments,
+  onDelete,
+  hasNewComments,
 }: CardActionsProps) {
   const [upvoted, setUpvoted] = useState(initialVoted);
+  const [downvoted, setDownvoted] = useState(initialDownvoted);
+  const [generatingComments, setGeneratingComments] = useState(false);
   const [score, setScore] = useState(credibilityScore);
   const [bookmarked, setBookmarked] = useState(initialBookmarked);
   const tier = getCredibilityTier(credibilityScore);
@@ -53,18 +67,47 @@ export function CardActions({
     e.stopPropagation();
 
     const newVoted = !upvoted;
+    const wasDownvoted = downvoted;
     setUpvoted(newVoted);
+    if (newVoted) setDownvoted(false);
     setScore(newVoted ? credibilityScore + 1 : credibilityScore);
     onUpvote?.(paperId, newVoted);
+    if (newVoted && wasDownvoted) onDownvote?.(paperId, false);
 
     try {
       await fetch("/api/votes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ paperId }),
+        body: JSON.stringify({ paperId, value: 1 }),
       });
     } catch {
       setUpvoted(!newVoted);
+      if (wasDownvoted) setDownvoted(true);
+      setScore(credibilityScore);
+    }
+  }
+
+  async function handleDownvote(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const newDownvoted = !downvoted;
+    const wasUpvoted = upvoted;
+    setDownvoted(newDownvoted);
+    if (newDownvoted) setUpvoted(false);
+    setScore(newDownvoted ? credibilityScore - 1 : credibilityScore);
+    onDownvote?.(paperId, newDownvoted);
+    if (newDownvoted && wasUpvoted) onUpvote?.(paperId, false);
+
+    try {
+      await fetch("/api/votes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paperId, value: -1 }),
+      });
+    } catch {
+      setDownvoted(!newDownvoted);
+      if (wasUpvoted) setUpvoted(true);
       setScore(credibilityScore);
     }
   }
@@ -99,6 +142,28 @@ export function CardActions({
     } catch {
       setBookmarked(!next);
     }
+  }
+
+  async function handleGenerateComments(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (generatingComments || !onGenerateComments) return;
+    setGeneratingComments(true);
+    try {
+      await onGenerateComments(paperId);
+      toast.success("Generating new comments...");
+    } catch {
+      toast.error("Failed to generate comments");
+    } finally {
+      setGeneratingComments(false);
+    }
+  }
+
+  async function handleDelete(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!onDelete) return;
+    onDelete(paperId);
   }
 
   const fmt = (n: number) =>
@@ -137,15 +202,13 @@ export function CardActions({
               </TooltipTrigger>
               <TooltipContent
                 side="top"
-                className="max-w-55 border bg-white text-left text-foreground shadow-md"
+                className="text-foreground max-w-55 border bg-white text-left shadow-md"
               >
                 <div className="flex flex-col gap-0.5">
                   <span className={cn("text-sm font-semibold", tier.color)}>
                     {tier.label}
                   </span>
-                  <span className="text-xs opacity-80">
-                    {tier.description}
-                  </span>
+                  <span className="text-xs opacity-80">{tier.description}</span>
                   <span className="mt-0.5 text-[10px] opacity-60">
                     Based on citations, venue, and recency
                   </span>
@@ -154,13 +217,17 @@ export function CardActions({
             </Tooltip>
           </TooltipProvider>
           <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-            }}
-            className="text-muted-foreground hover:text-primary rounded-r-full p-1.5 transition-colors hover:bg-[#dae8f5]"
+            onClick={handleDownvote}
+            className={cn(
+              "rounded-r-full p-1.5 transition-colors",
+              downvoted
+                ? "text-[#7193ff]"
+                : "text-muted-foreground hover:text-primary hover:bg-[#dae8f5]",
+            )}
           >
-            <ArrowBigDown className="h-5 w-5" />
+            <ArrowBigDown
+              className={cn("h-5 w-5", downvoted && "fill-current")}
+            />
           </button>
         </div>
 
@@ -183,7 +250,7 @@ export function CardActions({
             </TooltipTrigger>
             <TooltipContent
               side="top"
-              className="max-w-55 border bg-white text-left text-foreground shadow-md"
+              className="text-foreground max-w-55 border bg-white text-left shadow-md"
             >
               <div className="flex flex-col gap-0.5">
                 <span className="text-xs opacity-80">{tier.description}</span>
@@ -198,10 +265,13 @@ export function CardActions({
         {/* Comment */}
         <button
           onClick={handleCommentClick}
-          className="text-muted-foreground mr-1 flex items-center gap-1.5 rounded-full bg-[#f6f7f8] px-3.5 py-1.5 text-[14px] font-bold transition-colors hover:bg-[#e8e8e8]"
+          className="text-muted-foreground relative mr-1 flex items-center gap-1.5 rounded-full bg-[#f6f7f8] px-3.5 py-1.5 text-[14px] font-bold transition-colors hover:bg-[#e8e8e8]"
         >
           <MessageSquare className="h-4.5 w-4.5" />
           {commentCount}
+          {hasNewComments && (
+            <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white" />
+          )}
         </button>
 
         {/* Share */}
@@ -212,20 +282,48 @@ export function CardActions({
           <Share2 className="h-4 w-4" />
           Share
         </button>
+
+        {/* Generate Comments */}
+        {onGenerateComments && (
+          <button
+            onClick={handleGenerateComments}
+            disabled={generatingComments}
+            className={cn(
+              "text-muted-foreground flex items-center gap-1.5 rounded-full bg-[#f6f7f8] px-3.5 py-1.5 text-[14px] font-bold transition-colors hover:bg-[#e8e8e8]",
+              generatingComments && "opacity-50",
+            )}
+          >
+            <Sparkles
+              className={cn("h-4 w-4", generatingComments && "animate-spin")}
+            />
+          </button>
+        )}
       </div>
 
-      {/* Bookmark */}
-      <button
-        onClick={handleBookmark}
-        className={cn(
-          "rounded-full p-1.5 transition-colors",
-          bookmarked
-            ? "text-primary bg-primary/10"
-            : "text-muted-foreground hover:bg-[#f6f7f8]",
+      <div className="flex items-center gap-0.5">
+        {/* Bookmark */}
+        <button
+          onClick={handleBookmark}
+          className={cn(
+            "rounded-full p-1.5 transition-colors",
+            bookmarked
+              ? "text-primary bg-primary/10"
+              : "text-muted-foreground hover:bg-[#f6f7f8]",
+          )}
+        >
+          <Bookmark className={cn("h-4 w-4", bookmarked && "fill-current")} />
+        </button>
+
+        {/* Delete */}
+        {onDelete && (
+          <button
+            onClick={handleDelete}
+            className="text-muted-foreground rounded-full p-1.5 transition-colors hover:bg-red-50 hover:text-red-500"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
         )}
-      >
-        <Bookmark className={cn("h-4 w-4", bookmarked && "fill-current")} />
-      </button>
+      </div>
     </div>
   );
 }

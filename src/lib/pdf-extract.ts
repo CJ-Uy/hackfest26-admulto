@@ -97,7 +97,9 @@ function extractAbstract(text: string): string {
 export function pdfToRawPaper(extracted: ExtractedPdf): RawPaper {
   // Try to extract year from text
   const yearMatch = extracted.text.match(/\b(20[0-2]\d|19[89]\d)\b/);
-  const year = yearMatch ? parseInt(yearMatch[1], 10) : new Date().getFullYear();
+  const year = yearMatch
+    ? parseInt(yearMatch[1], 10)
+    : new Date().getFullYear();
 
   return {
     id: `pdf-${crypto.randomUUID()}`,

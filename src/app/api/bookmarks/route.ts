@@ -22,10 +22,7 @@ export async function POST(req: NextRequest) {
   const { paperId } = (await req.json()) as { paperId: string };
 
   if (!paperId) {
-    return NextResponse.json(
-      { error: "paperId required" },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "paperId required" }, { status: 400 });
   }
 
   // Toggle: if exists, remove; otherwise add

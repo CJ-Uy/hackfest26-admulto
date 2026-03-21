@@ -15,6 +15,7 @@ export interface InteractionContext {
   topic: string;
   description: string;
   upvotedPapers: Array<{ title: string; synthesis: string }>;
+  downvotedPapers: Array<{ title: string; synthesis: string }>;
   bookmarkedPapers: Array<{ title: string; synthesis: string }>;
   commentedPapers: Array<{
     title: string;
@@ -42,12 +43,19 @@ export async function gatherInteractionContext(
 
   const existingTitles = new Set(allPapers.map((p) => p.title.toLowerCase()));
 
-  // Get upvoted papers
+  // Get upvoted papers (value = 1)
   const upvotedRows = await db
     .select({ title: papers.title, synthesis: papers.synthesis })
     .from(votes)
     .innerJoin(papers, eq(votes.paperId, papers.id))
-    .where(eq(papers.scrollId, scrollId));
+    .where(and(eq(papers.scrollId, scrollId), eq(votes.value, 1)));
+
+  // Get downvoted papers (value = -1)
+  const downvotedRows = await db
+    .select({ title: papers.title, synthesis: papers.synthesis })
+    .from(votes)
+    .innerJoin(papers, eq(votes.paperId, papers.id))
+    .where(and(eq(papers.scrollId, scrollId), eq(votes.value, -1)));
 
   // Get bookmarked papers
   const bookmarkedRows = await db
@@ -66,9 +74,7 @@ export async function gatherInteractionContext(
     })
     .from(comments)
     .innerJoin(papers, eq(comments.paperId, papers.id))
-    .where(
-      and(eq(papers.scrollId, scrollId), eq(comments.isGenerated, false)),
-    );
+    .where(and(eq(papers.scrollId, scrollId), eq(comments.isGenerated, false)));
 
   const commentedMap = new Map<
     string,
@@ -105,6 +111,7 @@ export async function gatherInteractionContext(
     topic: scroll?.title || "",
     description: scroll?.description || "",
     upvotedPapers: upvotedRows,
+    downvotedPapers: downvotedRows,
     bookmarkedPapers: bookmarkedRows,
     commentedPapers: Array.from(commentedMap.values()),
     pollAnswers: pollRows,
@@ -119,11 +126,31 @@ export async function gatherInteractionContext(
 export function buildRefinedQuery(ctx: InteractionContext): string {
   const parts: string[] = [ctx.topic];
 
-  // Add keywords from upvoted/bookmarked papers
-  const engagedPapers = [
-    ...ctx.upvotedPapers,
-    ...ctx.bookmarkedPapers,
+  // Collect keywords from downvoted papers to avoid similar content
+  const stopWords = [
+    "about",
+    "using",
+    "based",
+    "their",
+    "these",
+    "which",
+    "study",
+    "research",
+    "analysis",
+    "review",
+    "paper",
   ];
+  const downvotedKeywords = new Set(
+    ctx.downvotedPapers.flatMap((p) =>
+      p.title
+        .toLowerCase()
+        .split(/\s+/)
+        .filter((w) => w.length > 4 && !stopWords.includes(w)),
+    ),
+  );
+
+  // Add keywords from upvoted/bookmarked papers (excluding downvoted keywords)
+  const engagedPapers = [...ctx.upvotedPapers, ...ctx.bookmarkedPapers];
   if (engagedPapers.length > 0) {
     // Extract key terms from engaged paper titles
     const keywords = engagedPapers
@@ -136,7 +163,8 @@ export function buildRefinedQuery(ctx: InteractionContext): string {
           .filter(
             (w) =>
               w.length > 4 &&
-              !["about", "using", "based", "their", "these", "which", "study", "research", "analysis", "review", "paper"].includes(w),
+              !stopWords.includes(w) &&
+              !downvotedKeywords.has(w),
           );
         return words.slice(0, 2).join(" ");
       })

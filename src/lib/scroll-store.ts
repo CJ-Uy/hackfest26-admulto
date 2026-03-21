@@ -1,4 +1,10 @@
-import type { Paper, ExportTheme, ScrollSession, Poll, UserPost } from "@/lib/types";
+import type {
+  Paper,
+  ExportTheme,
+  ScrollSession,
+  Poll,
+  UserPost,
+} from "@/lib/types";
 
 export interface StoredScroll {
   scroll: ScrollSession;

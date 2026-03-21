@@ -115,7 +115,10 @@ export function findSimilarPairs(
     const scores: Array<{ index: number; score: number }> = [];
     for (let j = 0; j < embeddings.length; j++) {
       if (i === j) continue;
-      scores.push({ index: j, score: cosineSimilarity(embeddings[i], embeddings[j]) });
+      scores.push({
+        index: j,
+        score: cosineSimilarity(embeddings[i], embeddings[j]),
+      });
     }
     scores.sort((a, b) => b.score - a.score);
     pairs.set(i, scores.slice(0, topK));

@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "scrollId required" }, { status: 400 });
   }
 
-  // Count user comments on papers (isGenerated = false, no userPostId)
+  // Count all comments on papers (both user and AI-generated, excluding user-post comments)
   const paperCounts = await db
     .select({
       paperId: comments.paperId,
@@ -17,13 +17,7 @@ export async function GET(req: NextRequest) {
     })
     .from(comments)
     .innerJoin(papers, eq(comments.paperId, papers.id))
-    .where(
-      and(
-        eq(papers.scrollId, scrollId),
-        eq(comments.isGenerated, false),
-        isNull(comments.userPostId),
-      ),
-    )
+    .where(and(eq(papers.scrollId, scrollId), isNull(comments.userPostId)))
     .groupBy(comments.paperId);
 
   // Count all comments on user posts

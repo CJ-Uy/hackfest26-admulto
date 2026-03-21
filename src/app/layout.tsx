@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Schrollar — Turn Your Scroll Into Research",
+  title: "Schrollar — Turn Your Schroll Into Research",
   description:
     "Research you already know how to scroll. Every minute produces something useful.",
 };

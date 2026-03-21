@@ -10,10 +10,7 @@ export async function POST(request: Request) {
     const files = formData.getAll("files") as File[];
 
     if (files.length === 0) {
-      return NextResponse.json(
-        { error: "No files provided" },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "No files provided" }, { status: 400 });
     }
 
     // Validate files

@@ -95,7 +95,7 @@ export function ExportView({ scrollId, papers }: ExportViewProps) {
             ? "AI-generated research outline"
             : `${papers.length} papers collected`}
         </p>
-        <ExportActions text={markdownText} />
+        <ExportActions text={markdownText} papers={papers} />
       </div>
 
       {hasOutline ? (

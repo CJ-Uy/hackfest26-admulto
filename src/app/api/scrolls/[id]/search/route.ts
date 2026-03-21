@@ -12,7 +12,10 @@ export async function GET(
   const query = url.searchParams.get("q");
 
   if (!query) {
-    return Response.json({ error: "Query parameter 'q' is required" }, { status: 400 });
+    return Response.json(
+      { error: "Query parameter 'q' is required" },
+      { status: 400 },
+    );
   }
 
   // Embed the search query
@@ -52,7 +55,9 @@ export async function GET(
   // Compute similarity for each paper that has an embedding
   const scored = scrollPapers
     .map((p) => {
-      const embedding = p.embedding ? (JSON.parse(p.embedding) as number[]) : null;
+      const embedding = p.embedding
+        ? (JSON.parse(p.embedding) as number[])
+        : null;
       const score = embedding ? cosineSimilarity(queryEmbedding, embedding) : 0;
       return {
         id: p.id,

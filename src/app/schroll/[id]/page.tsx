@@ -43,6 +43,9 @@ export default function ScrollPage() {
   const [polls, setPolls] = useState<Poll[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [upvotedPapers, setUpvotedPapers] = useState<Set<string>>(new Set());
+  const [downvotedPapers, setDownvotedPapers] = useState<Set<string>>(
+    new Set(),
+  );
   const [bookmarkedPapers, setBookmarkedPapers] = useState<Set<string>>(
     new Set(),
   );
@@ -50,6 +53,10 @@ export default function ScrollPage() {
     new Map(),
   );
   const [userPosts, setUserPosts] = useState<UserPost[]>([]);
+  const [generatingPostIds, setGeneratingPostIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const [newCommentIds, setNewCommentIds] = useState<Set<string>>(new Set());
   const [isGeneratingMore, setIsGeneratingMore] = useState(false);
   const [generateMoreProgress, setGenerateMoreProgress] = useState<{
     step: string;
@@ -82,12 +89,15 @@ export default function ScrollPage() {
         setPolls(stored.polls || []);
         setUserPosts(stored.userPosts || []);
         const voted = new Set<string>();
+        const downed = new Set<string>();
         const saved = new Set<string>();
         stored.papers.forEach((p) => {
           if (p.voted) voted.add(p.id);
+          if (p.downvoted) downed.add(p.id);
           if (p.bookmarked) saved.add(p.id);
         });
         setUpvotedPapers(voted);
+        setDownvotedPapers(downed);
         setBookmarkedPapers(saved);
       }
     }
@@ -108,12 +118,15 @@ export default function ScrollPage() {
       setPolls(stored.polls || []);
       setUserPosts(stored.userPosts || []);
       const voted = new Set<string>();
+      const downed = new Set<string>();
       const saved = new Set<string>();
       stored.papers.forEach((p) => {
         if (p.voted) voted.add(p.id);
+        if (p.downvoted) downed.add(p.id);
         if (p.bookmarked) saved.add(p.id);
       });
       setUpvotedPapers(voted);
+      setDownvotedPapers(downed);
       setBookmarkedPapers(saved);
     }
     fetchCommentCounts();
@@ -139,37 +152,39 @@ export default function ScrollPage() {
         next.set(key, (next.get(key) || 0) + 1);
         return next;
       });
+      // Track new comments for notification dots
+      const notifKey = comment.userPostId
+        ? `post:${comment.userPostId}`
+        : comment.paperId;
+      setNewCommentIds((prev) => new Set(prev).add(notifKey));
+
+      // Clear generating indicator when AI replies to a user post
+      if (comment.userPostId && comment.isGenerated) {
+        setGeneratingPostIds((prev) => {
+          if (!prev.has(comment.userPostId!)) return prev;
+          const next = new Set(prev);
+          next.delete(comment.userPostId!);
+          return next;
+        });
+      }
     }, []),
   });
 
-  // Continuously generate new discussion comments while the user is on the scroll
-  useEffect(() => {
-    if (!scroll || scroll.status !== "complete") return;
-
-    let active = true;
-
-    async function generateLoop() {
-      while (active) {
-        // Wait 10 seconds between generations
-        await new Promise((r) => setTimeout(r, 10000));
-        if (!active) break;
-        // Only generate when the tab is visible
-        if (document.visibilityState !== "visible") continue;
-        try {
-          await fetch(`/api/scrolls/${scrollId}/generate-comments`, {
-            method: "POST",
-          });
-        } catch {
-          // ignore — will retry next cycle
-        }
+  // Generate comments for a specific paper on demand
+  const handleGenerateComments = useCallback(
+    async (paperId: string) => {
+      try {
+        await fetch(`/api/scrolls/${scrollId}/generate-comments`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ paperId }),
+        });
+      } catch {
+        // ignore
       }
-    }
-
-    generateLoop();
-    return () => {
-      active = false;
-    };
-  }, [scroll, scrollId]);
+    },
+    [scrollId],
+  );
 
   // Refresh comment counts when page regains visibility or focus (e.g. coming back from detail page)
   useEffect(() => {
@@ -198,6 +213,18 @@ export default function ScrollPage() {
     });
   }, []);
 
+  const handleDownvote = useCallback(
+    (paperId: string, isDownvoted: boolean) => {
+      setDownvotedPapers((prev) => {
+        const next = new Set(prev);
+        if (isDownvoted) next.add(paperId);
+        else next.delete(paperId);
+        return next;
+      });
+    },
+    [],
+  );
+
   const handleBookmark = useCallback((paperId: string, bookmarked: boolean) => {
     setBookmarkedPapers((prev) => {
       const next = new Set(prev);
@@ -217,6 +244,41 @@ export default function ScrollPage() {
 
   const handleNewPost = useCallback((post: UserPost) => {
     setUserPosts((prev) => [post, ...prev]);
+    // Mark post as generating (AI will reply)
+    setGeneratingPostIds((prev) => new Set(prev).add(post.id));
+    // Auto-clear after 90s as safety timeout
+    setTimeout(() => {
+      setGeneratingPostIds((prev) => {
+        if (!prev.has(post.id)) return prev;
+        const next = new Set(prev);
+        next.delete(post.id);
+        return next;
+      });
+    }, 90000);
+  }, []);
+
+  const handleDeletePaper = useCallback(async (paperId: string) => {
+    try {
+      const res = await fetch(`/api/papers/${paperId}`, { method: "DELETE" });
+      if (res.ok) {
+        setPapers((prev) => prev.filter((p) => p.id !== paperId));
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const handleDeletePost = useCallback(async (postId: string) => {
+    try {
+      const res = await fetch(`/api/user-posts?id=${postId}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        setUserPosts((prev) => prev.filter((p) => p.id !== postId));
+      }
+    } catch {
+      // ignore
+    }
   }, []);
 
   // Live SSE stream for generate-more
@@ -260,7 +322,7 @@ export default function ScrollPage() {
         <Sidebar />
         <div className="flex flex-1 justify-center gap-0 lg:gap-6 lg:px-6 lg:py-4">
           <main className="bg-background w-full max-w-[780px] flex-1 lg:rounded-t-lg">
-            <div className="border-border border-b px-4 pt-5 pb-3">
+            <div className="border-border border-b px-4 pt-14 pb-3 md:pt-5">
               <Skeleton className="mb-2 h-5 w-24" />
               <Skeleton className="mb-2 h-7 w-3/4" />
               <Skeleton className="h-4 w-full" />
@@ -327,13 +389,28 @@ export default function ScrollPage() {
                 userPosts={userPosts}
                 commentCounts={commentCounts}
                 bookmarkedPapers={bookmarkedPapers}
+                downvotedPapers={downvotedPapers}
                 isGeneratingMore={isGeneratingMore}
                 generateMoreProgress={generateMoreProgress}
                 onUpvote={handleUpvote}
+                onDownvote={handleDownvote}
                 onBookmark={handleBookmark}
                 onComment={handleComment}
                 onGenerateMore={handleGenerateMore}
                 onPost={handleNewPost}
+                onGenerateComments={handleGenerateComments}
+                onDelete={handleDeletePaper}
+                onDeletePost={handleDeletePost}
+                generatingPostIds={generatingPostIds}
+                newCommentIds={newCommentIds}
+                onClearNewComment={(id: string) => {
+                  setNewCommentIds((prev) => {
+                    if (!prev.has(id)) return prev;
+                    const next = new Set(prev);
+                    next.delete(id);
+                    return next;
+                  });
+                }}
               />
             )}
             {scroll.status !== "generating" && activeTab === "fine-tune" && (
@@ -347,12 +424,15 @@ export default function ScrollPage() {
                     setPolls(stored.polls || []);
                     setUserPosts(stored.userPosts || []);
                     const voted = new Set<string>();
+                    const downed = new Set<string>();
                     const saved = new Set<string>();
                     stored.papers.forEach((p) => {
                       if (p.voted) voted.add(p.id);
+                      if (p.downvoted) downed.add(p.id);
                       if (p.bookmarked) saved.add(p.id);
                     });
                     setUpvotedPapers(voted);
+                    setDownvotedPapers(downed);
                     setBookmarkedPapers(saved);
                   }
                   fetchCommentCounts();
@@ -371,6 +451,7 @@ export default function ScrollPage() {
           scroll={scroll}
           papers={papers}
           upvotedPapers={upvotedPapers}
+          downvotedPapers={downvotedPapers}
           bookmarkedPapers={bookmarkedPapers}
           commentCounts={commentCounts}
           userPosts={userPosts}

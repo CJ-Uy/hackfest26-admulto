@@ -3,7 +3,7 @@ import {
   generateApaCitation,
   generateSocialComments,
 } from "@/lib/ollama";
-import { verifyCard } from "@/lib/grounding";
+import { verifyCard, type GroundingResult } from "@/lib/grounding";
 import { safeEmbedBatch, findSimilarPairs } from "@/lib/embeddings";
 import type { Paper } from "@/lib/types";
 
@@ -73,17 +73,12 @@ export async function processAcademicPaper(
   try {
     const [synthesis, apaCitation] = await Promise.all([
       generateSynthesis(raw.title, raw.abstract, raw.authors),
-      generateApaCitation(
-        raw.title,
-        raw.authors,
-        raw.year,
-        raw.venue,
-        raw.doi,
-      ),
+      generateApaCitation(raw.title, raw.authors, raw.year, raw.venue, raw.doi),
     ]);
 
+    let groundingData: GroundingResult | null = null;
     try {
-      await verifyCard(raw.abstract, synthesis);
+      groundingData = await verifyCard(raw.abstract, synthesis);
     } catch {
       // verification service unavailable — continue
     }
@@ -108,6 +103,7 @@ export async function processAcademicPaper(
       commentCount: 0,
       apaCitation,
       embedding: raw.embedding,
+      groundingData,
     };
   } catch (err) {
     console.error(`Failed to process paper "${raw.title}":`, err);
@@ -170,23 +166,20 @@ export async function generateCommentsForPapers(
   if (processedPapers.length < 2) return rawComments;
 
   // Build semantic similarity pairs for better comment matching
-  let similarPairs: Map<number, Array<{ index: number; score: number }>> | null =
-    null;
+  let similarPairs: Map<
+    number,
+    Array<{ index: number; score: number }>
+  > | null = null;
 
   // Use existing embeddings or generate new ones
   const existingEmbeddings = processedPapers.map((p) => p.embedding);
   const allHaveEmbeddings = existingEmbeddings.every((e) => !!e);
 
   if (allHaveEmbeddings) {
-    similarPairs = findSimilarPairs(
-      existingEmbeddings as number[][],
-      4,
-    );
+    similarPairs = findSimilarPairs(existingEmbeddings as number[][], 4);
   } else {
     // Try to embed papers that don't have embeddings
-    const texts = processedPapers.map(
-      (p) => `${p.title}. ${p.synthesis}`,
-    );
+    const texts = processedPapers.map((p) => `${p.title}. ${p.synthesis}`);
     const embeddings = await safeEmbedBatch(texts);
     if (embeddings) {
       similarPairs = findSimilarPairs(embeddings, 4);

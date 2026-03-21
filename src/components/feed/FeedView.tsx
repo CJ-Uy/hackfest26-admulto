@@ -19,13 +19,25 @@ interface FeedViewProps {
   userPosts: UserPost[];
   commentCounts: Map<string, number>;
   bookmarkedPapers: Set<string>;
+  downvotedPapers?: Set<string>;
   isGeneratingMore?: boolean;
-  generateMoreProgress?: { step: string; papersProcessed?: number; total?: number } | null;
+  generateMoreProgress?: {
+    step: string;
+    papersProcessed?: number;
+    total?: number;
+  } | null;
   onUpvote: (paperId: string, voted: boolean) => void;
+  onDownvote?: (paperId: string, downvoted: boolean) => void;
   onBookmark: (paperId: string, bookmarked: boolean) => void;
   onComment: (paperId: string) => void;
   onGenerateMore?: () => void;
   onPost?: (post: UserPost) => void;
+  onGenerateComments?: (paperId: string) => void;
+  onDelete?: (paperId: string) => void;
+  onDeletePost?: (postId: string) => void;
+  generatingPostIds?: Set<string>;
+  newCommentIds?: Set<string>;
+  onClearNewComment?: (id: string) => void;
 }
 
 export function FeedView({
@@ -37,13 +49,21 @@ export function FeedView({
   userPosts,
   commentCounts,
   bookmarkedPapers,
+  downvotedPapers,
   isGeneratingMore,
   generateMoreProgress,
   onUpvote,
+  onDownvote,
   onBookmark,
   onComment,
   onGenerateMore,
   onPost,
+  onGenerateComments,
+  onDelete,
+  onDeletePost,
+  generatingPostIds,
+  newCommentIds,
+  onClearNewComment,
 }: FeedViewProps) {
   const router = useRouter();
   const query = searchQuery.toLowerCase();
@@ -137,6 +157,10 @@ export function FeedView({
           post={post}
           scrollId={scrollId}
           commentCount={commentCounts.get(`post:${post.id}`)}
+          onDelete={onDeletePost}
+          isGenerating={generatingPostIds?.has(post.id)}
+          hasNewComments={newCommentIds?.has(`post:${post.id}`)}
+          onClearNewComment={() => onClearNewComment?.(`post:${post.id}`)}
         />
       ))}
 
@@ -153,9 +177,17 @@ export function FeedView({
               (item.data as Paper).commentCount
             }
             initialBookmarked={bookmarkedPapers.has((item.data as Paper).id)}
+            initialDownvoted={downvotedPapers?.has((item.data as Paper).id)}
             onUpvote={onUpvote}
+            onDownvote={onDownvote}
             onBookmark={onBookmark}
             onComment={onComment}
+            onGenerateComments={onGenerateComments}
+            onDelete={onDelete}
+            hasNewComments={newCommentIds?.has((item.data as Paper).id)}
+            onClearNewComment={() =>
+              onClearNewComment?.((item.data as Paper).id)
+            }
           />
         ) : (
           <FeedPollCard
@@ -174,8 +206,8 @@ export function FeedView({
       )}
 
       {/* Generate More */}
-      {!query && (
-        isGeneratingMore ? (
+      {!query &&
+        (isGeneratingMore ? (
           <GenerateMoreProgress progress={generateMoreProgress ?? null} />
         ) : (
           <div className="px-4 py-8 text-center">
@@ -191,8 +223,7 @@ export function FeedView({
               Based on your interactions &amp; interests
             </p>
           </div>
-        )
-      )}
+        ))}
     </div>
   );
 }

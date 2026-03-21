@@ -9,16 +9,24 @@ export function ScrollHeader({ scroll }: ScrollHeaderProps) {
     <div className="px-4 pt-5 pb-3">
       <div className="mb-2 flex items-center gap-2">
         <span className="bg-primary/10 text-primary inline-flex items-center rounded-full px-2.5 py-0.5 text-[13px] font-semibold">
-          {scroll.mode === "brainstorm" ? "Brainstorm" : "Citation Finder"}
+          {scroll.mode === "pdf_only"
+            ? "PDF Only"
+            : scroll.mode === "pdf_context"
+              ? "PDF + Research"
+              : scroll.mode === "pdf_include"
+                ? "PDF + Research"
+                : scroll.mode === "brainstorm"
+                  ? "Brainstorm"
+                  : "Research"}
         </span>
         <span className="text-muted-foreground text-[14px]">
           {scroll.paperCount} papers &middot; {scroll.date}
         </span>
       </div>
-      <h1 className="font-heading text-foreground text-[26px] leading-tight font-bold">
+      <h1 className="font-heading text-foreground text-[20px] leading-tight font-bold sm:text-[26px]">
         {scroll.title}
       </h1>
-      <p className="text-muted-foreground mt-1.5 text-[15px] leading-snug">
+      <p className="text-muted-foreground mt-1.5 text-[14px] leading-snug sm:text-[15px]">
         {scroll.description}
       </p>
     </div>

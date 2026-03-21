@@ -1,7 +1,14 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Sparkles, Loader2, RefreshCw, Search, FileText, CheckCircle2 } from "lucide-react";
+import {
+  Sparkles,
+  Loader2,
+  RefreshCw,
+  Search,
+  FileText,
+  CheckCircle2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FineTuneCard } from "./FineTuneCard";
 import { toast } from "sonner";
@@ -45,20 +52,27 @@ function getStepIndex(step: string | undefined): number {
   return idx >= 0 ? idx : 0;
 }
 
-function getProgressPercent(progress: { step: string; papersProcessed?: number; total?: number } | null): number {
+function getProgressPercent(
+  progress: { step: string; papersProcessed?: number; total?: number } | null,
+): number {
   if (!progress) return 5;
   switch (progress.step) {
-    case "searching": return 15;
+    case "searching":
+      return 15;
     case "processing": {
       const base = 20;
       const range = 55;
       if (progress.total && progress.total > 0) {
-        return Math.round(base + (range * (progress.papersProcessed ?? 0)) / progress.total);
+        return Math.round(
+          base + (range * (progress.papersProcessed ?? 0)) / progress.total,
+        );
       }
       return base;
     }
-    case "exporting": return 85;
-    default: return 5;
+    case "exporting":
+      return 85;
+    default:
+      return 5;
   }
 }
 
@@ -76,6 +90,16 @@ export function FineTuneView({ scrollId, onRegenerated }: FineTuneViewProps) {
   const [elapsed, setElapsed] = useState(0);
   const startTimeRef = useRef(Date.now());
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
+    };
+  }, []);
 
   // Load or generate questions
   useEffect(() => {
@@ -101,7 +125,9 @@ export function FineTuneView({ scrollId, onRegenerated }: FineTuneViewProps) {
                     answer?: string;
                   } | null;
                   if (pollData?.answer) {
-                    setAnswers((prev) => new Map(prev).set(q.id, pollData.answer!));
+                    setAnswers((prev) =>
+                      new Map(prev).set(q.id, pollData.answer!),
+                    );
                   }
                 }
               } catch {
@@ -169,18 +195,23 @@ export function FineTuneView({ scrollId, onRegenerated }: FineTuneViewProps) {
     setElapsed(0);
 
     try {
-      await fetch("/api/fine-tune/regenerate", {
+      const res = await fetch("/api/fine-tune/regenerate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ scrollId }),
       });
 
+      if (!res.ok) {
+        const err = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(err.error || `Regeneration failed (${res.status})`);
+      }
+
       // Poll for progress
       pollingRef.current = setInterval(async () => {
         try {
-          const res = await fetch(`/api/scrolls/${scrollId}/status`);
-          if (!res.ok) return;
-          const data = (await res.json()) as {
+          const statusRes = await fetch(`/api/scrolls/${scrollId}/status`);
+          if (!statusRes.ok) return;
+          const data = (await statusRes.json()) as {
             status: string;
             progress?: string | null;
           };
@@ -211,25 +242,28 @@ export function FineTuneView({ scrollId, onRegenerated }: FineTuneViewProps) {
           // ignore
         }
       }, 2500);
-    } catch {
+    } catch (err) {
       setRegenerating(false);
       setRegenProgress(null);
-      toast.error("Failed to regenerate feed");
+      toast.error(
+        err instanceof Error ? err.message : "Failed to regenerate feed",
+      );
     }
   }
+
+  const [currentIndex, setCurrentIndex] = useState(0);
 
   const answeredCount = answers.size;
   const totalQuestions = questions.length;
   const allAnswered = answeredCount >= totalQuestions && totalQuestions > 0;
+  const currentQuestion = questions[currentIndex];
 
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center px-4 py-16">
         <Loader2 className="text-primary mb-3 h-6 w-6 animate-spin" />
         <p className="text-muted-foreground text-[14px]">
-          {generating
-            ? "Generating personalized questions..."
-            : "Loading..."}
+          {generating ? "Generating personalized questions..." : "Loading..."}
         </p>
       </div>
     );
@@ -238,10 +272,11 @@ export function FineTuneView({ scrollId, onRegenerated }: FineTuneViewProps) {
   if (regenerating) {
     const currentStepIdx = getStepIndex(regenProgress?.step);
     const percent = getProgressPercent(regenProgress);
-    const showPaperCount = regenProgress?.step === "processing" && (regenProgress.total ?? 0) > 0;
+    const showPaperCount =
+      regenProgress?.step === "processing" && (regenProgress.total ?? 0) > 0;
 
     return (
-      <div className="px-4 py-6 animate-in fade-in duration-500">
+      <div className="animate-in fade-in px-4 py-6 duration-500">
         <div className="mx-auto max-w-lg space-y-6">
           {/* Header */}
           <div className="space-y-2 text-center">
@@ -287,7 +322,9 @@ export function FineTuneView({ scrollId, onRegenerated }: FineTuneViewProps) {
                     {isDone ? (
                       <CheckCircle2 className="h-4 w-4" />
                     ) : (
-                      <Icon className={`h-4 w-4 ${isActive ? "animate-pulse" : ""}`} />
+                      <Icon
+                        className={`h-4 w-4 ${isActive ? "animate-pulse" : ""}`}
+                      />
                     )}
                   </div>
                   <div className="flex-1">
@@ -361,40 +398,81 @@ export function FineTuneView({ scrollId, onRegenerated }: FineTuneViewProps) {
           Answer these questions to help us curate your research feed. Your
           upvoted, saved, and commented posts will be preserved.
         </p>
-        <div className="text-muted-foreground mt-2 text-[12px]">
-          {answeredCount} of {totalQuestions} answered
-        </div>
       </div>
 
-      {/* Questions */}
-      <div className="mx-auto max-w-lg space-y-4">
-        {questions.map((q, i) => (
-          <FineTuneCard
-            key={q.id}
-            question={q}
-            index={i}
-            onAnswer={handleAnswer}
-            savedAnswer={answers.get(q.id)}
+      {/* Progress dots */}
+      <div className="mb-4 flex items-center justify-center gap-2">
+        {questions.map((_, i) => (
+          <button
+            key={i}
+            onClick={() => setCurrentIndex(i)}
+            className={`h-2 rounded-full transition-all ${
+              i === currentIndex
+                ? "bg-primary w-6"
+                : answers.has(questions[i].id)
+                  ? "bg-primary/40 w-2"
+                  : "bg-muted w-2"
+            }`}
           />
         ))}
       </div>
 
-      {/* Regenerate button */}
-      <div className="mt-6 text-center">
-        <Button
-          onClick={handleRegenerate}
-          disabled={!allAnswered}
-          className="gap-2"
-        >
-          <RefreshCw className="h-4 w-4" />
-          Regenerate My Feed
-        </Button>
-        {!allAnswered && (
-          <p className="text-muted-foreground mt-2 text-[12px]">
-            Answer all questions to regenerate
-          </p>
-        )}
-      </div>
+      {/* Current question card */}
+      {currentQuestion && (
+        <div className="mx-auto max-w-lg">
+          <div className="text-muted-foreground mb-2 text-center text-[12px]">
+            Question {currentIndex + 1} of {totalQuestions}
+          </div>
+
+          <FineTuneCard
+            key={currentQuestion.id}
+            question={currentQuestion}
+            index={currentIndex}
+            onAnswer={handleAnswer}
+            savedAnswer={answers.get(currentQuestion.id)}
+          />
+
+          {/* Navigation */}
+          <div className="mt-4 flex items-center justify-between">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentIndex((i) => Math.max(0, i - 1))}
+              disabled={currentIndex === 0}
+            >
+              Previous
+            </Button>
+
+            {currentIndex < totalQuestions - 1 ? (
+              <Button
+                size="sm"
+                onClick={() =>
+                  setCurrentIndex((i) => Math.min(totalQuestions - 1, i + 1))
+                }
+                disabled={!answers.has(currentQuestion.id)}
+              >
+                Next
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                onClick={handleRegenerate}
+                disabled={!allAnswered}
+                className="gap-2"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                Regenerate Feed
+              </Button>
+            )}
+          </div>
+
+          {!allAnswered && currentIndex === totalQuestions - 1 && (
+            <p className="text-muted-foreground mt-3 text-center text-[12px]">
+              Answer all {totalQuestions} questions to regenerate
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

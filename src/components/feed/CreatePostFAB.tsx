@@ -24,9 +24,11 @@ export function CreatePostFAB({ scrollId, onPost }: CreatePostFABProps) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit() {
-    if (!content.trim()) return;
+    if (!content.trim() || submitting) return;
+    setSubmitting(true);
 
     try {
       const res = await fetch("/api/user-posts", {
@@ -34,8 +36,8 @@ export function CreatePostFAB({ scrollId, onPost }: CreatePostFABProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           scrollId,
-          title: title.trim() || undefined,
           content: content.trim(),
+          title: title.trim() || undefined,
         }),
       });
 
@@ -64,6 +66,8 @@ export function CreatePostFAB({ scrollId, onPost }: CreatePostFABProps) {
       }
     } catch {
       toast.error("Failed to create post");
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -71,7 +75,7 @@ export function CreatePostFAB({ scrollId, onPost }: CreatePostFABProps) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
         render={
-          <button className="bg-primary text-primary-foreground fixed right-6 bottom-6 z-50 flex h-12 w-12 items-center justify-center rounded-full shadow-lg transition-all hover:scale-105 hover:shadow-xl active:scale-95" />
+          <button className="bg-primary text-primary-foreground fixed right-6 bottom-6 z-50 flex h-12 w-12 items-center justify-center rounded-full shadow-lg transition-all hover:scale-105 hover:shadow-xl active:scale-95 lg:right-6 lg:bottom-6" />
         }
       >
         <Plus className="h-5 w-5" />
@@ -97,21 +101,24 @@ export function CreatePostFAB({ scrollId, onPost }: CreatePostFABProps) {
           />
           <div className="flex justify-end gap-2">
             <Button
+              type="button"
               variant="ghost"
               size="sm"
               onClick={() => setOpen(false)}
+              disabled={submitting}
               className="text-[13px]"
             >
               Cancel
             </Button>
             <Button
+              type="button"
               size="sm"
               onClick={handleSubmit}
-              disabled={!content.trim()}
+              disabled={!content.trim() || submitting}
               className="gap-1.5 text-[13px]"
             >
               <Send className="h-3.5 w-3.5" />
-              Post
+              {submitting ? "Posting..." : "Post"}
             </Button>
           </div>
         </div>

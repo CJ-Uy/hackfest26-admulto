@@ -93,9 +93,7 @@ export function FineTuneCard({
                       : "border-muted-foreground/40",
                   )}
                 >
-                  {isSelected && (
-                    <Check className="h-3 w-3 text-white" />
-                  )}
+                  {isSelected && <Check className="h-3 w-3 text-white" />}
                 </div>
                 <span>{option}</span>
               </button>
@@ -106,7 +104,7 @@ export function FineTuneCard({
                   value={otherText}
                   onChange={(e) => setOtherText(e.target.value)}
                   placeholder="Type your answer..."
-                  className="border-border text-foreground placeholder:text-muted-foreground mt-2 ml-8 w-[calc(100%-2rem)] rounded-lg border bg-transparent px-3 py-2 text-[14px] outline-none focus:border-primary"
+                  className="border-border text-foreground placeholder:text-muted-foreground focus:border-primary mt-2 ml-8 w-[calc(100%-2rem)] rounded-lg border bg-transparent px-3 py-2 text-[14px] outline-none"
                   autoFocus
                 />
               )}
