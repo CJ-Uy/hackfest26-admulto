@@ -58,6 +58,7 @@ export interface ScrollSession {
   date: string;
   paperCount: number;
   mode: "brainstorm" | "citation-finder";
+  status?: "generating" | "complete" | "error";
 }
 
 export interface OnboardingPreset {

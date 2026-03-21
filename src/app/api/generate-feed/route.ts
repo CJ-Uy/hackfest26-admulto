@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import {
   generateSynthesis,
   generateApaCitation,
@@ -123,6 +124,17 @@ function computeCredibilityScore(paper: AnyRecord): number {
   return Math.min(score, 99);
 }
 
+async function updateProgress(
+  scrollId: string,
+  step: string,
+  extra: Record<string, number> = {},
+) {
+  await db.scroll.update({
+    where: { id: scrollId },
+    data: { progress: JSON.stringify({ step, ...extra }) },
+  });
+}
+
 export async function POST(req: Request) {
   const body = (await req.json()) as {
     topic: string;
@@ -133,306 +145,339 @@ export async function POST(req: Request) {
 
   const { topic, description, subfields, mode } = body;
 
-  // Use just the topic for S2 search (short, focused query)
-  // Subfields can be appended for specificity but keep it concise
-  let searchQuery = topic;
-  if (subfields?.length) {
-    searchQuery += " " + subfields.slice(0, 2).join(" ");
-  }
-
   try {
-    // 1. Fetch S2 papers and web results in parallel
-    const [rawPapers, webResults] = await Promise.all([
-      searchPapersWithRetry(searchQuery, 20),
-      webSearch(searchQuery, 8).catch((err) => {
-        console.error("Web search failed:", err);
-        return [] as {
-          title: string;
-          url: string;
-          snippet: string;
-          engine: string;
-        }[];
-      }),
-    ]);
-
-    const papersWithAbstracts = rawPapers.filter(
-      (p) => p.abstract && (p.abstract as string).length > 50,
-    );
-
-    // 2. Process S2 papers in parallel batches
-    const processPaper = async (raw: AnyRecord): Promise<Paper | null> => {
-      const authors =
-        (raw.authors as AnyRecord[])?.map((a) => a.name as string) || [];
-      const title = raw.title as string;
-      const abstract = raw.abstract as string;
-      const year = (raw.year as number) || 0;
-      const venue =
-        (raw.venue as string) ||
-        (raw.journal as AnyRecord)?.name ||
-        "Academic Publication";
-      const doi = (raw.externalIds as AnyRecord)?.DOI || "";
-      const citationCount = (raw.citationCount as number) || 0;
-
-      try {
-        // Run synthesis and verification concurrently — start synthesis,
-        // then verify once it's done (verification depends on synthesis output)
-        const synthesis = await generateSynthesis(title, abstract, authors);
-
-        let verified = true;
-        try {
-          const verification = (await verifyCard(
-            abstract,
-            synthesis,
-          )) as AnyRecord;
-          verified = verification.card_verified !== false;
-        } catch {
-          verified = true;
-        }
-
-        if (!verified) return null;
-
-        const apaCitation = await generateApaCitation(
-          title,
-          authors,
-          year,
-          venue as string,
-          doi as string,
-        );
-        const credibilityScore = computeCredibilityScore(raw);
-
-        return {
-          id:
-            (raw.paperId as string) ||
-            `p-${Math.random().toString(36).slice(2)}`,
-          title,
-          authors,
-          journal: venue as string,
-          year,
-          doi: doi as string,
-          peerReviewed: !!venue,
-          synthesis,
-          credibilityScore,
-          citationCount,
-          commentCount: 0,
-          apaCitation,
-        };
-      } catch (err) {
-        console.error(`Failed to process paper "${title}":`, err);
-        return null;
-      }
-    };
-
-    const processedPapers = await processInBatches(
-      papersWithAbstracts,
-      processPaper,
-      12,
-    );
-
-    // 3. Supplement with web results if S2 yielded few papers
-    if (processedPapers.length < 6) {
-      console.log(
-        `Only ${processedPapers.length} S2 results, supplementing with web search`,
-      );
-
-      const existingTitles = new Set(
-        processedPapers.map((p) => p.title.toLowerCase()),
-      );
-
-      const eligibleWebResults = webResults.filter(
-        (r) =>
-          r.snippet &&
-          r.snippet.length >= 20 &&
-          !existingTitles.has(r.title.toLowerCase()),
-      );
-
-      const processWebResult = async (
-        result: (typeof webResults)[number],
-      ): Promise<Paper | null> => {
-        try {
-          const synthesis = await generateSynthesis(
-            result.title,
-            result.snippet,
-            [],
-          );
-          const apaCitation = await generateApaCitation(
-            result.title,
-            [],
-            new Date().getFullYear(),
-            result.engine || "Web",
-            result.url,
-          );
-
-          return {
-            id: `web-${Math.random().toString(36).slice(2)}`,
-            title: result.title,
-            authors: [],
-            journal: result.engine || "Web Source",
-            year: new Date().getFullYear(),
-            doi: result.url,
-            peerReviewed: false,
-            synthesis,
-            credibilityScore: 40,
-            citationCount: 0,
-            commentCount: 0,
-            apaCitation,
-          };
-        } catch (err) {
-          console.error(`Failed to process web result "${result.title}":`, err);
-          return null;
-        }
-      };
-
-      const remaining = 12 - processedPapers.length;
-      const webPapers = await processInBatches(
-        eligibleWebResults,
-        processWebResult,
-        remaining,
-      );
-      processedPapers.push(...webPapers);
-    }
-
-    // 4. Generate export outline from processed papers
-    const fallbackOutline = (): ExportTheme[] => [
-      {
-        title: topic,
-        summary: `Research papers on ${topic}.`,
-        sources: processedPapers.map((p) => ({
-          title: p.title,
-          authors: p.authors.join(", "),
-          year: p.year,
-          keyFinding: p.synthesis.split(".")[0] + ".",
-          apaCitation: p.apaCitation,
-        })),
-      },
-    ];
-
-    let exportOutline: ExportTheme[] = [];
-    if (processedPapers.length > 0) {
-      try {
-        const outlineInput = processedPapers.map((p) => ({
-          title: p.title,
-          authors: p.authors.join(", "),
-          year: p.year,
-          synthesis: p.synthesis,
-          apaCitation: p.apaCitation,
-        }));
-
-        const outlineJson = await generateExportOutline(outlineInput);
-        // Try to extract JSON — LLM sometimes wraps in markdown or adds trailing text
-        const jsonMatch = outlineJson.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          try {
-            const parsed = JSON.parse(jsonMatch[0]) as {
-              themes: ExportTheme[];
-            };
-            exportOutline = parsed.themes || [];
-          } catch {
-            // JSON was malformed — use fallback
-            console.warn("Export outline JSON was malformed, using fallback");
-            exportOutline = fallbackOutline();
-          }
-        } else {
-          exportOutline = fallbackOutline();
-        }
-      } catch (err) {
-        console.error("Failed to generate export outline:", err);
-        exportOutline = fallbackOutline();
-      }
-    }
-
-    // 5. Persist to database
+    // Create scroll record immediately with "generating" status
     const scroll = await db.scroll.create({
       data: {
         title: topic,
         description: description || `Exploring research on ${topic}.`,
         mode: mode === "citationFinder" ? "citation-finder" : "brainstorm",
         date: new Date().toISOString().split("T")[0],
-        paperCount: processedPapers.length,
-        exportData: JSON.stringify(exportOutline),
-        papers: {
-          create: processedPapers.map((p) => ({
-            externalId: p.id,
-            title: p.title,
-            authors: JSON.stringify(p.authors),
-            journal: p.journal,
-            year: p.year,
-            doi: p.doi,
-            peerReviewed: p.peerReviewed,
-            synthesis: p.synthesis,
-            credibilityScore: p.credibilityScore,
-            citationCount: p.citationCount,
-            commentCount: p.commentCount,
-            apaCitation: p.apaCitation,
-          })),
-        },
-        polls: {
-          create: [
-            {
-              type: "multiple-choice",
-              question: `Which aspect of "${topic}" interests you most?`,
-              options: JSON.stringify(
-                subfields && subfields.length >= 2
-                  ? subfields.slice(0, 4)
-                  : [
-                      "Foundational theories",
-                      "Recent developments",
-                      "Practical applications",
-                      "Methodological approaches",
-                    ],
-              ),
-            },
-            {
-              type: "multiple-choice",
-              question: "What type of research sources do you prefer?",
-              options: JSON.stringify([
-                "Foundational/classic papers (pre-2000)",
-                "Modern empirical studies (2000–2015)",
-                "Recent cutting-edge research (2015+)",
-                "A mix of all eras",
-              ]),
-            },
-            {
-              type: "open-ended",
-              question:
-                "What specific research question are you trying to answer?",
-            },
-          ],
-        },
+        paperCount: 0,
+        status: "generating",
+        progress: JSON.stringify({ step: "searching" }),
       },
-      include: { papers: true },
     });
 
-    // 6. Map DB records back to API response types
-    const responsePapers: Paper[] = scroll.papers.map((p) => ({
-      id: p.id,
-      title: p.title,
-      authors: JSON.parse(p.authors) as string[],
-      journal: p.journal,
-      year: p.year,
-      doi: p.doi,
-      peerReviewed: p.peerReviewed,
-      synthesis: p.synthesis,
-      credibilityScore: p.credibilityScore,
-      citationCount: p.citationCount,
-      commentCount: p.commentCount,
-      apaCitation: p.apaCitation,
-    }));
+    const scrollId = scroll.id;
 
-    const responseScroll = {
-      id: scroll.id,
-      title: scroll.title,
-      description: scroll.description,
-      date: scroll.date,
-      paperCount: scroll.paperCount,
-      mode: scroll.mode as "brainstorm" | "citation-finder",
-    };
+    // Run heavy processing in background after returning response
+    after(async () => {
+      try {
+        let searchQuery = topic;
+        if (subfields?.length) {
+          searchQuery += " " + subfields.slice(0, 2).join(" ");
+        }
 
-    return Response.json({
-      papers: responsePapers,
-      exportOutline,
-      scroll: responseScroll,
-      topic,
+        // 1. Fetch S2 papers and web results in parallel
+        const [rawPapers, webResults] = await Promise.all([
+          searchPapersWithRetry(searchQuery, 20),
+          webSearch(searchQuery, 8).catch((err) => {
+            console.error("Web search failed:", err);
+            return [] as {
+              title: string;
+              url: string;
+              snippet: string;
+              engine: string;
+            }[];
+          }),
+        ]);
+
+        const papersWithAbstracts = rawPapers.filter(
+          (p) => p.abstract && (p.abstract as string).length > 50,
+        );
+
+        const total = Math.min(papersWithAbstracts.length, 12);
+        await updateProgress(scrollId, "processing", {
+          papersProcessed: 0,
+          total,
+        });
+
+        // 2. Process S2 papers in parallel batches with progress updates
+        let papersProcessed = 0;
+
+        const processPaper = async (raw: AnyRecord): Promise<Paper | null> => {
+          const authors =
+            (raw.authors as AnyRecord[])?.map((a) => a.name as string) || [];
+          const title = raw.title as string;
+          const abstract = raw.abstract as string;
+          const year = (raw.year as number) || 0;
+          const venue =
+            (raw.venue as string) ||
+            (raw.journal as AnyRecord)?.name ||
+            "Academic Publication";
+          const doi = (raw.externalIds as AnyRecord)?.DOI || "";
+          const citationCount = (raw.citationCount as number) || 0;
+
+          try {
+            const synthesis = await generateSynthesis(title, abstract, authors);
+
+            let verified = true;
+            try {
+              const verification = (await verifyCard(
+                abstract,
+                synthesis,
+              )) as AnyRecord;
+              verified = verification.card_verified !== false;
+            } catch {
+              verified = true;
+            }
+
+            if (!verified) return null;
+
+            const apaCitation = await generateApaCitation(
+              title,
+              authors,
+              year,
+              venue as string,
+              doi as string,
+            );
+            const credibilityScore = computeCredibilityScore(raw);
+
+            return {
+              id:
+                (raw.paperId as string) ||
+                `p-${Math.random().toString(36).slice(2)}`,
+              title,
+              authors,
+              journal: venue as string,
+              year,
+              doi: doi as string,
+              peerReviewed: !!venue,
+              synthesis,
+              credibilityScore,
+              citationCount,
+              commentCount: 0,
+              apaCitation,
+            };
+          } catch (err) {
+            console.error(`Failed to process paper "${title}":`, err);
+            return null;
+          }
+        };
+
+        // Process with progress tracking per batch
+        const processedPapers: Paper[] = [];
+        for (
+          let i = 0;
+          i < papersWithAbstracts.length && processedPapers.length < 12;
+          i += CONCURRENCY
+        ) {
+          const batch = papersWithAbstracts.slice(i, i + CONCURRENCY);
+          const batchResults = await Promise.allSettled(
+            batch.map(processPaper),
+          );
+          for (const r of batchResults) {
+            if (processedPapers.length >= 12) break;
+            if (r.status === "fulfilled" && r.value !== null) {
+              processedPapers.push(r.value);
+            }
+          }
+          papersProcessed = Math.min(i + CONCURRENCY, papersWithAbstracts.length);
+          await updateProgress(scrollId, "processing", {
+            papersProcessed: Math.min(papersProcessed, total),
+            total,
+          });
+        }
+
+        // 3. Supplement with web results if S2 yielded few papers
+        if (processedPapers.length < 6) {
+          console.log(
+            `Only ${processedPapers.length} S2 results, supplementing with web search`,
+          );
+
+          const existingTitles = new Set(
+            processedPapers.map((p) => p.title.toLowerCase()),
+          );
+
+          const eligibleWebResults = webResults.filter(
+            (r) =>
+              r.snippet &&
+              r.snippet.length >= 20 &&
+              !existingTitles.has(r.title.toLowerCase()),
+          );
+
+          const processWebResult = async (
+            result: (typeof webResults)[number],
+          ): Promise<Paper | null> => {
+            try {
+              const synthesis = await generateSynthesis(
+                result.title,
+                result.snippet,
+                [],
+              );
+              const apaCitation = await generateApaCitation(
+                result.title,
+                [],
+                new Date().getFullYear(),
+                result.engine || "Web",
+                result.url,
+              );
+
+              return {
+                id: `web-${Math.random().toString(36).slice(2)}`,
+                title: result.title,
+                authors: [],
+                journal: result.engine || "Web Source",
+                year: new Date().getFullYear(),
+                doi: result.url,
+                peerReviewed: false,
+                synthesis,
+                credibilityScore: 40,
+                citationCount: 0,
+                commentCount: 0,
+                apaCitation,
+              };
+            } catch (err) {
+              console.error(
+                `Failed to process web result "${result.title}":`,
+                err,
+              );
+              return null;
+            }
+          };
+
+          const remaining = 12 - processedPapers.length;
+          const webPapers = await processInBatches(
+            eligibleWebResults,
+            processWebResult,
+            remaining,
+          );
+          processedPapers.push(...webPapers);
+        }
+
+        // 4. Generate export outline
+        await updateProgress(scrollId, "exporting");
+
+        const fallbackOutline = (): ExportTheme[] => [
+          {
+            title: topic,
+            summary: `Research papers on ${topic}.`,
+            sources: processedPapers.map((p) => ({
+              title: p.title,
+              authors: p.authors.join(", "),
+              year: p.year,
+              keyFinding: p.synthesis.split(".")[0] + ".",
+              apaCitation: p.apaCitation,
+            })),
+          },
+        ];
+
+        let exportOutline: ExportTheme[] = [];
+        if (processedPapers.length > 0) {
+          try {
+            const outlineInput = processedPapers.map((p) => ({
+              title: p.title,
+              authors: p.authors.join(", "),
+              year: p.year,
+              synthesis: p.synthesis,
+              apaCitation: p.apaCitation,
+            }));
+
+            const outlineJson = await generateExportOutline(outlineInput);
+            const jsonMatch = outlineJson.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+              try {
+                const parsed = JSON.parse(jsonMatch[0]) as {
+                  themes: ExportTheme[];
+                };
+                exportOutline = parsed.themes || [];
+              } catch {
+                console.warn(
+                  "Export outline JSON was malformed, using fallback",
+                );
+                exportOutline = fallbackOutline();
+              }
+            } else {
+              exportOutline = fallbackOutline();
+            }
+          } catch (err) {
+            console.error("Failed to generate export outline:", err);
+            exportOutline = fallbackOutline();
+          }
+        }
+
+        // 5. Persist papers, polls, and mark as complete
+        await db.scroll.update({
+          where: { id: scrollId },
+          data: {
+            paperCount: processedPapers.length,
+            exportData: JSON.stringify(exportOutline),
+            status: "complete",
+            progress: null,
+            papers: {
+              create: processedPapers.map((p) => ({
+                externalId: p.id,
+                title: p.title,
+                authors: JSON.stringify(p.authors),
+                journal: p.journal,
+                year: p.year,
+                doi: p.doi,
+                peerReviewed: p.peerReviewed,
+                synthesis: p.synthesis,
+                credibilityScore: p.credibilityScore,
+                citationCount: p.citationCount,
+                commentCount: p.commentCount,
+                apaCitation: p.apaCitation,
+              })),
+            },
+            polls: {
+              create: [
+                {
+                  type: "multiple-choice",
+                  question: `Which aspect of "${topic}" interests you most?`,
+                  options: JSON.stringify(
+                    subfields && subfields.length >= 2
+                      ? subfields.slice(0, 4)
+                      : [
+                          "Foundational theories",
+                          "Recent developments",
+                          "Practical applications",
+                          "Methodological approaches",
+                        ],
+                  ),
+                },
+                {
+                  type: "multiple-choice",
+                  question: "What type of research sources do you prefer?",
+                  options: JSON.stringify([
+                    "Foundational/classic papers (pre-2000)",
+                    "Modern empirical studies (2000–2015)",
+                    "Recent cutting-edge research (2015+)",
+                    "A mix of all eras",
+                  ]),
+                },
+                {
+                  type: "open-ended",
+                  question:
+                    "What specific research question are you trying to answer?",
+                },
+              ],
+            },
+          },
+        });
+
+        console.log(
+          `Feed generation complete for scroll ${scrollId}: ${processedPapers.length} papers`,
+        );
+      } catch (err) {
+        console.error(`Background feed generation failed for ${scrollId}:`, err);
+        await db.scroll.update({
+          where: { id: scrollId },
+          data: {
+            status: "error",
+            progress: JSON.stringify({
+              step: "error",
+              message:
+                err instanceof Error ? err.message : "Feed generation failed",
+            }),
+          },
+        });
+      }
     });
+
+    // Return immediately with the scroll ID
+    return Response.json({ scroll: { id: scroll.id } });
   } catch (err) {
     console.error("Feed generation failed:", err);
     return Response.json(

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Sparkles, Loader2, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -9,17 +9,112 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 
-interface TopicFormProps {
-  mode: "brainstorm" | "citationFinder" | null;
+interface ProgressInfo {
+  step: string;
+  papersProcessed?: number;
+  total?: number;
+  message?: string;
 }
 
-export function TopicForm({ mode }: TopicFormProps) {
+interface TopicFormProps {
+  mode: "brainstorm" | "citationFinder" | null;
+  initialTopic?: string;
+}
+
+function getProgressMessage(progress: ProgressInfo | null): string {
+  if (!progress) return "Starting...";
+  switch (progress.step) {
+    case "searching":
+      return "Searching for papers...";
+    case "processing":
+      if (progress.total && progress.total > 0) {
+        return `Generating summaries... ${progress.papersProcessed ?? 0}/${progress.total}`;
+      }
+      return "Generating summaries...";
+    case "exporting":
+      return "Organizing your research...";
+    case "error":
+      return progress.message || "Something went wrong.";
+    default:
+      return "Working...";
+  }
+}
+
+function getProgressPercent(progress: ProgressInfo | null): number {
+  if (!progress) return 5;
+  switch (progress.step) {
+    case "searching":
+      return 15;
+    case "processing": {
+      const base = 20;
+      const range = 60;
+      if (progress.total && progress.total > 0) {
+        return base + (range * (progress.papersProcessed ?? 0)) / progress.total;
+      }
+      return base;
+    }
+    case "exporting":
+      return 85;
+    default:
+      return 5;
+  }
+}
+
+export function TopicForm({ mode, initialTopic }: TopicFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState<ProgressInfo | null>(null);
+  const [scrollId, setScrollId] = useState<string | null>(null);
   const [subfields, setSubfields] = useState<string[]>([]);
   const [subfieldInput, setSubfieldInput] = useState("");
   const topicRef = useRef<HTMLInputElement>(null);
   const descRef = useRef<HTMLTextAreaElement>(null);
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const stopPolling = useCallback(() => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
+  }, []);
+
+  // Poll for status updates
+  useEffect(() => {
+    if (!scrollId) return;
+
+    async function pollStatus() {
+      try {
+        const res = await fetch(`/api/scrolls/${scrollId}/status`);
+        if (!res.ok) return;
+        const data = (await res.json()) as {
+          status: string;
+          progress: ProgressInfo | null;
+        };
+
+        if (data.status === "complete") {
+          stopPolling();
+          router.push(`/scroll/${scrollId}`);
+        } else if (data.status === "error") {
+          stopPolling();
+          setLoading(false);
+          setScrollId(null);
+          toast.error(
+            data.progress?.message || "Feed generation failed. Please try again.",
+          );
+        } else {
+          setProgress(data.progress);
+        }
+      } catch {
+        // Ignore transient fetch errors during polling
+      }
+    }
+
+    // Poll immediately, then every 2.5s
+    pollStatus();
+    pollingRef.current = setInterval(pollStatus, 2500);
+
+    return stopPolling;
+  }, [scrollId, router, stopPolling]);
 
   function addSubfield() {
     const val = subfieldInput.trim();
@@ -52,6 +147,7 @@ export function TopicForm({ mode }: TopicFormProps) {
     if (!topic) return;
 
     setLoading(true);
+    setProgress({ step: "searching" });
 
     try {
       const res = await fetch("/api/generate-feed", {
@@ -74,14 +170,17 @@ export function TopicForm({ mode }: TopicFormProps) {
         scroll: { id: string };
       };
 
-      router.push(`/scroll/${data.scroll.id}`);
+      // Start polling for progress
+      setScrollId(data.scroll.id);
     } catch (err) {
       console.error("Feed generation failed:", err);
       toast.error("Could not generate feed. Please try again.");
-    } finally {
       setLoading(false);
+      setProgress(null);
     }
   }
+
+  const progressPercent = getProgressPercent(progress);
 
   return (
     <form onSubmit={handleSubmit} className="mt-8 space-y-5">
@@ -92,6 +191,7 @@ export function TopicForm({ mode }: TopicFormProps) {
         <Input
           id="topic"
           ref={topicRef}
+          defaultValue={initialTopic}
           placeholder={
             mode === "citationFinder"
               ? "e.g., Climate Policy Effectiveness in Southeast Asia"
@@ -179,7 +279,7 @@ export function TopicForm({ mode }: TopicFormProps) {
         {loading ? (
           <>
             <Loader2 className="h-4 w-4 animate-spin" />
-            Generating your feed...
+            {getProgressMessage(progress)}
           </>
         ) : (
           <>
@@ -196,10 +296,17 @@ export function TopicForm({ mode }: TopicFormProps) {
       )}
 
       {loading && (
-        <p className="text-muted-foreground text-center text-xs">
-          Searching papers, generating summaries, and verifying claims. This may
-          take a minute.
-        </p>
+        <div className="space-y-2">
+          <div className="bg-muted h-2 w-full overflow-hidden rounded-full">
+            <div
+              className="bg-primary h-full rounded-full transition-all duration-500 ease-out"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+          <p className="text-muted-foreground text-center text-xs">
+            {getProgressMessage(progress)}
+          </p>
+        </div>
       )}
     </form>
   );

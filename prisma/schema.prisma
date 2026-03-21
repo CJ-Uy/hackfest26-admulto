@@ -18,6 +18,8 @@ model Scroll {
   date        String
   paperCount  Int
   exportData  String?
+  status      String   @default("complete")
+  progress    String?
   createdAt   DateTime @default(now())
   papers      Paper[]
   polls       Poll[]

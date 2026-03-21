@@ -1,5 +1,8 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+import { Search, AlertTriangle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import type { Paper, Poll, UserPost } from "@/lib/types";
 import { PaperCard } from "./PaperCard";
 import { ComposeBox } from "./ComposeBox";
@@ -11,6 +14,7 @@ interface FeedViewProps {
   papers: Paper[];
   polls: Poll[];
   searchQuery: string;
+  scrollTitle?: string;
   userPosts: UserPost[];
   commentCounts: Map<string, number>;
   onUpvote: (paperId: string, voted: boolean) => void;
@@ -23,13 +27,19 @@ export function FeedView({
   papers,
   polls,
   searchQuery,
+  scrollTitle,
   userPosts,
   commentCounts,
   onUpvote,
   onBookmark,
   onComment,
 }: FeedViewProps) {
+  const router = useRouter();
   const query = searchQuery.toLowerCase();
+
+  const retryUrl = scrollTitle
+    ? `/onboarding?topic=${encodeURIComponent(scrollTitle)}`
+    : "/onboarding";
 
   const filteredPapers = query
     ? papers.filter(
@@ -43,10 +53,18 @@ export function FeedView({
 
   if (papers.length === 0) {
     return (
-      <div className="px-4 py-12 text-center">
-        <p className="text-muted-foreground text-[15px]">
-          No papers found. Try a different topic.
+      <div className="px-4 py-16 text-center">
+        <div className="bg-muted mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full">
+          <Search className="text-muted-foreground h-8 w-8" />
+        </div>
+        <h2 className="mb-2 text-lg font-semibold">No papers found</h2>
+        <p className="text-muted-foreground mx-auto mb-6 max-w-md text-sm">
+          We couldn&apos;t find papers for this topic. Try broadening your
+          search or using different keywords.
         </p>
+        <Button variant="outline" onClick={() => router.push(retryUrl)}>
+          Try a different topic
+        </Button>
       </div>
     );
   }
@@ -73,6 +91,32 @@ export function FeedView({
 
   return (
     <div>
+      {papers.length > 0 && papers.length < 3 && (
+        <div className="mx-4 mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+            <div>
+              <p className="text-sm font-medium text-amber-800">
+                We found fewer papers than expected ({papers.length}{" "}
+                {papers.length === 1 ? "paper" : "papers"}).
+              </p>
+              <p className="mt-1 text-xs text-amber-700">
+                Try broadening your topic or using more general keywords for
+                better results.
+              </p>
+              <Button
+                size="sm"
+                variant="outline"
+                className="mt-3"
+                onClick={() => router.push(retryUrl)}
+              >
+                Try again with a different topic
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <ComposeBox scrollId={scrollId} />
 
       {/* User posts at top */}

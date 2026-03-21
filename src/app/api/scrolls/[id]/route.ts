@@ -84,6 +84,7 @@ export async function GET(
       date: scroll.date,
       paperCount: scroll.paperCount,
       mode: scroll.mode,
+      status: scroll.status,
     },
     papers,
     exportOutline,
