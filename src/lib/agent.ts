@@ -1,6 +1,7 @@
 import { webSearch } from "./search";
 import { getSmartModel } from "./ollama";
 
+const OLLAMA_URL = process.env.OLLAMA_URL || "http://localhost:11434";
 const S2_API = "https://api.semanticscholar.org/graph/v1/paper/search";
 
 async function searchPapers(query: string, limit = 10) {
@@ -17,7 +18,7 @@ async function searchPapers(query: string, limit = 10) {
 
 export async function agentQuery(userQuery: string) {
   // Step 1: Send to Qwen with tools defined
-  const res = await fetch(`${process.env.OLLAMA_URL}/api/chat`, {
+  const res = await fetch(`${OLLAMA_URL}/api/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -99,7 +100,7 @@ export async function agentQuery(userQuery: string) {
     }
 
     // Step 3: Send tool results back to Qwen for final answer
-    const finalRes = await fetch(`${process.env.OLLAMA_URL}/api/chat`, {
+    const finalRes = await fetch(`${OLLAMA_URL}/api/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

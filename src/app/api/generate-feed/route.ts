@@ -212,10 +212,10 @@ export async function POST(req: Request) {
           });
         }
 
-        // 3. Supplement with web results if we have too few papers
-        if (processedPapers.length < 6) {
+        // 3. Always supplement with web results (fill up to 12 total)
+        if (webResults.length > 0 && processedPapers.length < 12) {
           console.log(
-            `Only ${processedPapers.length} academic results, supplementing with web search`,
+            `${processedPapers.length} academic results, supplementing with ${webResults.length} web results`,
           );
 
           const existingTitles = new Set(
