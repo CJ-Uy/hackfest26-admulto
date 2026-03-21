@@ -16,7 +16,7 @@ export interface RawPaper {
   year: number;
   doi: string;
   citationCount: number;
-  source: "openalex" | "crossref" | "semantic_scholar" | "web";
+  source: "openalex" | "crossref" | "semantic_scholar" | "web" | "pdf_upload";
 }
 
 // ─── OpenAlex (primary — free, 100k req/day with polite pool) ───────────────

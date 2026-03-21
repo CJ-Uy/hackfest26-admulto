@@ -13,9 +13,17 @@ interface ProgressInfo {
 interface GenerationProgressProps {
   progress: ProgressInfo | null;
   topic: string;
+  hasPdfs?: boolean;
 }
 
 const STEPS = [
+  {
+    key: "extracting",
+    label: "Extracting PDFs",
+    detail: "Reading text from your uploaded documents",
+    icon: FileText,
+    pdfOnly: true,
+  },
   {
     key: "searching",
     label: "Searching databases",
@@ -57,14 +65,12 @@ const FUN_FACTS = [
   "Nature and Science have rejection rates above 90%.",
 ];
 
-function getStepIndex(step: string | undefined): number {
-  if (!step) return 0;
-  const idx = STEPS.findIndex((s) => s.key === step);
-  return idx >= 0 ? idx : 0;
-}
-
-export function GenerationProgress({ progress, topic }: GenerationProgressProps) {
-  const currentStepIdx = getStepIndex(progress?.step);
+export function GenerationProgress({ progress, topic, hasPdfs }: GenerationProgressProps) {
+  const visibleSteps = hasPdfs
+    ? STEPS
+    : STEPS.filter((s) => !(s as { pdfOnly?: boolean }).pdfOnly);
+  const currentStepIdx = visibleSteps.findIndex((s) => s.key === (progress?.step || "searching"));
+  const effectiveIdx = currentStepIdx >= 0 ? currentStepIdx : 0;
   const [factIndex, setFactIndex] = useState(() =>
     Math.floor(Math.random() * FUN_FACTS.length),
   );
@@ -121,11 +127,11 @@ export function GenerationProgress({ progress, topic }: GenerationProgressProps)
 
       {/* Step indicators */}
       <div className="space-y-3">
-        {STEPS.slice(0, -1).map((step, idx) => {
+        {visibleSteps.slice(0, -1).map((step, idx) => {
           const Icon = step.icon;
-          const isActive = idx === currentStepIdx;
-          const isDone = idx < currentStepIdx;
-          const isPending = idx > currentStepIdx;
+          const isActive = idx === effectiveIdx;
+          const isDone = idx < effectiveIdx;
+          const isPending = idx > effectiveIdx;
 
           return (
             <div
@@ -231,6 +237,8 @@ export function GenerationProgress({ progress, topic }: GenerationProgressProps)
 function getProgressPercent(progress: ProgressInfo | null): number {
   if (!progress) return 5;
   switch (progress.step) {
+    case "extracting":
+      return 8;
     case "searching":
       return 15;
     case "processing": {

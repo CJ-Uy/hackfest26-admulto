@@ -12,6 +12,7 @@ export interface Paper {
   commentCount: number;
   apaCitation: string;
   voted?: boolean;
+  isUserUpload?: boolean;
 }
 
 export interface Comment {
@@ -68,7 +69,7 @@ export interface ScrollSession {
   description: string;
   date: string;
   paperCount: number;
-  mode: "brainstorm" | "citation-finder";
+  mode: string;
   status?: "generating" | "complete" | "error";
 }
 

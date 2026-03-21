@@ -8,11 +8,13 @@ import {
 } from "@/lib/ollama";
 import { verifyCard } from "@/lib/grounding";
 import { webSearch } from "@/lib/search";
-import { searchPapers } from "@/lib/paper-search";
+import { searchPapers, type RawPaper } from "@/lib/paper-search";
 import { db } from "@/lib/db";
 import { scrolls, papers, comments, polls } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import type { Paper, ExportTheme } from "@/lib/types";
+import { getPdf, deletePdfs } from "@/lib/r2";
+import { extractPdfContent, pdfToRawPaper } from "@/lib/pdf-extract";
 
 const CONCURRENCY = 2; // Ollama processes sequentially, so keep low to avoid timeouts
 
@@ -75,31 +77,47 @@ async function updateProgress(
 
 export async function POST(req: Request) {
   const body = (await req.json()) as {
-    topic: string;
+    topic?: string;
     description?: string;
     subfields?: string[];
     mode?: string;
     fastModel?: string;
     smartModel?: string;
+    pdfKeys?: string[];
+    sourceMode?: "include" | "context_only" | "only_sources";
   };
 
-  const { topic, description, subfields, mode } = body;
+  const { topic, description, subfields, pdfKeys, sourceMode } = body;
 
   // Apply user-selected model overrides for this request
   setModels(body.fastModel, body.smartModel);
 
+  const hasPdfs = pdfKeys && pdfKeys.length > 0;
+  const effectiveSourceMode = hasPdfs ? (sourceMode || "include") : undefined;
+  const isOnlySources = effectiveSourceMode === "only_sources";
+
+  // Topic is required unless only_sources mode
+  if (!topic && !isOnlySources) {
+    return Response.json(
+      { error: "Topic is required" },
+      { status: 400 },
+    );
+  }
+
   try {
+    const scrollTitle = topic || "Uploaded Sources";
+
     // Create scroll record immediately with "generating" status
     const [scroll] = await db
       .insert(scrolls)
       .values({
-        title: topic,
-        description: description || `Exploring research on ${topic}.`,
-        mode: mode === "citationFinder" ? "citation-finder" : "brainstorm",
+        title: scrollTitle,
+        description: description || (topic ? `Exploring research on ${topic}.` : "Feed from uploaded PDF sources."),
+        mode: "default",
         date: new Date().toISOString().split("T")[0],
         paperCount: 0,
         status: "generating",
-        progress: JSON.stringify({ step: "searching" }),
+        progress: JSON.stringify({ step: hasPdfs ? "extracting" : "searching" }),
       })
       .returning();
 
@@ -108,28 +126,82 @@ export async function POST(req: Request) {
     // Run heavy processing in background after returning response
     after(async () => {
       try {
-        let searchQuery = topic;
-        if (subfields?.length) {
-          searchQuery += " " + subfields.slice(0, 2).join(" ");
+        // ── Step 0: Extract PDFs if provided ──
+        let pdfPapers: RawPaper[] = [];
+        let pdfContextText = "";
+
+        if (hasPdfs) {
+          await updateProgress(scrollId, "extracting");
+
+          for (const key of pdfKeys) {
+            try {
+              const buffer = await getPdf(key);
+              if (!buffer) {
+                console.warn(`PDF not found in R2: ${key}`);
+                continue;
+              }
+              const extracted = await extractPdfContent(
+                buffer,
+                key.split("/").pop() || "document.pdf",
+              );
+              pdfPapers.push(pdfToRawPaper(extracted));
+              // Accumulate context text for context_only mode
+              pdfContextText += `\n\n--- ${extracted.title} ---\n${extracted.text.slice(0, 2000)}`;
+            } catch (err) {
+              console.error(`Failed to extract PDF ${key}:`, err);
+            }
+          }
+
+          console.log(
+            `[generate-feed] Extracted ${pdfPapers.length} papers from ${pdfKeys.length} PDFs`,
+          );
+
+          // If topic was not provided (only_sources mode), derive from PDF titles
+          if (!topic && pdfPapers.length > 0) {
+            const derivedTitle = pdfPapers
+              .map((p) => p.title)
+              .slice(0, 3)
+              .join(", ");
+            await db
+              .update(scrolls)
+              .set({ title: derivedTitle })
+              .where(eq(scrolls.id, scrollId));
+          }
         }
 
-        // 1. Fetch papers from all academic APIs + web search in parallel
-        const [academicPapers, webResults] = await Promise.all([
-          searchPapers(searchQuery, 20),
-          webSearch(searchQuery, 8).catch((err) => {
-            console.error("Web search failed:", err);
-            return [] as {
-              title: string;
-              url: string;
-              snippet: string;
-              engine: string;
-            }[];
-          }),
-        ]);
+        // ── Step 1: Search for papers (skip if only_sources) ──
+        let academicPapers: RawPaper[] = [];
+        let webResults: { title: string; url: string; snippet: string; engine: string }[] = [];
 
-        console.log(
-          `[generate-feed] ${academicPapers.length} academic papers, ${webResults.length} web results`,
-        );
+        if (!isOnlySources) {
+          await updateProgress(scrollId, "searching");
+
+          let searchQuery = topic || "";
+          if (subfields?.length) {
+            searchQuery += " " + subfields.slice(0, 2).join(" ");
+          }
+
+          [academicPapers, webResults] = await Promise.all([
+            searchPapers(searchQuery, 20),
+            webSearch(searchQuery, 8).catch((err) => {
+              console.error("Web search failed:", err);
+              return [] as typeof webResults;
+            }),
+          ]);
+
+          console.log(
+            `[generate-feed] ${academicPapers.length} academic papers, ${webResults.length} web results`,
+          );
+        }
+
+        // Merge PDF papers based on sourceMode
+        if (effectiveSourceMode === "include") {
+          // PDF papers go first, then academic papers fill the rest
+          academicPapers = [...pdfPapers, ...academicPapers];
+        } else if (effectiveSourceMode === "only_sources") {
+          academicPapers = pdfPapers;
+        }
+        // context_only: pdfPapers not added to academicPapers — used as context only
 
         const total = Math.min(academicPapers.length, 12);
         await updateProgress(scrollId, "processing", {
@@ -141,11 +213,23 @@ export async function POST(req: Request) {
         let papersProcessed = 0;
 
         const processPaper = async (
-          raw: (typeof academicPapers)[number],
+          raw: RawPaper,
         ): Promise<Paper | null> => {
           try {
+            // For context_only mode, prepend PDF context to the synthesis prompt
+            const contextPrefix =
+              effectiveSourceMode === "context_only" && pdfContextText
+                ? `[User's reference material for context: ${pdfContextText.slice(0, 1500)}]\n\n`
+                : "";
+
+            const abstractForSynthesis = raw.abstract.slice(0, 2000);
+
             const [synthesis, apaCitation] = await Promise.all([
-              generateSynthesis(raw.title, raw.abstract, raw.authors),
+              generateSynthesis(
+                raw.title,
+                contextPrefix + abstractForSynthesis,
+                raw.authors,
+              ),
               generateApaCitation(
                 raw.title,
                 raw.authors,
@@ -157,7 +241,7 @@ export async function POST(req: Request) {
 
             // Verify synthesis — advisory only, don't reject papers
             try {
-              await verifyCard(raw.abstract, synthesis);
+              await verifyCard(raw.abstract.slice(0, 2000), synthesis);
             } catch {
               // verification service unavailable — continue
             }
@@ -175,12 +259,13 @@ export async function POST(req: Request) {
               journal: raw.venue,
               year: raw.year,
               doi: raw.doi,
-              peerReviewed: !!raw.venue,
+              peerReviewed: !!raw.venue && raw.source !== "pdf_upload",
               synthesis,
               credibilityScore,
               citationCount: raw.citationCount,
               commentCount: 0,
               apaCitation,
+              isUserUpload: raw.source === "pdf_upload",
             };
           } catch (err) {
             console.error(`Failed to process paper "${raw.title}":`, err);
@@ -212,8 +297,8 @@ export async function POST(req: Request) {
           });
         }
 
-        // 3. Always supplement with web results (fill up to 12 total)
-        if (webResults.length > 0 && processedPapers.length < 12) {
+        // 3. Supplement with web results (fill up to 12 total) — skip if only_sources
+        if (!isOnlySources && webResults.length > 0 && processedPapers.length < 12) {
           console.log(
             `${processedPapers.length} academic results, supplementing with ${webResults.length} web results`,
           );
@@ -277,12 +362,13 @@ export async function POST(req: Request) {
         }
 
         // 4. Generate export outline
+        const effectiveTopic = topic || scroll.title;
         await updateProgress(scrollId, "exporting");
 
         const fallbackOutline = (): ExportTheme[] => [
           {
-            title: topic,
-            summary: `Research papers on ${topic}.`,
+            title: effectiveTopic,
+            summary: `Research papers on ${effectiveTopic}.`,
             sources: processedPapers.map((p) => ({
               title: p.title,
               authors: p.authors.join(", "),
@@ -413,6 +499,7 @@ export async function POST(req: Request) {
                       paperComments.get(processedPapers.indexOf(p)) || []
                     ).length,
                     apaCitation: p.apaCitation,
+                    isUserUpload: (p as Paper & { isUserUpload?: boolean }).isUserUpload || false,
                   })),
                 )
                 .returning()
@@ -452,7 +539,7 @@ export async function POST(req: Request) {
           {
             scrollId,
             type: "multiple-choice",
-            question: `Which aspect of "${topic}" interests you most?`,
+            question: `Which aspect of "${effectiveTopic}" interests you most?`,
             options: JSON.stringify(
               subfields && subfields.length >= 2
                 ? subfields.slice(0, 4)
@@ -497,6 +584,15 @@ export async function POST(req: Request) {
         console.log(
           `Feed generation complete for scroll ${scrollId}: ${processedPapers.length} papers`,
         );
+
+        // Cleanup uploaded PDFs from R2
+        if (hasPdfs) {
+          try {
+            await deletePdfs(pdfKeys);
+          } catch (err) {
+            console.warn("Failed to cleanup PDFs from R2:", err);
+          }
+        }
       } catch (err) {
         console.error(
           `Background feed generation failed for ${scrollId}:`,
@@ -515,6 +611,15 @@ export async function POST(req: Request) {
             }),
           })
           .where(eq(scrolls.id, scrollId));
+
+        // Cleanup even on error
+        if (hasPdfs) {
+          try {
+            await deletePdfs(pdfKeys);
+          } catch {
+            // ignore cleanup errors
+          }
+        }
       }
     });
 

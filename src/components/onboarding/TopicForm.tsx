@@ -10,12 +10,16 @@ import {
   Zap,
   Brain,
   Info,
+  Clock,
+  FileUp,
 } from "lucide-react";
 import { GenerationProgress } from "./GenerationProgress";
+import { PdfUploader, type UploadedFile } from "./PdfUploader";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 
 interface ProgressInfo {
@@ -32,8 +36,9 @@ interface OllamaModel {
   family?: string;
 }
 
+type SourceMode = "include" | "context_only" | "only_sources";
+
 interface TopicFormProps {
-  mode: "brainstorm" | "citationFinder" | null;
   initialTopic?: string;
 }
 
@@ -43,8 +48,58 @@ function formatSize(bytes: number): string {
   return `${(bytes / 1e6).toFixed(0)} MB`;
 }
 
+function estimateGenerationTime(params: {
+  pdfCount: number;
+  sourceMode: SourceMode;
+  fastModel: string;
+  smartModel: string;
+  models: OllamaModel[];
+}): { min: number; max: number } {
+  const { pdfCount, sourceMode, fastModel, smartModel, models } = params;
 
-export function TopicForm({ mode, initialTopic }: TopicFormProps) {
+  function getModelMultiplier(modelName: string): number {
+    if (!modelName) return 1;
+    const model = models.find((m) => m.name === modelName);
+    if (!model) return 1;
+    const sizeGB = model.size / 1e9;
+    if (sizeGB > 10) return 2.5;
+    if (sizeGB > 5) return 1.8;
+    if (sizeGB > 2) return 1.2;
+    return 1;
+  }
+
+  let baseSeconds = 0;
+
+  // PDF extraction
+  baseSeconds += pdfCount * 5;
+
+  // Academic search (skip if only_sources)
+  if (sourceMode !== "only_sources") {
+    baseSeconds += 15;
+  }
+
+  // Paper count estimate
+  const paperCount =
+    sourceMode === "only_sources"
+      ? pdfCount
+      : Math.min(12, pdfCount + 12);
+
+  // Per-paper synthesis
+  const fastMult = getModelMultiplier(fastModel);
+  baseSeconds += paperCount * 8 * fastMult;
+
+  // Comments + outline
+  const smartMult = getModelMultiplier(smartModel);
+  baseSeconds += 30 * smartMult;
+  baseSeconds += 15 * smartMult;
+
+  return {
+    min: Math.max(1, Math.floor(baseSeconds / 60)),
+    max: Math.ceil((baseSeconds * 1.5) / 60),
+  };
+}
+
+export function TopicForm({ initialTopic }: TopicFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState<ProgressInfo | null>(null);
@@ -55,6 +110,11 @@ export function TopicForm({ mode, initialTopic }: TopicFormProps) {
   const topicRef = useRef<HTMLInputElement>(null);
   const descRef = useRef<HTMLTextAreaElement>(null);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // PDF upload state
+  const [pdfEnabled, setPdfEnabled] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  const [sourceMode, setSourceMode] = useState<SourceMode>("include");
 
   const stopPolling = useCallback(() => {
     if (pollingRef.current) {
@@ -94,7 +154,6 @@ export function TopicForm({ mode, initialTopic }: TopicFormProps) {
       }
     }
 
-    // Poll immediately, then every 2.5s
     pollStatus();
     pollingRef.current = setInterval(pollStatus, 2500);
 
@@ -140,32 +199,51 @@ export function TopicForm({ mode, initialTopic }: TopicFormProps) {
     }
   }
 
+  const doneFiles = uploadedFiles.filter((f) => f.status === "done");
+  const isOnlySourcesMode = pdfEnabled && sourceMode === "only_sources";
+  const topicRequired = !isOnlySourcesMode;
+
+  const estimate = estimateGenerationTime({
+    pdfCount: doneFiles.length,
+    sourceMode: pdfEnabled ? sourceMode : "include",
+    fastModel,
+    smartModel,
+    models,
+  });
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
-    if (!mode) {
-      toast.error("Please select a mode first.");
+    const topic = topicRef.current?.value?.trim();
+
+    if (topicRequired && !topic) {
+      toast.error("Please enter a topic.");
       return;
     }
 
-    const topic = topicRef.current?.value?.trim();
-    if (!topic) return;
+    if (pdfEnabled && doneFiles.length === 0) {
+      toast.error("Please upload at least one PDF or disable PDF sources.");
+      return;
+    }
 
-    setSubmittedTopic(topic);
+    setSubmittedTopic(topic || "your uploaded sources");
     setLoading(true);
-    setProgress({ step: "searching" });
+    setProgress({ step: pdfEnabled ? "extracting" : "searching" });
 
     try {
+      const pdfKeys = pdfEnabled ? doneFiles.map((f) => f.key) : undefined;
+
       const res = await fetch("/api/generate-feed", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          topic,
+          topic: topic || undefined,
           description: descRef.current?.value?.trim() || undefined,
           subfields: subfields.length > 0 ? subfields : undefined,
-          mode: mode || "brainstorm",
           fastModel: fastModel || undefined,
           smartModel: smartModel || undefined,
+          pdfKeys,
+          sourceMode: pdfEnabled ? sourceMode : undefined,
         }),
       });
 
@@ -178,7 +256,6 @@ export function TopicForm({ mode, initialTopic }: TopicFormProps) {
         scroll: { id: string };
       };
 
-      // Start polling for progress
       setScrollId(data.scroll.id);
     } catch (err) {
       console.error("Feed generation failed:", err);
@@ -193,26 +270,106 @@ export function TopicForm({ mode, initialTopic }: TopicFormProps) {
       <GenerationProgress
         progress={progress}
         topic={submittedTopic || "your topic"}
+        hasPdfs={pdfEnabled && doneFiles.length > 0}
       />
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+    <form onSubmit={handleSubmit} className="mt-8 space-y-6">
+      {/* ── PDF Sources ── */}
+      <div className="rounded-xl border border-border p-4 space-y-4">
+        <div className="flex items-center justify-between">
+          <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
+            <FileUp className="h-4 w-4 text-primary" />
+            Upload your own PDF sources
+          </label>
+          <Switch
+            checked={pdfEnabled}
+            onCheckedChange={setPdfEnabled}
+          />
+        </div>
+
+        {pdfEnabled && (
+          <>
+            <PdfUploader
+              files={uploadedFiles}
+              onFilesChange={setUploadedFiles}
+              disabled={loading}
+            />
+
+            {doneFiles.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-muted-foreground">
+                  How should your sources be used?
+                </p>
+                <div className="space-y-2">
+                  {(
+                    [
+                      {
+                        value: "include",
+                        label: "Include as posts in the feed",
+                        desc: "Your PDFs appear alongside discovered papers",
+                      },
+                      {
+                        value: "context_only",
+                        label: "Use as context only",
+                        desc: "Inform the search but don't show as posts",
+                      },
+                      {
+                        value: "only_sources",
+                        label: "Only use your sources",
+                        desc: "No external search — self-contained feed",
+                      },
+                    ] as const
+                  ).map((opt) => (
+                    <label
+                      key={opt.value}
+                      className={`flex items-start gap-3 rounded-lg border px-3 py-2.5 cursor-pointer transition-colors ${
+                        sourceMode === opt.value
+                          ? "border-primary bg-primary/5"
+                          : "border-border hover:border-primary/40"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="sourceMode"
+                        value={opt.value}
+                        checked={sourceMode === opt.value}
+                        onChange={() => setSourceMode(opt.value)}
+                        className="mt-0.5 accent-primary"
+                      />
+                      <div>
+                        <p className="text-sm font-medium">{opt.label}</p>
+                        <p className="text-muted-foreground text-xs">
+                          {opt.desc}
+                        </p>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* ── Topic / Description ── */}
       <div>
         <label htmlFor="topic" className="mb-1.5 block text-sm font-medium">
-          Main Topic <span className="text-destructive">*</span>
+          Main Topic{" "}
+          {topicRequired ? (
+            <span className="text-destructive">*</span>
+          ) : (
+            <span className="text-muted-foreground text-xs">(optional — auto-derived from PDFs)</span>
+          )}
         </label>
         <Input
           id="topic"
           ref={topicRef}
           defaultValue={initialTopic}
-          placeholder={
-            mode === "citationFinder"
-              ? "e.g., Climate Policy Effectiveness in Southeast Asia"
-              : "e.g., Cognitive Psychology and Decision-Making"
-          }
-          required
+          placeholder="e.g., Cognitive Psychology and Decision-Making"
+          required={topicRequired}
           disabled={loading}
         />
       </div>
@@ -228,11 +385,7 @@ export function TopicForm({ mode, initialTopic }: TopicFormProps) {
         <Textarea
           id="description"
           ref={descRef}
-          placeholder={
-            mode === "citationFinder"
-              ? "Describe the paper you're writing and what citations you need..."
-              : "Add context about your research direction..."
-          }
+          placeholder="Add context about your research direction..."
           rows={3}
           className="resize-none"
           disabled={loading}
@@ -285,7 +438,7 @@ export function TopicForm({ mode, initialTopic }: TopicFormProps) {
         )}
       </div>
 
-      {/* Advanced Settings */}
+      {/* ── Advanced Settings ── */}
       <div className="border-border rounded-lg border">
         <button
           type="button"
@@ -397,21 +550,34 @@ export function TopicForm({ mode, initialTopic }: TopicFormProps) {
         )}
       </div>
 
+      {/* ── Estimated Time ── */}
+      <div className="flex items-center gap-2 rounded-lg bg-muted/50 px-4 py-3">
+        <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
+        <p className="text-sm text-muted-foreground">
+          Estimated time:{" "}
+          <span className="text-foreground font-medium">
+            {estimate.min === estimate.max
+              ? `~${estimate.min} min`
+              : `${estimate.min}–${estimate.max} min`}
+          </span>
+          {pdfEnabled && doneFiles.length > 0 && (
+            <span className="text-xs ml-2">
+              ({doneFiles.length} PDF{doneFiles.length !== 1 ? "s" : ""}
+              {sourceMode === "only_sources" ? ", no external search" : ""})
+            </span>
+          )}
+        </p>
+      </div>
+
       <Button
         type="submit"
         size="lg"
         className="w-full gap-2"
-        disabled={loading || !mode}
+        disabled={loading}
       >
         <Sparkles className="h-4 w-4" />
         Generate My Feed
       </Button>
-
-      {!mode && (
-        <p className="text-muted-foreground text-center text-xs">
-          Select a mode above to enable feed generation.
-        </p>
-      )}
     </form>
   );
 }
