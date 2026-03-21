@@ -49,7 +49,7 @@ export const papers = sqliteTable("paper", {
   apaCitation: text("apa_citation").notNull(),
   isUserUpload: integer("is_user_upload", { mode: "boolean" })
     .notNull()
-    .default(false),
+    .default(sql`0`),
 });
 
 export const comments = sqliteTable("comment", {
