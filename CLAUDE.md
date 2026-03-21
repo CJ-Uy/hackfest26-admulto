@@ -13,16 +13,16 @@ Schrollar (hackfest26-admulto) is a research paper discovery app that presents a
 - `npm run lint` — ESLint on src/
 - `npm run deploy` — build + deploy to Cloudflare Workers via OpenNext
 - `npm run preview` — build + local Cloudflare preview
-- `npx prisma generate` — regenerate Prisma client after schema changes
-- `npm run db:migrate:local` — apply D1 migrations locally
-- `npm run db:migrate:remote` — apply D1 migrations to remote D1
+- `pnpm db:generate` — generate Drizzle migrations
+- `pnpm db:push` — push schema to Turso database
+- `pnpm db:studio` — open Drizzle Studio
 
 ## Architecture
 
 ### Stack
 
 - **Next.js 16** (App Router, React 19) deployed to **Cloudflare Workers** via OpenNext
-- **Prisma** with SQLite — two adapters: `PrismaLibSql` for local dev (`src/lib/db.ts`), `PrismaD1` for Cloudflare production (`src/lib/prisma.ts`)
+- **Drizzle ORM** with **Turso** (libSQL) — schema in `src/lib/schema.ts`, client in `src/lib/db.ts`
 - **Tailwind CSS v4** + **shadcn/ui** (base-nova style, `components.json`)
 - **Ollama** (Qwen3 8B) for AI synthesis and citation generation (`src/lib/ollama.ts`)
 
@@ -42,9 +42,10 @@ Schrollar (hackfest26-admulto) is a research paper discovery app that presents a
 
 ### Database
 
-- Schema: `prisma/schema.prisma` — models: Scroll, Paper, Comment, Vote, Poll, PollResponse
-- Local dev uses `prisma/dev.db` (SQLite via libsql adapter)
-- Production uses Cloudflare D1 (configured in `wrangler.jsonc`)
+- Schema: `src/lib/schema.ts` — tables: scrolls, papers, comments, votes, polls, pollResponses
+- Drizzle config: `drizzle.config.ts`
+- Local dev falls back to file-based SQLite (`local.db`) when `TURSO_DATABASE_URL` is not set
+- Production uses Turso (libSQL) — configured via `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` env vars
 
 ### Route Structure
 
@@ -57,8 +58,10 @@ Schrollar (hackfest26-admulto) is a research paper discovery app that presents a
 
 ### Environment Variables
 
-Set in `.env.local`:
+Set in `.env`:
 
+- `TURSO_DATABASE_URL` — Turso database URL (omit for local file-based SQLite)
+- `TURSO_AUTH_TOKEN` — Turso auth token
 - `SEARXNG_URL` — SearXNG instance URL
 - `DEBERTA_URL` — DeBERTa NLI service URL
 - `OLLAMA_URL` — Ollama instance URL (defaults to http://localhost:11434)

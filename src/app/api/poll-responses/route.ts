@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { pollResponses } from "@/lib/schema";
+import { eq } from "drizzle-orm";
 
 export async function GET(req: NextRequest) {
   const pollId = req.nextUrl.searchParams.get("pollId");
@@ -7,11 +9,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "pollId required" }, { status: 400 });
   }
 
-  const response = await db.pollResponse.findUnique({
-    where: { pollId },
+  const response = await db.query.pollResponses.findFirst({
+    where: eq(pollResponses.pollId, pollId),
   });
 
-  return NextResponse.json(response);
+  return NextResponse.json(response ?? null);
 }
 
 export async function POST(req: NextRequest) {
@@ -26,11 +28,23 @@ export async function POST(req: NextRequest) {
   }
 
   // Upsert: update if already answered, create if not
-  const response = await db.pollResponse.upsert({
-    where: { pollId },
-    update: { answer },
-    create: { pollId, answer },
+  const existing = await db.query.pollResponses.findFirst({
+    where: eq(pollResponses.pollId, pollId),
   });
 
-  return NextResponse.json(response);
+  if (existing) {
+    const [updated] = await db
+      .update(pollResponses)
+      .set({ answer })
+      .where(eq(pollResponses.id, existing.id))
+      .returning();
+    return NextResponse.json(updated);
+  }
+
+  const [created] = await db
+    .insert(pollResponses)
+    .values({ pollId, answer })
+    .returning();
+
+  return NextResponse.json(created);
 }

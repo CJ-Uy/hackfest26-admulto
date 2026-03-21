@@ -53,8 +53,9 @@ export function TopicForm({ mode }: TopicFormProps) {
     if (advancedOpen && !modelsLoaded) {
       fetch("/api/ollama-models")
         .then((r) => r.json())
-        .then((data: { models: OllamaModel[] }) => {
-          setModels(data.models);
+        .then((data: unknown) => {
+          const typedData = data as { models: OllamaModel[] };
+          setModels(typedData.models);
           setModelsLoaded(true);
         })
         .catch(() => setModelsLoaded(true));

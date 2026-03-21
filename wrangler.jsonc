@@ -33,14 +33,7 @@
   "observability": {
     "enabled": true,
   },
-  "d1_databases": [
-    {
-      "binding": "DB",
-      "database_name": "hackfest26",
-      "database_id": "77b548ab-df3d-4532-a2cf-e77a3c531980",
-      "migrations_dir": "prisma/migrations",
-    },
-  ],
+
   /**
    * Smart Placement
    * https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement

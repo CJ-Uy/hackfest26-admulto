@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { votes, papers } from "@/lib/schema";
+import { eq } from "drizzle-orm";
 
 export async function GET(req: NextRequest) {
   const scrollId = req.nextUrl.searchParams.get("scrollId");
@@ -7,17 +9,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "scrollId required" }, { status: 400 });
   }
 
-  const votes = await db.vote.findMany({
-    where: {
-      paper: { scrollId },
-    },
-    select: {
-      paperId: true,
-      value: true,
-    },
-  });
+  const rows = await db
+    .select({ paperId: votes.paperId, value: votes.value })
+    .from(votes)
+    .innerJoin(papers, eq(votes.paperId, papers.id))
+    .where(eq(papers.scrollId, scrollId));
 
-  return NextResponse.json(votes);
+  return NextResponse.json(rows);
 }
 
 export async function POST(req: NextRequest) {
@@ -29,18 +27,16 @@ export async function POST(req: NextRequest) {
   }
 
   // Toggle: if vote exists, remove it; otherwise create it
-  const existing = await db.vote.findUnique({
-    where: { paperId },
+  const existing = await db.query.votes.findFirst({
+    where: eq(votes.paperId, paperId),
   });
 
   if (existing) {
-    await db.vote.delete({ where: { id: existing.id } });
+    await db.delete(votes).where(eq(votes.id, existing.id));
     return NextResponse.json({ voted: false, paperId });
   }
 
-  await db.vote.create({
-    data: { paperId, value: 1 },
-  });
+  await db.insert(votes).values({ paperId, value: 1 });
 
   return NextResponse.json({ voted: true, paperId });
 }

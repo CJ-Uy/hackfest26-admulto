@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { comments, papers } from "@/lib/schema";
+import { eq, desc, sql } from "drizzle-orm";
 
 export async function GET(req: NextRequest) {
   const paperId = req.nextUrl.searchParams.get("paperId");
@@ -7,13 +9,14 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "paperId required" }, { status: 400 });
   }
 
-  const comments = await db.comment.findMany({
-    where: { paperId },
-    orderBy: { createdAt: "desc" },
-  });
+  const result = await db
+    .select()
+    .from(comments)
+    .where(eq(comments.paperId, paperId))
+    .orderBy(desc(comments.createdAt));
 
   return NextResponse.json(
-    comments.map((c) => ({
+    result.map((c) => ({
       ...c,
       isGenerated: c.isGenerated ?? false,
       relationship: c.relationship ?? null,
@@ -36,20 +39,21 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const [comment] = await db.$transaction([
-    db.comment.create({
-      data: {
-        paperId,
-        content,
-        author: author || "You",
-        isGenerated: false,
-      },
-    }),
-    db.paper.update({
-      where: { id: paperId },
-      data: { commentCount: { increment: 1 } },
-    }),
-  ]);
+  const [comment] = await db
+    .insert(comments)
+    .values({
+      paperId,
+      content,
+      author: author || "You",
+      isGenerated: false,
+    })
+    .returning();
+
+  // Increment comment count on the paper
+  await db
+    .update(papers)
+    .set({ commentCount: sql`${papers.commentCount} + 1` })
+    .where(eq(papers.id, paperId));
 
   return NextResponse.json(comment, { status: 201 });
 }

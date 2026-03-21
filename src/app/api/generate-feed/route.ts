@@ -9,6 +9,7 @@ import { verifyCard } from "@/lib/grounding";
 import { webSearch } from "@/lib/search";
 import { searchPapers } from "@/lib/paper-search";
 import { db } from "@/lib/db";
+import { scrolls, papers, comments, polls } from "@/lib/schema";
 import type { Paper, ExportTheme } from "@/lib/types";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -284,7 +285,7 @@ export async function POST(req: Request) {
             .slice(0, 4); // max 4 candidate commenters
 
           try {
-            const comments = await generateSocialComments(
+            const generatedComments = await generateSocialComments(
               {
                 title: paper.title,
                 synthesis: paper.synthesis,
@@ -299,7 +300,7 @@ export async function POST(req: Request) {
               })),
               3, // max 3 comments per paper
             );
-            rawComments.set(paperIdx, comments);
+            rawComments.set(paperIdx, generatedComments);
           } catch (err) {
             console.error(
               `Failed to generate comments for paper ${paperIdx}:`,
@@ -320,81 +321,112 @@ export async function POST(req: Request) {
       commentPromise,
     ]);
 
-    // 6. Persist to database
-    const scroll = await db.scroll.create({
-      data: {
+    // 6. Persist to database — Drizzle doesn't support nested creates,
+    //    so we do it in sequence: scroll → papers → comments + polls
+    const [scroll] = await db
+      .insert(scrolls)
+      .values({
         title: topic,
         description: description || `Exploring research on ${topic}.`,
         mode: mode === "citationFinder" ? "citation-finder" : "brainstorm",
         date: new Date().toISOString().split("T")[0],
         paperCount: processedPapers.length,
         exportData: JSON.stringify(exportOutline),
-        papers: {
-          create: processedPapers.map((p, idx) => {
-            const comments = paperComments.get(idx) || [];
-            return {
-              externalId: p.id,
-              title: p.title,
-              authors: JSON.stringify(p.authors),
-              journal: p.journal,
-              year: p.year,
-              doi: p.doi,
-              peerReviewed: p.peerReviewed,
-              synthesis: p.synthesis,
-              credibilityScore: p.credibilityScore,
-              citationCount: p.citationCount,
-              commentCount: comments.length,
-              apaCitation: p.apaCitation,
-              comments: {
-                create: comments.map((c) => ({
-                  content: c.content,
-                  author: c.author,
-                  isGenerated: true,
-                  relationship: c.relationship,
-                })),
-              },
-            };
-          }),
-        },
-        polls: {
-          create: [
-            {
-              type: "multiple-choice",
-              question: `Which aspect of "${topic}" interests you most?`,
-              options: JSON.stringify(
-                subfields && subfields.length >= 2
-                  ? subfields.slice(0, 4)
-                  : [
-                      "Foundational theories",
-                      "Recent developments",
-                      "Practical applications",
-                      "Methodological approaches",
-                    ],
-              ),
-            },
-            {
-              type: "multiple-choice",
-              question: "What type of research sources do you prefer?",
-              options: JSON.stringify([
-                "Foundational/classic papers (pre-2000)",
-                "Modern empirical studies (2000–2015)",
-                "Recent cutting-edge research (2015+)",
-                "A mix of all eras",
-              ]),
-            },
-            {
-              type: "open-ended",
-              question:
-                "What specific research question are you trying to answer?",
-            },
-          ],
-        },
-      },
-      include: { papers: true },
+      })
+      .returning();
+
+    // Insert papers and collect their DB-generated IDs
+    const insertedPapers =
+      processedPapers.length > 0
+        ? await db
+            .insert(papers)
+            .values(
+              processedPapers.map((p) => ({
+                scrollId: scroll.id,
+                externalId: p.id,
+                title: p.title,
+                authors: JSON.stringify(p.authors),
+                journal: p.journal,
+                year: p.year,
+                doi: p.doi,
+                peerReviewed: p.peerReviewed,
+                synthesis: p.synthesis,
+                credibilityScore: p.credibilityScore,
+                citationCount: p.citationCount,
+                commentCount: (paperComments.get(processedPapers.indexOf(p)) || []).length,
+                apaCitation: p.apaCitation,
+              })),
+            )
+            .returning()
+        : [];
+
+    // Insert generated comments for each paper
+    const allComments: {
+      paperId: string;
+      content: string;
+      author: string;
+      isGenerated: boolean;
+      relationship: string;
+    }[] = [];
+
+    processedPapers.forEach((_, idx) => {
+      const rawComments = paperComments.get(idx) || [];
+      const dbPaper = insertedPapers[idx];
+      if (dbPaper && rawComments.length > 0) {
+        for (const c of rawComments) {
+          allComments.push({
+            paperId: dbPaper.id,
+            content: c.content,
+            author: c.author,
+            isGenerated: true,
+            relationship: c.relationship,
+          });
+        }
+      }
     });
 
+    if (allComments.length > 0) {
+      await db.insert(comments).values(allComments);
+    }
+
+    // Insert polls
+    await db.insert(polls).values([
+      {
+        scrollId: scroll.id,
+        type: "multiple-choice",
+        question: `Which aspect of "${topic}" interests you most?`,
+        options: JSON.stringify(
+          subfields && subfields.length >= 2
+            ? subfields.slice(0, 4)
+            : [
+                "Foundational theories",
+                "Recent developments",
+                "Practical applications",
+                "Methodological approaches",
+              ],
+        ),
+      },
+      {
+        scrollId: scroll.id,
+        type: "multiple-choice",
+        question: "What type of research sources do you prefer?",
+        options: JSON.stringify([
+          "Foundational/classic papers (pre-2000)",
+          "Modern empirical studies (2000–2015)",
+          "Recent cutting-edge research (2015+)",
+          "A mix of all eras",
+        ]),
+      },
+      {
+        scrollId: scroll.id,
+        type: "open-ended",
+        question:
+          "What specific research question are you trying to answer?",
+      },
+    ]);
+
     // 7. Map DB records back to API response
-    const responsePapers: Paper[] = scroll.papers.map((p) => ({
+    const responsePapers: Paper[] = insertedPapers.map((p) => ({
       id: p.id,
       title: p.title,
       authors: JSON.parse(p.authors) as string[],
