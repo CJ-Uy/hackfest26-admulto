@@ -1,4 +1,5 @@
 import { webSearch } from "./search";
+import { getSmartModel } from "./ollama";
 
 const S2_API = "https://api.semanticscholar.org/graph/v1/paper/search";
 
@@ -20,7 +21,7 @@ export async function agentQuery(userQuery: string) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "qwen3.5:9b",
+      model: getSmartModel(),
       stream: false,
       messages: [
         {
@@ -102,7 +103,7 @@ export async function agentQuery(userQuery: string) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "qwen3.5:9b",
+        model: getSmartModel(),
         stream: false,
         messages,
       }),

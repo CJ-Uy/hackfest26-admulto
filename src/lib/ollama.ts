@@ -16,6 +16,10 @@ export function setModels(fast?: string, smart?: string) {
   if (smart) SMART_MODEL = smart;
 }
 
+export function getSmartModel() {
+  return SMART_MODEL;
+}
+
 async function ollamaChat(
   systemPrompt: string,
   userPrompt: string,
