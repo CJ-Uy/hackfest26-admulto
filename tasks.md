@@ -20,6 +20,7 @@ Tasks:
 
 - Improve prompts and responses
 - Add route to hit for polling to update the feed
+- Add delete functionality to scrolls
 
 Possible Backend Solutions:
 
