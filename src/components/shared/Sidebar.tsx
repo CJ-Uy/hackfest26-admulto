@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   PanelLeftClose,
   PanelLeftOpen,
   Plus,
   ScrollText,
   Menu,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -18,13 +19,25 @@ import {
   SheetTrigger,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { fetchAllScrollSessions } from "@/lib/scroll-store";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { fetchAllScrollSessions, deleteScroll } from "@/lib/scroll-store";
 import type { ScrollSession } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [sessions, setSessions] = useState<ScrollSession[]>([]);
+  const [deleteTarget, setDeleteTarget] = useState<ScrollSession | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -34,6 +47,23 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
     load();
   }, []);
+
+  async function handleDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    const ok = await deleteScroll(deleteTarget.id);
+    setDeleting(false);
+    if (ok) {
+      setSessions((prev) => prev.filter((s) => s.id !== deleteTarget.id));
+      toast.success("Scroll deleted");
+      if (pathname === `/scroll/${deleteTarget.id}`) {
+        router.push("/");
+      }
+    } else {
+      toast.error("Failed to delete scroll");
+    }
+    setDeleteTarget(null);
+  }
 
   return (
     <div className="flex h-full flex-col">
@@ -69,29 +99,78 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         ) : (
           <nav className="space-y-0.5">
             {sessions.map((session) => (
-              <Link
+              <div
                 key={session.id}
-                href={`/scroll/${session.id}`}
-                onClick={onNavigate}
                 className={cn(
-                  "flex items-start gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-[#f6f7f8]",
+                  "group flex items-start gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-[#f6f7f8]",
                   pathname === `/scroll/${session.id}` && "bg-[#f6f7f8]",
                 )}
               >
-                <ScrollText className="text-muted-foreground mt-0.5 h-3.5 w-3.5 shrink-0" />
-                <div className="min-w-0">
-                  <p className="text-foreground truncate text-[14px] leading-tight font-medium">
-                    {session.title}
-                  </p>
-                  <p className="text-muted-foreground text-[13px]">
-                    {session.paperCount} papers
-                  </p>
-                </div>
-              </Link>
+                <Link
+                  href={`/scroll/${session.id}`}
+                  onClick={onNavigate}
+                  className="flex min-w-0 flex-1 items-start gap-2"
+                >
+                  <ScrollText className="text-muted-foreground mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-foreground truncate text-[14px] leading-tight font-medium">
+                      {session.title}
+                    </p>
+                    <p className="text-muted-foreground text-[13px]">
+                      {session.paperCount} papers
+                    </p>
+                  </div>
+                </Link>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDeleteTarget(session);
+                  }}
+                  className="text-muted-foreground hover:text-destructive mt-0.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
+                  aria-label={`Delete ${session.title}`}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
             ))}
           </nav>
         )}
       </div>
+
+      <Dialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+      >
+        <DialogContent showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle>Delete scroll</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete &ldquo;{deleteTarget?.title}
+              &rdquo;? This will permanently remove the scroll and all its
+              papers, comments, and votes.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteTarget(null)}
+              disabled={deleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={deleting}
+            >
+              {deleting ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

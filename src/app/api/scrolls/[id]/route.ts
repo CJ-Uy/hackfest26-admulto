@@ -1,6 +1,22 @@
 import { db } from "@/lib/db";
 import type { Paper, ExportTheme, Poll } from "@/lib/types";
 
+export async function DELETE(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { id } = await params;
+
+  const scroll = await db.scroll.findUnique({ where: { id } });
+  if (!scroll) {
+    return Response.json({ error: "Scroll not found" }, { status: 404 });
+  }
+
+  await db.scroll.delete({ where: { id } });
+
+  return Response.json({ success: true });
+}
+
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> },

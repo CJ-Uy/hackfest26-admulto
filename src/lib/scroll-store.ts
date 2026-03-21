@@ -29,6 +29,15 @@ export async function fetchScroll(id: string): Promise<StoredScroll | null> {
   }
 }
 
+export async function deleteScroll(id: string): Promise<boolean> {
+  try {
+    const res = await fetch(`/api/scrolls/${id}`, { method: "DELETE" });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 export async function fetchPaperFromScroll(
   scrollId: string,
   paperId: string,
