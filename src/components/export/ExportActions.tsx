@@ -25,7 +25,7 @@ export function ExportActions({ text }: ExportActionsProps) {
   }
 
   return (
-    <div className="flex gap-1">
+    <div className="flex shrink-0 gap-1">
       <button
         onClick={handleCopy}
         className="text-muted-foreground flex items-center gap-1 rounded-full bg-[#f6f7f8] px-3 py-1 text-[12px] font-semibold transition-colors hover:bg-[#e8e8e8]"
