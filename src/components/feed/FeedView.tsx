@@ -25,6 +25,7 @@ interface FeedViewProps {
   onBookmark: (paperId: string, bookmarked: boolean) => void;
   onComment: (paperId: string) => void;
   onGenerateMore?: () => void;
+  onPost?: (post: UserPost) => void;
 }
 
 export function FeedView({
@@ -42,6 +43,7 @@ export function FeedView({
   onBookmark,
   onComment,
   onGenerateMore,
+  onPost,
 }: FeedViewProps) {
   const router = useRouter();
   const query = searchQuery.toLowerCase();
@@ -126,7 +128,7 @@ export function FeedView({
         </div>
       )}
 
-      <ComposeBox scrollId={scrollId} />
+      <ComposeBox scrollId={scrollId} onPost={onPost} />
 
       {/* User posts at top */}
       {userPosts.map((post) => (

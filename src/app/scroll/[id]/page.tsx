@@ -336,6 +336,7 @@ export default function ScrollPage() {
                 onBookmark={handleBookmark}
                 onComment={handleComment}
                 onGenerateMore={handleGenerateMore}
+                onPost={handleNewPost}
               />
             )}
             {scroll.status !== "generating" && activeTab === "fine-tune" && (

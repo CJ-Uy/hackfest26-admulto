@@ -2,20 +2,56 @@
 
 import { useState } from "react";
 import { User } from "lucide-react";
+import { toast } from "sonner";
+import type { UserPost } from "@/lib/types";
 
 interface ComposeBoxProps {
   scrollId: string;
+  onPost?: (post: UserPost) => void;
 }
 
-export function ComposeBox({ scrollId }: ComposeBoxProps) {
+export function ComposeBox({ scrollId, onPost }: ComposeBoxProps) {
   const [expanded, setExpanded] = useState(false);
   const [content, setContent] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  function handlePost() {
-    if (!content.trim()) return;
-    // Posts are handled by the parent via CreatePostFAB or inline
-    setContent("");
-    setExpanded(false);
+  async function handlePost() {
+    if (!content.trim() || submitting) return;
+    setSubmitting(true);
+
+    try {
+      const res = await fetch("/api/user-posts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scrollId, content: content.trim() }),
+      });
+
+      if (res.ok) {
+        const saved = (await res.json()) as {
+          id: string;
+          title?: string | null;
+          content: string;
+          commentCount: number;
+          createdAt: string;
+        };
+        const post: UserPost = {
+          id: saved.id,
+          title: saved.title ?? undefined,
+          content: saved.content,
+          commentCount: saved.commentCount ?? 0,
+          createdAt: saved.createdAt,
+        };
+        onPost?.(post);
+        setContent("");
+        setExpanded(false);
+      } else {
+        toast.error("Failed to create post");
+      }
+    } catch {
+      toast.error("Failed to create post");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -46,10 +82,10 @@ export function ComposeBox({ scrollId }: ComposeBoxProps) {
                 </button>
                 <button
                   onClick={handlePost}
-                  disabled={!content.trim()}
+                  disabled={!content.trim() || submitting}
                   className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full px-4 py-1.5 text-[14px] font-semibold transition-colors disabled:opacity-40"
                 >
-                  Post
+                  {submitting ? "Posting..." : "Post"}
                 </button>
               </div>
             </>
