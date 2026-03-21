@@ -18,6 +18,7 @@ export interface Paper {
 export interface Comment {
   id: string;
   paperId: string;
+  userPostId?: string | null;
   parentId?: string | null;
   content: string;
   author: string;

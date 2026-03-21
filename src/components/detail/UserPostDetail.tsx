@@ -69,7 +69,7 @@ export function UserPostDetail({ post, scrollId }: UserPostDetailProps) {
 
       {/* Comments */}
       <div className="mt-4" key={refreshKey}>
-        <DetailTabs userPostId={post.id} />
+        <DetailTabs userPostId={post.id} scrollId={scrollId} />
       </div>
 
       {/* Reply */}

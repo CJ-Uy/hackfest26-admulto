@@ -118,6 +118,71 @@ export async function POST(req: NextRequest) {
   // Generate AI reply in background
   after(async () => {
     try {
+      // Walk up the thread to build conversation context
+      const threadContext: string[] = [];
+      let walkId = parentId || null;
+      while (walkId) {
+        const [ancestor] = await db
+          .select()
+          .from(comments)
+          .where(eq(comments.id, walkId))
+          .limit(1);
+        if (!ancestor) break;
+        threadContext.unshift(`${ancestor.author}: ${ancestor.content}`);
+        walkId = ancestor.parentId;
+      }
+
+      // Pick a different paper's perspective for the reply in threaded discussions.
+      // If the user is replying to a generated comment, the AI should respond
+      // from a different paper (to create the debate effect).
+      const paper = await db
+        .select()
+        .from(papers)
+        .where(eq(papers.id, resolvedPaperId!))
+        .limit(1);
+
+      if (paper.length === 0) return;
+      const p = paper[0];
+
+      // Find another paper in this scroll that can provide a different perspective
+      let replyPaper = p;
+      let replyAuthor: string;
+
+      if (parentId) {
+        // Check what author the parent comment was from
+        const [parentComment] = await db
+          .select()
+          .from(comments)
+          .where(eq(comments.id, parentId))
+          .limit(1);
+
+        if (parentComment?.isGenerated) {
+          // The user is replying to an AI comment — pick a DIFFERENT paper
+          // to create the back-and-forth debate
+          const otherPapers = await db
+            .select()
+            .from(papers)
+            .where(eq(papers.scrollId, p.scrollId));
+
+          // Find a paper whose author is different from the parent comment's author
+          const candidate = otherPapers.find((op) => {
+            const authors = JSON.parse(op.authors) as string[];
+            const authorName = authors[0]
+              ? `${authors[0]} et al.`
+              : op.title;
+            return authorName !== parentComment.author && op.id !== p.id;
+          });
+
+          if (candidate) {
+            replyPaper = candidate;
+          }
+        }
+      }
+
+      const parsedAuthors = JSON.parse(replyPaper.authors) as string[];
+      replyAuthor =
+        parsedAuthors[0] ? `${parsedAuthors[0]} et al.` : replyPaper.title;
+
       if (resolvedUserPostId) {
         // Reply on a user post — use web search for context
         const post = await db
@@ -146,19 +211,6 @@ export async function POST(req: NextRequest) {
 
         if (!replyContent?.trim()) return;
 
-        // Determine reply author
-        let replyAuthor = "Research Assistant";
-        if (parentId) {
-          const parentComment = await db
-            .select()
-            .from(comments)
-            .where(eq(comments.id, parentId))
-            .limit(1);
-          if (parentComment.length > 0 && parentComment[0].isGenerated) {
-            replyAuthor = parentComment[0].author;
-          }
-        }
-
         await db.insert(comments).values({
           paperId: resolvedPaperId!,
           userPostId: resolvedUserPostId,
@@ -174,45 +226,18 @@ export async function POST(req: NextRequest) {
           .set({ commentCount: sql`${userPosts.commentCount} + 1` })
           .where(eq(userPosts.id, resolvedUserPostId));
       } else {
-        // Reply on a paper — existing logic
-        let replyAuthorSource: string | null = null;
-
-        if (parentId) {
-          const parentComment = await db
-            .select()
-            .from(comments)
-            .where(eq(comments.id, parentId))
-            .limit(1);
-
-          if (parentComment.length > 0 && parentComment[0].isGenerated) {
-            replyAuthorSource = parentComment[0].author;
-          }
-        }
-
-        const paper = await db
-          .select()
-          .from(papers)
-          .where(eq(papers.id, resolvedPaperId!))
-          .limit(1);
-
-        if (paper.length === 0) return;
-
-        const p = paper[0];
-        const parsedAuthors = JSON.parse(p.authors) as string[];
-
+        // Reply on a paper
         const replyContent = await generateReplyComment(
           {
-            title: p.title,
-            synthesis: p.synthesis,
+            title: replyPaper.title,
+            synthesis: replyPaper.synthesis,
             authors: parsedAuthors,
           },
           content,
+          threadContext.length > 0 ? threadContext : undefined,
         );
 
         if (!replyContent?.trim()) return;
-
-        const replyAuthor = replyAuthorSource
-          || (parsedAuthors[0] ? `${parsedAuthors[0]} et al.` : p.title);
 
         await db.insert(comments).values({
           paperId: resolvedPaperId!,

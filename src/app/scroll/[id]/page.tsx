@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { Sidebar } from "@/components/shared/Sidebar";
@@ -15,9 +15,11 @@ import { CreatePostFAB } from "@/components/feed/CreatePostFAB";
 import { FeedSkeleton } from "@/components/shared/LoadingSkeleton";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useScrollCollapse } from "@/hooks/useScrollCollapse";
+import { useScrollStream } from "@/hooks/useScrollStream";
+import { useCommentStream } from "@/hooks/useCommentStream";
 import { fetchScroll } from "@/lib/scroll-store";
 import { cn } from "@/lib/utils";
-import type { ScrollSession, Paper, Poll, UserPost } from "@/lib/types";
+import type { ScrollSession, Paper, Poll, UserPost, Comment } from "@/lib/types";
 
 const TABS = [
   { value: "feed", label: "Feed" },
@@ -91,53 +93,48 @@ export default function ScrollPage() {
     };
   }, [scrollId, fetchCommentCounts]);
 
-  // Poll for completion if scroll is still generating
-  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  useEffect(() => {
-    if (!scroll || scroll.status !== "generating") {
-      if (pollingRef.current) {
-        clearInterval(pollingRef.current);
-        pollingRef.current = null;
-      }
-      return;
+  // Helper to reload full scroll data from the API
+  const reloadScroll = useCallback(async () => {
+    const stored = await fetchScroll(scrollId);
+    if (stored) {
+      setScroll(stored.scroll);
+      setPapers(stored.papers);
+      setPolls(stored.polls || []);
+      setUserPosts(stored.userPosts || []);
+      const voted = new Set<string>();
+      const saved = new Set<string>();
+      stored.papers.forEach((p) => {
+        if (p.voted) voted.add(p.id);
+        if (p.bookmarked) saved.add(p.id);
+      });
+      setUpvotedPapers(voted);
+      setBookmarkedPapers(saved);
     }
+    fetchCommentCounts();
+  }, [scrollId, fetchCommentCounts]);
 
-    async function pollStatus() {
-      try {
-        const res = await fetch(`/api/scrolls/${scrollId}/status`);
-        if (!res.ok) return;
-        const data = (await res.json()) as { status: string };
-        if (data.status === "complete") {
-          // Re-fetch full scroll data
-          const stored = await fetchScroll(scrollId);
-          if (stored) {
-            setScroll(stored.scroll);
-            setPapers(stored.papers);
-            setPolls(stored.polls || []);
-            setUserPosts(stored.userPosts || []);
-            const voted = new Set<string>();
-            const saved = new Set<string>();
-            stored.papers.forEach((p) => {
-              if (p.voted) voted.add(p.id);
-              if (p.bookmarked) saved.add(p.id);
-            });
-            setUpvotedPapers(voted);
-            setBookmarkedPapers(saved);
-          }
-        }
-      } catch {
-        // ignore
-      }
-    }
+  // Live SSE stream for initial feed generation
+  useScrollStream({
+    scrollId,
+    enabled: scroll?.status === "generating" && !isGeneratingMore,
+    onComplete: reloadScroll,
+  });
 
-    pollingRef.current = setInterval(pollStatus, 3000);
-    return () => {
-      if (pollingRef.current) {
-        clearInterval(pollingRef.current);
-        pollingRef.current = null;
-      }
-    };
-  }, [scroll, scrollId]);
+  // Live comment stream — update comment counts on feed cards in real-time
+  useCommentStream({
+    scrollId,
+    onComment: useCallback((comment: Comment) => {
+      // Increment comment count for the relevant paper/post
+      const key = comment.userPostId
+        ? `post:${comment.userPostId}`
+        : comment.paperId;
+      setCommentCounts((prev) => {
+        const next = new Map(prev);
+        next.set(key, (next.get(key) || 0) + 1);
+        return next;
+      });
+    }, []),
+  });
 
   // Refresh comment counts when page regains visibility or focus (e.g. coming back from detail page)
   useEffect(() => {
@@ -187,9 +184,25 @@ export default function ScrollPage() {
     setUserPosts((prev) => [post, ...prev]);
   }, []);
 
-  // Generate More handler
-  const generateMorePollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Live SSE stream for generate-more
+  useScrollStream({
+    scrollId,
+    enabled: isGeneratingMore,
+    onProgress: (progress) => {
+      setGenerateMoreProgress(progress);
+    },
+    onComplete: async () => {
+      await reloadScroll();
+      setIsGeneratingMore(false);
+      setGenerateMoreProgress(null);
+    },
+    onError: () => {
+      setIsGeneratingMore(false);
+      setGenerateMoreProgress(null);
+    },
+  });
 
+  // Generate More handler
   const handleGenerateMore = useCallback(async () => {
     setIsGeneratingMore(true);
     setGenerateMoreProgress({ step: "searching" });
@@ -200,62 +213,11 @@ export default function ScrollPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ scrollId }),
       });
-
-      // Start polling for progress
-      generateMorePollingRef.current = setInterval(async () => {
-        try {
-          const res = await fetch(`/api/scrolls/${scrollId}/status`);
-          if (!res.ok) return;
-          const data = (await res.json()) as {
-            status: string;
-            progress?: string | null;
-          };
-
-          if (data.progress) {
-            try {
-              const prog = typeof data.progress === "string"
-                ? JSON.parse(data.progress)
-                : data.progress;
-              setGenerateMoreProgress(prog);
-            } catch {
-              // ignore
-            }
-          }
-
-          if (data.status === "complete") {
-            if (generateMorePollingRef.current) {
-              clearInterval(generateMorePollingRef.current);
-              generateMorePollingRef.current = null;
-            }
-            // Re-fetch full scroll data
-            const stored = await fetchScroll(scrollId);
-            if (stored) {
-              setScroll(stored.scroll);
-              setPapers(stored.papers);
-              setPolls(stored.polls || []);
-              setUserPosts(stored.userPosts || []);
-              const voted = new Set<string>();
-              const saved = new Set<string>();
-              stored.papers.forEach((p) => {
-                if (p.voted) voted.add(p.id);
-                if (p.bookmarked) saved.add(p.id);
-              });
-              setUpvotedPapers(voted);
-              setBookmarkedPapers(saved);
-            }
-            setIsGeneratingMore(false);
-            setGenerateMoreProgress(null);
-            fetchCommentCounts();
-          }
-        } catch {
-          // ignore
-        }
-      }, 2500);
     } catch {
       setIsGeneratingMore(false);
       setGenerateMoreProgress(null);
     }
-  }, [scrollId, fetchCommentCounts]);
+  }, [scrollId]);
 
   if (!scroll) {
     return (
