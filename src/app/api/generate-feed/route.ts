@@ -3,6 +3,7 @@ import {
   generateApaCitation,
   generateExportOutline,
   generateSocialComments,
+  setModels,
 } from "@/lib/ollama";
 import { verifyCard } from "@/lib/grounding";
 import { webSearch } from "@/lib/search";
@@ -67,9 +68,14 @@ export async function POST(req: Request) {
     description?: string;
     subfields?: string[];
     mode?: string;
+    fastModel?: string;
+    smartModel?: string;
   };
 
   const { topic, description, subfields, mode } = body;
+
+  // Apply user-selected model overrides for this request
+  setModels(body.fastModel, body.smartModel);
 
   let searchQuery = topic;
   if (subfields?.length) {

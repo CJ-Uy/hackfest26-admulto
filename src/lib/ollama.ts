@@ -5,8 +5,16 @@ const OLLAMA_URL = process.env.OLLAMA_URL || "http://localhost:11434";
 
 // phi4-mini is fastest for short generations (synthesis, citations)
 // Use llama3 for more complex reasoning tasks (comments, outlines)
-const FAST_MODEL = "phi4-mini:3.8b";
-const SMART_MODEL = "llama3:8b";
+export const DEFAULT_FAST_MODEL = "phi4-mini:3.8b";
+export const DEFAULT_SMART_MODEL = "llama3:8b";
+
+let FAST_MODEL = DEFAULT_FAST_MODEL;
+let SMART_MODEL = DEFAULT_SMART_MODEL;
+
+export function setModels(fast?: string, smart?: string) {
+  if (fast) FAST_MODEL = fast;
+  if (smart) SMART_MODEL = smart;
+}
 
 async function ollamaChat(
   systemPrompt: string,
