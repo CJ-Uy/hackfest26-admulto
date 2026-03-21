@@ -15,6 +15,12 @@ import { eq } from "drizzle-orm";
 import type { Paper, ExportTheme } from "@/lib/types";
 import { getPdf, deletePdfs } from "@/lib/r2";
 import { extractPdfContent, pdfToRawPaper } from "@/lib/pdf-extract";
+import {
+  safeEmbed,
+  safeEmbedBatch,
+  rankBySimilarity,
+  findSimilarPairs,
+} from "@/lib/embeddings";
 
 const CONCURRENCY = 2; // Ollama processes sequentially, so keep low to avoid timeouts
 
@@ -196,12 +202,104 @@ export async function POST(req: Request) {
 
         // Merge PDF papers based on sourceMode
         if (effectiveSourceMode === "include") {
-          // PDF papers go first, then academic papers fill the rest
           academicPapers = [...pdfPapers, ...academicPapers];
         } else if (effectiveSourceMode === "only_sources") {
           academicPapers = pdfPapers;
         }
         // context_only: pdfPapers not added to academicPapers — used as context only
+
+        // ── Embedding-based ranking ──
+        await updateProgress(scrollId, "ranking");
+
+        // Embed the query for relevance ranking
+        const queryText = [topic, description, ...(subfields || [])].filter(Boolean).join(" ");
+        const queryEmbedding = queryText ? await safeEmbed(queryText) : null;
+
+        // Store query embedding on scroll
+        if (queryEmbedding) {
+          await db
+            .update(scrolls)
+            .set({ queryEmbedding: JSON.stringify(queryEmbedding) })
+            .where(eq(scrolls.id, scrollId));
+        }
+
+        // Embed papers that don't already have embeddings (from searchPapers dedup)
+        const needsEmbedding = academicPapers.filter((p) => !p.embedding);
+        if (needsEmbedding.length > 0) {
+          const texts = needsEmbedding.map(
+            (p) => `${p.title}. ${p.abstract.slice(0, 500)}`,
+          );
+          const newEmbeddings = await safeEmbedBatch(texts);
+          if (newEmbeddings) {
+            needsEmbedding.forEach((p, i) => {
+              p.embedding = newEmbeddings[i];
+            });
+          }
+        }
+
+        // Rank by relevance: PDF similarity (if PDFs) or query similarity
+        if (hasPdfs && pdfPapers.some((p) => p.embedding) && effectiveSourceMode !== "only_sources") {
+          // For PDF modes: rank academic papers by similarity to uploaded PDFs
+          const pdfEmbeddings = pdfPapers
+            .map((p) => p.embedding)
+            .filter((e): e is number[] => !!e);
+
+          if (pdfEmbeddings.length > 0) {
+            // Score each academic paper by max similarity to any PDF
+            const nonPdfPapers = academicPapers.filter(
+              (p) => p.source !== "pdf_upload",
+            );
+            const pdfPapersInList = academicPapers.filter(
+              (p) => p.source === "pdf_upload",
+            );
+
+            const scored = nonPdfPapers
+              .map((paper) => {
+                if (!paper.embedding) return { paper, score: 0 };
+                const maxSim = Math.max(
+                  ...pdfEmbeddings.map((pe) => {
+                    let dot = 0, magA = 0, magB = 0;
+                    for (let i = 0; i < pe.length; i++) {
+                      dot += pe[i] * paper.embedding![i];
+                      magA += pe[i] * pe[i];
+                      magB += paper.embedding![i] * paper.embedding![i];
+                    }
+                    const denom = Math.sqrt(magA) * Math.sqrt(magB);
+                    return denom === 0 ? 0 : dot / denom;
+                  }),
+                );
+                return { paper, score: maxSim };
+              })
+              .sort((a, b) => b.score - a.score);
+
+            // PDF papers first, then ranked academic papers
+            academicPapers = [
+              ...pdfPapersInList,
+              ...scored.map((s) => s.paper),
+            ];
+            console.log(
+              `[generate-feed] Ranked papers by PDF similarity (top score: ${scored[0]?.score.toFixed(3)})`,
+            );
+          }
+        } else if (queryEmbedding) {
+          // Rank by query relevance
+          const papersWithEmb = academicPapers.filter((p) => p.embedding);
+          const papersWithoutEmb = academicPapers.filter((p) => !p.embedding);
+
+          if (papersWithEmb.length > 0) {
+            const ranked = rankBySimilarity(
+              queryEmbedding,
+              papersWithEmb.map((p) => p.embedding!),
+            );
+            academicPapers = [
+              ...ranked.map((r) => papersWithEmb[r.index]),
+              ...papersWithoutEmb,
+            ];
+            console.log(
+              `[generate-feed] Ranked ${papersWithEmb.length} papers by query similarity (top: ${ranked[0]?.score.toFixed(3)})`,
+            );
+          }
+        }
 
         const total = Math.min(academicPapers.length, 12);
         await updateProgress(scrollId, "processing", {
@@ -266,6 +364,7 @@ export async function POST(req: Request) {
               commentCount: 0,
               apaCitation,
               isUserUpload: raw.source === "pdf_upload",
+              embedding: raw.embedding,
             };
           } catch (err) {
             console.error(`Failed to process paper "${raw.title}":`, err);
@@ -416,11 +515,23 @@ export async function POST(req: Request) {
             : Promise.resolve([] as ExportTheme[]);
 
         // 5. Generate social comments — papers reacting to each other
+        // Use embedding similarity to pair papers with the most related commenters
         type RawComment = {
           author: string;
           content: string;
           relationship: string;
         };
+
+        // Build similarity pairs for comment matching
+        const paperEmbeddings = processedPapers
+          .map((p) => p.embedding)
+          .filter((e): e is number[] => !!e);
+        const hasPaperEmbeddings =
+          paperEmbeddings.length === processedPapers.length;
+        const similarPairs = hasPaperEmbeddings
+          ? findSimilarPairs(paperEmbeddings, 4)
+          : null;
+
         const commentPromise = (async (): Promise<
           Map<number, RawComment[]>
         > => {
@@ -436,9 +547,17 @@ export async function POST(req: Request) {
             const batch = processedPapers.slice(i, i + commentBatchSize);
             const batchPromises = batch.map(async (paper, batchIdx) => {
               const paperIdx = i + batchIdx;
-              const others = processedPapers
-                .filter((_, idx) => idx !== paperIdx)
-                .slice(0, 4);
+
+              // Pick commenters: use semantic similarity if available, else first 4
+              let others;
+              if (similarPairs && similarPairs.has(paperIdx)) {
+                const similar = similarPairs.get(paperIdx)!;
+                others = similar.map((s) => processedPapers[s.index]);
+              } else {
+                others = processedPapers
+                  .filter((_, idx) => idx !== paperIdx)
+                  .slice(0, 4);
+              }
 
               try {
                 const generatedComments = await generateSocialComments(
@@ -500,6 +619,7 @@ export async function POST(req: Request) {
                     ).length,
                     apaCitation: p.apaCitation,
                     isUserUpload: (p as Paper & { isUserUpload?: boolean }).isUserUpload || false,
+                    embedding: p.embedding ? JSON.stringify(p.embedding) : null,
                   })),
                 )
                 .returning()

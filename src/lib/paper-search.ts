@@ -17,6 +17,7 @@ export interface RawPaper {
   doi: string;
   citationCount: number;
   source: "openalex" | "crossref" | "semantic_scholar" | "web" | "pdf_upload";
+  embedding?: number[]; // nomic-embed-text embedding, attached during search dedup
 }
 
 // ─── OpenAlex (primary — free, 100k req/day with polite pool) ───────────────
@@ -231,6 +232,20 @@ async function searchSemanticScholar(
 
 // ─── Unified search across all sources ────────────────────────────────────
 
+import {
+  safeEmbedBatch,
+  deduplicateByEmbedding,
+} from "@/lib/embeddings";
+
+// Source priority for dedup: prefer OpenAlex > S2 > CrossRef
+const SOURCE_PRIORITY: Record<string, number> = {
+  openalex: 0,
+  semantic_scholar: 1,
+  crossref: 2,
+  web: 3,
+  pdf_upload: -1, // always keep PDFs
+};
+
 export async function searchPapers(
   query: string,
   targetCount = 15,
@@ -251,19 +266,60 @@ export async function searchPapers(
     `[paper-search] Results — OpenAlex: ${openAlexResults.length}, CrossRef: ${crossRefResults.length}, S2: ${s2Results.length}`,
   );
 
-  // Merge and deduplicate by title (case-insensitive)
+  // First pass: exact title dedup (fast, catches obvious duplicates)
   const seen = new Set<string>();
-  const merged: RawPaper[] = [];
+  const allPapers: RawPaper[] = [];
 
   // Priority: OpenAlex first (best abstracts), then S2, then CrossRef
   for (const paper of [...openAlexResults, ...s2Results, ...crossRefResults]) {
     const key = paper.title.toLowerCase().trim();
     if (seen.has(key)) continue;
     seen.add(key);
-    merged.push(paper);
-    if (merged.length >= targetCount) break;
+    allPapers.push(paper);
   }
 
-  console.log(`[paper-search] Merged deduplicated: ${merged.length} papers`);
-  return merged;
+  console.log(
+    `[paper-search] After title dedup: ${allPapers.length} papers`,
+  );
+
+  // Second pass: embedding-based semantic dedup (catches near-duplicates)
+  const embeddingTexts = allPapers.map(
+    (p) => `${p.title}. ${p.abstract.slice(0, 500)}`,
+  );
+  const embeddings = await safeEmbedBatch(embeddingTexts);
+
+  let merged: RawPaper[];
+
+  if (embeddings) {
+    // Attach embeddings to papers
+    for (let i = 0; i < allPapers.length; i++) {
+      allPapers[i].embedding = embeddings[i];
+    }
+
+    // Semantic dedup: remove papers with >0.92 similarity, keeping higher-priority source
+    const keepIndices = deduplicateByEmbedding(
+      embeddings,
+      0.92,
+      (a, b) => {
+        // Prefer by: citation count first, then source priority
+        const citDiff = (allPapers[a].citationCount || 0) - (allPapers[b].citationCount || 0);
+        if (citDiff !== 0) return citDiff > 0 ? a : b;
+        const priA = SOURCE_PRIORITY[allPapers[a].source] ?? 99;
+        const priB = SOURCE_PRIORITY[allPapers[b].source] ?? 99;
+        return priA <= priB ? a : b;
+      },
+    );
+
+    merged = keepIndices.map((i) => allPapers[i]);
+    console.log(
+      `[paper-search] After semantic dedup: ${merged.length} papers (removed ${allPapers.length - merged.length} near-duplicates)`,
+    );
+  } else {
+    // Embedding failed — fall back to title-only dedup
+    merged = allPapers;
+  }
+
+  const result = merged.slice(0, targetCount);
+  console.log(`[paper-search] Final result: ${result.length} papers`);
+  return result;
 }

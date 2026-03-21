@@ -23,6 +23,7 @@ export const scrolls = sqliteTable("scroll", {
   exportData: text("export_data"),
   status: text("status").notNull().default("complete"),
   progress: text("progress"),
+  queryEmbedding: text("query_embedding"), // JSON-stringified embedding of the search query
   createdAt: text("created_at")
     .notNull()
     .default(sql`(datetime('now'))`),
@@ -50,6 +51,7 @@ export const papers = sqliteTable("paper", {
   isUserUpload: integer("is_user_upload", { mode: "boolean" })
     .notNull()
     .default(sql`0`),
+  embedding: text("embedding"), // JSON-stringified 768-dim float array from nomic-embed-text
 });
 
 export const comments = sqliteTable("comment", {

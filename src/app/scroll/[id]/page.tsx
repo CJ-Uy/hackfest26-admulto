@@ -19,7 +19,13 @@ import { useScrollStream } from "@/hooks/useScrollStream";
 import { useCommentStream } from "@/hooks/useCommentStream";
 import { fetchScroll } from "@/lib/scroll-store";
 import { cn } from "@/lib/utils";
-import type { ScrollSession, Paper, Poll, UserPost, Comment } from "@/lib/types";
+import type {
+  ScrollSession,
+  Paper,
+  Poll,
+  UserPost,
+  Comment,
+} from "@/lib/types";
 
 const TABS = [
   { value: "feed", label: "Feed" },
@@ -135,6 +141,35 @@ export default function ScrollPage() {
       });
     }, []),
   });
+
+  // Continuously generate new discussion comments while the user is on the scroll
+  useEffect(() => {
+    if (!scroll || scroll.status !== "complete") return;
+
+    let active = true;
+
+    async function generateLoop() {
+      while (active) {
+        // Wait 10 seconds between generations
+        await new Promise((r) => setTimeout(r, 10000));
+        if (!active) break;
+        // Only generate when the tab is visible
+        if (document.visibilityState !== "visible") continue;
+        try {
+          await fetch(`/api/scrolls/${scrollId}/generate-comments`, {
+            method: "POST",
+          });
+        } catch {
+          // ignore — will retry next cycle
+        }
+      }
+    }
+
+    generateLoop();
+    return () => {
+      active = false;
+    };
+  }, [scroll, scrollId]);
 
   // Refresh comment counts when page regains visibility or focus (e.g. coming back from detail page)
   useEffect(() => {

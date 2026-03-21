@@ -13,6 +13,7 @@ export interface Paper {
   apaCitation: string;
   voted?: boolean;
   isUserUpload?: boolean;
+  embedding?: number[]; // nomic-embed-text embedding for semantic similarity
 }
 
 export interface Comment {
