@@ -12,7 +12,13 @@ export async function GET(req: NextRequest) {
     orderBy: { createdAt: "desc" },
   });
 
-  return NextResponse.json(comments);
+  return NextResponse.json(
+    comments.map((c) => ({
+      ...c,
+      isGenerated: c.isGenerated ?? false,
+      relationship: c.relationship ?? null,
+    })),
+  );
 }
 
 export async function POST(req: NextRequest) {
@@ -36,6 +42,7 @@ export async function POST(req: NextRequest) {
         paperId,
         content,
         author: author || "You",
+        isGenerated: false,
       },
     }),
     db.paper.update({

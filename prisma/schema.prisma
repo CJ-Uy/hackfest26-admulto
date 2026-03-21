@@ -44,12 +44,14 @@ model Paper {
 }
 
 model Comment {
-  id        String   @id @default(cuid())
-  paperId   String
-  paper     Paper    @relation(fields: [paperId], references: [id], onDelete: Cascade)
-  content   String
-  author    String   @default("You")
-  createdAt DateTime @default(now())
+  id           String   @id @default(cuid())
+  paperId      String
+  paper        Paper    @relation(fields: [paperId], references: [id], onDelete: Cascade)
+  content      String
+  author       String   @default("You")
+  isGenerated  Boolean  @default(false)
+  relationship String?
+  createdAt    DateTime @default(now())
 }
 
 model Vote {
