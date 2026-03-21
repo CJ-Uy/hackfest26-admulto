@@ -25,6 +25,7 @@ interface CardActionsProps {
   citationCount: number;
   apaCitation: string;
   initialVoted?: boolean;
+  initialBookmarked?: boolean;
   onCommentClick?: () => void;
   onUpvote?: (paperId: string, voted: boolean) => void;
   onBookmark?: (paperId: string, bookmarked: boolean) => void;
@@ -37,13 +38,14 @@ export function CardActions({
   citationCount,
   apaCitation,
   initialVoted = false,
+  initialBookmarked = false,
   onCommentClick,
   onUpvote,
   onBookmark,
 }: CardActionsProps) {
   const [upvoted, setUpvoted] = useState(initialVoted);
   const [score, setScore] = useState(credibilityScore);
-  const [bookmarked, setBookmarked] = useState(false);
+  const [bookmarked, setBookmarked] = useState(initialBookmarked);
   const tier = getCredibilityTier(credibilityScore);
 
   async function handleUpvote(e: React.MouseEvent) {
@@ -80,13 +82,23 @@ export function CardActions({
     onCommentClick?.();
   }
 
-  function handleBookmark(e: React.MouseEvent) {
+  async function handleBookmark(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
     const next = !bookmarked;
     setBookmarked(next);
     onBookmark?.(paperId, next);
     toast.success(next ? "Saved" : "Removed from saved");
+
+    try {
+      await fetch("/api/bookmarks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paperId }),
+      });
+    } catch {
+      setBookmarked(!next);
+    }
   }
 
   const fmt = (n: number) =>

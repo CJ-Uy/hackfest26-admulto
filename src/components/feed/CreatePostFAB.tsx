@@ -25,21 +25,44 @@ export function CreatePostFAB({ scrollId, onPost }: CreatePostFABProps) {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
 
-  function handleSubmit() {
+  async function handleSubmit() {
     if (!content.trim()) return;
 
-    const post: UserPost = {
-      id: `post-${Date.now()}`,
-      title: title.trim() || undefined,
-      content: content.trim(),
-      createdAt: new Date().toISOString(),
-    };
+    try {
+      const res = await fetch("/api/user-posts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          scrollId,
+          title: title.trim() || undefined,
+          content: content.trim(),
+        }),
+      });
 
-    onPost(post);
-    toast.success("Post created");
-    setTitle("");
-    setContent("");
-    setOpen(false);
+      if (res.ok) {
+        const saved = (await res.json()) as {
+          id: string;
+          title?: string | null;
+          content: string;
+          createdAt: string;
+        };
+        const post: UserPost = {
+          id: saved.id,
+          title: saved.title ?? undefined,
+          content: saved.content,
+          createdAt: saved.createdAt,
+        };
+        onPost(post);
+        toast.success("Post created");
+        setTitle("");
+        setContent("");
+        setOpen(false);
+      } else {
+        toast.error("Failed to create post");
+      }
+    } catch {
+      toast.error("Failed to create post");
+    }
   }
 
   return (

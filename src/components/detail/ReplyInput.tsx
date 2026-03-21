@@ -6,10 +6,11 @@ import { toast } from "sonner";
 
 interface ReplyInputProps {
   paperId: string;
-  onCommentAdded?: () => void;
+  parentId?: string;
+  onCommentAdded?: (commentId?: string) => void;
 }
 
-export function ReplyInput({ paperId, onCommentAdded }: ReplyInputProps) {
+export function ReplyInput({ paperId, parentId, onCommentAdded }: ReplyInputProps) {
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -21,13 +22,18 @@ export function ReplyInput({ paperId, onCommentAdded }: ReplyInputProps) {
       const res = await fetch("/api/comments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ paperId, content: content.trim() }),
+        body: JSON.stringify({
+          paperId,
+          content: content.trim(),
+          parentId: parentId || undefined,
+        }),
       });
 
       if (res.ok) {
+        const data = (await res.json()) as { id: string };
         setContent("");
         toast.success("Comment added!");
-        onCommentAdded?.();
+        onCommentAdded?.(data.id);
       } else {
         toast.error("Failed to add comment.");
       }
