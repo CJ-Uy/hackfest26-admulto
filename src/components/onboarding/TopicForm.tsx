@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   Sparkles,
@@ -11,11 +11,19 @@ import {
   Brain,
   Info,
 } from "lucide-react";
+import { GenerationProgress } from "./GenerationProgress";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+
+interface ProgressInfo {
+  step: string;
+  papersProcessed?: number;
+  total?: number;
+  message?: string;
+}
 
 interface OllamaModel {
   name: string;
@@ -26,6 +34,7 @@ interface OllamaModel {
 
 interface TopicFormProps {
   mode: "brainstorm" | "citationFinder" | null;
+  initialTopic?: string;
 }
 
 function formatSize(bytes: number): string {
@@ -34,13 +43,63 @@ function formatSize(bytes: number): string {
   return `${(bytes / 1e6).toFixed(0)} MB`;
 }
 
-export function TopicForm({ mode }: TopicFormProps) {
+
+export function TopicForm({ mode, initialTopic }: TopicFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState<ProgressInfo | null>(null);
+  const [scrollId, setScrollId] = useState<string | null>(null);
+  const [submittedTopic, setSubmittedTopic] = useState("");
   const [subfields, setSubfields] = useState<string[]>([]);
   const [subfieldInput, setSubfieldInput] = useState("");
   const topicRef = useRef<HTMLInputElement>(null);
   const descRef = useRef<HTMLTextAreaElement>(null);
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const stopPolling = useCallback(() => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
+  }, []);
+
+  // Poll for status updates
+  useEffect(() => {
+    if (!scrollId) return;
+
+    async function pollStatus() {
+      try {
+        const res = await fetch(`/api/scrolls/${scrollId}/status`);
+        if (!res.ok) return;
+        const data = (await res.json()) as {
+          status: string;
+          progress: ProgressInfo | null;
+        };
+
+        if (data.status === "complete") {
+          stopPolling();
+          router.push(`/scroll/${scrollId}`);
+        } else if (data.status === "error") {
+          stopPolling();
+          setLoading(false);
+          setScrollId(null);
+          toast.error(
+            data.progress?.message || "Feed generation failed. Please try again.",
+          );
+        } else {
+          setProgress(data.progress);
+        }
+      } catch {
+        // Ignore transient fetch errors during polling
+      }
+    }
+
+    // Poll immediately, then every 2.5s
+    pollStatus();
+    pollingRef.current = setInterval(pollStatus, 2500);
+
+    return stopPolling;
+  }, [scrollId, router, stopPolling]);
 
   // Advanced settings
   const [advancedOpen, setAdvancedOpen] = useState(false);
@@ -92,7 +151,9 @@ export function TopicForm({ mode }: TopicFormProps) {
     const topic = topicRef.current?.value?.trim();
     if (!topic) return;
 
+    setSubmittedTopic(topic);
     setLoading(true);
+    setProgress({ step: "searching" });
 
     try {
       const res = await fetch("/api/generate-feed", {
@@ -117,13 +178,23 @@ export function TopicForm({ mode }: TopicFormProps) {
         scroll: { id: string };
       };
 
-      router.push(`/scroll/${data.scroll.id}`);
+      // Start polling for progress
+      setScrollId(data.scroll.id);
     } catch (err) {
       console.error("Feed generation failed:", err);
       toast.error("Could not generate feed. Please try again.");
-    } finally {
       setLoading(false);
+      setProgress(null);
     }
+  }
+
+  if (loading) {
+    return (
+      <GenerationProgress
+        progress={progress}
+        topic={submittedTopic || "your topic"}
+      />
+    );
   }
 
   return (
@@ -135,6 +206,7 @@ export function TopicForm({ mode }: TopicFormProps) {
         <Input
           id="topic"
           ref={topicRef}
+          defaultValue={initialTopic}
           placeholder={
             mode === "citationFinder"
               ? "e.g., Climate Policy Effectiveness in Southeast Asia"
@@ -331,29 +403,13 @@ export function TopicForm({ mode }: TopicFormProps) {
         className="w-full gap-2"
         disabled={loading || !mode}
       >
-        {loading ? (
-          <>
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Generating your feed...
-          </>
-        ) : (
-          <>
-            <Sparkles className="h-4 w-4" />
-            Generate My Feed
-          </>
-        )}
+        <Sparkles className="h-4 w-4" />
+        Generate My Feed
       </Button>
 
       {!mode && (
         <p className="text-muted-foreground text-center text-xs">
           Select a mode above to enable feed generation.
-        </p>
-      )}
-
-      {loading && (
-        <p className="text-muted-foreground text-center text-xs">
-          Searching papers, generating summaries, and verifying claims. This may
-          take a minute.
         </p>
       )}
     </form>

@@ -1,10 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { ModeSelector } from "@/components/onboarding/ModeSelector";
 import { TopicForm } from "@/components/onboarding/TopicForm";
 
-export default function OnboardingPage() {
+function OnboardingContent() {
+  const searchParams = useSearchParams();
+  const initialTopic = searchParams.get("topic") || undefined;
   const [mode, setMode] = useState<"brainstorm" | "citationFinder" | null>(
     null,
   );
@@ -23,8 +26,16 @@ export default function OnboardingPage() {
 
         <ModeSelector selected={mode} onSelect={setMode} />
 
-        <TopicForm mode={mode} />
+        <TopicForm mode={mode} initialTopic={initialTopic} />
       </div>
     </div>
+  );
+}
+
+export default function OnboardingPage() {
+  return (
+    <Suspense>
+      <OnboardingContent />
+    </Suspense>
   );
 }

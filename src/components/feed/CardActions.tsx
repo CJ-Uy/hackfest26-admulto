@@ -10,6 +10,13 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { getCredibilityTier } from "@/lib/credibility";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+  TooltipProvider,
+} from "@/components/ui/tooltip";
 
 interface CardActionsProps {
   paperId: string;
@@ -37,6 +44,7 @@ export function CardActions({
   const [upvoted, setUpvoted] = useState(initialVoted);
   const [score, setScore] = useState(credibilityScore);
   const [bookmarked, setBookmarked] = useState(false);
+  const tier = getCredibilityTier(credibilityScore);
 
   async function handleUpvote(e: React.MouseEvent) {
     e.preventDefault();
@@ -100,14 +108,39 @@ export function CardActions({
           >
             <ArrowBigUp className={cn("h-5 w-5", upvoted && "fill-current")} />
           </button>
-          <span
-            className={cn(
-              "min-w-[24px] text-center text-[14px] font-bold",
-              upvoted ? "text-[#ff4500]" : "text-foreground",
-            )}
-          >
-            {fmt(score)}
-          </span>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger
+                render={<span />}
+                className={cn(
+                  "min-w-6 cursor-help text-center text-[14px] font-bold",
+                  upvoted ? "text-[#ff4500]" : "text-foreground",
+                )}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+              >
+                {fmt(score)}
+              </TooltipTrigger>
+              <TooltipContent
+                side="top"
+                className="max-w-55 border bg-white text-left text-foreground shadow-md"
+              >
+                <div className="flex flex-col gap-0.5">
+                  <span className={cn("text-sm font-semibold", tier.color)}>
+                    {tier.label}
+                  </span>
+                  <span className="text-xs opacity-80">
+                    {tier.description}
+                  </span>
+                  <span className="mt-0.5 text-[10px] opacity-60">
+                    Based on citations, venue, and recency
+                  </span>
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           <button
             onClick={(e) => {
               e.preventDefault();
@@ -118,6 +151,37 @@ export function CardActions({
             <ArrowBigDown className="h-5 w-5" />
           </button>
         </div>
+
+        {/* Credibility badge */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger
+              render={<span />}
+              className={cn(
+                "mr-1 cursor-help rounded-full px-2 py-0.5 text-xs font-semibold",
+                tier.bg,
+                tier.textOnBg,
+              )}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+            >
+              {tier.label}
+            </TooltipTrigger>
+            <TooltipContent
+              side="top"
+              className="max-w-55 border bg-white text-left text-foreground shadow-md"
+            >
+              <div className="flex flex-col gap-0.5">
+                <span className="text-xs opacity-80">{tier.description}</span>
+                <span className="mt-0.5 text-[10px] opacity-60">
+                  Based on citations, venue, and recency
+                </span>
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
 
         {/* Comment */}
         <button

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
+import { Loader2 } from "lucide-react";
 import { Sidebar } from "@/components/shared/Sidebar";
 import { ScrollHeader } from "@/components/shared/ScrollHeader";
 import { TabNav } from "@/components/shared/TabNav";
@@ -11,7 +12,11 @@ import { PollsView } from "@/components/polls/PollsView";
 import { ExportView } from "@/components/export/ExportView";
 import { RightSidebar } from "@/components/shared/RightSidebar";
 import { CreatePostFAB } from "@/components/feed/CreatePostFAB";
+import { FeedSkeleton } from "@/components/shared/LoadingSkeleton";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useScrollCollapse } from "@/hooks/useScrollCollapse";
 import { fetchScroll } from "@/lib/scroll-store";
+import { cn } from "@/lib/utils";
 import type { ScrollSession, Paper, Poll, UserPost } from "@/lib/types";
 
 const TABS = [
@@ -23,6 +28,7 @@ const TABS = [
 export default function ScrollPage() {
   const params = useParams();
   const scrollId = params.id as string;
+  const { isCollapsed } = useScrollCollapse();
   const [activeTab, setActiveTab] = useState("feed");
   const [scroll, setScroll] = useState<ScrollSession | null>(null);
   const [papers, setPapers] = useState<Paper[]>([]);
@@ -75,6 +81,50 @@ export default function ScrollPage() {
     };
   }, [scrollId, fetchCommentCounts]);
 
+  // Poll for completion if scroll is still generating
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  useEffect(() => {
+    if (!scroll || scroll.status !== "generating") {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
+      return;
+    }
+
+    async function pollStatus() {
+      try {
+        const res = await fetch(`/api/scrolls/${scrollId}/status`);
+        if (!res.ok) return;
+        const data = (await res.json()) as { status: string };
+        if (data.status === "complete") {
+          // Re-fetch full scroll data
+          const stored = await fetchScroll(scrollId);
+          if (stored) {
+            setScroll(stored.scroll);
+            setPapers(stored.papers);
+            setPolls(stored.polls || []);
+            const voted = new Set<string>();
+            stored.papers.forEach((p) => {
+              if (p.voted) voted.add(p.id);
+            });
+            setUpvotedPapers(voted);
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    pollingRef.current = setInterval(pollStatus, 3000);
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
+    };
+  }, [scroll, scrollId]);
+
   // Refresh comment counts when page regains visibility or focus (e.g. coming back from detail page)
   useEffect(() => {
     function handleVisibility() {
@@ -123,7 +173,32 @@ export default function ScrollPage() {
     setUserPosts((prev) => [post, ...prev]);
   }, []);
 
-  if (!scroll) return null;
+  if (!scroll) {
+    return (
+      <div className="flex min-h-screen bg-[#dae0e6]">
+        <Sidebar />
+        <div className="flex flex-1 justify-center gap-0 lg:gap-6 lg:px-6 lg:py-4">
+          <main className="bg-background w-full max-w-[780px] flex-1 lg:rounded-t-lg">
+            <div className="border-border border-b px-4 pt-5 pb-3">
+              <Skeleton className="mb-2 h-5 w-24" />
+              <Skeleton className="mb-2 h-7 w-3/4" />
+              <Skeleton className="h-4 w-full" />
+            </div>
+            <div className="border-border flex border-b">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="flex flex-1 justify-center py-3">
+                  <Skeleton className="h-5 w-16" />
+                </div>
+              ))}
+            </div>
+            <div className="pt-4">
+              <FeedSkeleton />
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-[#dae0e6]">
@@ -135,7 +210,14 @@ export default function ScrollPage() {
           {/* Sticky top section: search + header + tabs */}
           <div className="bg-background border-border sticky top-0 z-30 border-b">
             <SearchBar value={searchQuery} onChange={setSearchQuery} />
-            <ScrollHeader scroll={scroll} />
+            <div
+              className={cn(
+                "overflow-hidden transition-all duration-300 ease-in-out",
+                isCollapsed ? "max-h-0 opacity-0" : "max-h-40 opacity-100",
+              )}
+            >
+              <ScrollHeader scroll={scroll} />
+            </div>
             <TabNav
               value={activeTab}
               onValueChange={setActiveTab}
@@ -145,12 +227,22 @@ export default function ScrollPage() {
 
           {/* Tab content */}
           <div className="overflow-hidden pb-20">
-            {activeTab === "feed" && (
+            {scroll.status === "generating" && (
+              <div className="flex flex-col items-center justify-center px-4 py-16">
+                <Loader2 className="text-primary mb-4 h-8 w-8 animate-spin" />
+                <p className="text-muted-foreground text-sm">
+                  Your feed is still being generated. This page will update
+                  automatically.
+                </p>
+              </div>
+            )}
+            {scroll.status !== "generating" && activeTab === "feed" && (
               <FeedView
                 scrollId={scrollId}
                 papers={papers}
                 polls={polls}
                 searchQuery={searchQuery}
+                scrollTitle={scroll.title}
                 userPosts={userPosts}
                 commentCounts={commentCounts}
                 onUpvote={handleUpvote}
@@ -158,8 +250,8 @@ export default function ScrollPage() {
                 onComment={handleComment}
               />
             )}
-            {activeTab === "polls" && <PollsView polls={polls} />}
-            {activeTab === "export" && (
+            {scroll.status !== "generating" && activeTab === "polls" && <PollsView polls={polls} />}
+            {scroll.status !== "generating" && activeTab === "export" && (
               <ExportView scrollId={scrollId} papers={papers} />
             )}
           </div>

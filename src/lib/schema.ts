@@ -21,6 +21,8 @@ export const scrolls = sqliteTable("scroll", {
   date: text("date").notNull(),
   paperCount: integer("paper_count").notNull(),
   exportData: text("export_data"),
+  status: text("status").notNull().default("complete"),
+  progress: text("progress"),
   createdAt: text("created_at")
     .notNull()
     .default(sql`(datetime('now'))`),
