@@ -12,11 +12,14 @@ export interface Paper {
   commentCount: number;
   apaCitation: string;
   voted?: boolean;
+  isUserUpload?: boolean;
+  embedding?: number[]; // nomic-embed-text embedding for semantic similarity
 }
 
 export interface Comment {
   id: string;
   paperId: string;
+  userPostId?: string | null;
   parentId?: string | null;
   content: string;
   author: string;
@@ -68,7 +71,7 @@ export interface ScrollSession {
   description: string;
   date: string;
   paperCount: number;
-  mode: "brainstorm" | "citation-finder";
+  mode: string;
   status?: "generating" | "complete" | "error";
 }
 

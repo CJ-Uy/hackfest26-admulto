@@ -13,11 +13,13 @@ import {
   Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useCommentStream } from "@/hooks/useCommentStream";
 import type { Comment } from "@/lib/types";
 
 interface DetailTabsProps {
   paperId?: string;
   userPostId?: string;
+  scrollId: string;
 }
 
 const relationshipConfig: Record<
@@ -77,9 +79,12 @@ function RelationshipBadge({ relationship }: { relationship: string }) {
   );
 }
 
-function TypingIndicator() {
+function TypingIndicator({ depth = 0 }: { depth?: number }) {
   return (
-    <div className="border-border bg-muted/30 my-2 ml-8 flex items-center gap-3 rounded-md border p-3.5">
+    <div
+      className="border-border bg-muted/30 my-2 flex items-center gap-3 rounded-md border p-3.5"
+      style={{ marginLeft: depth > 0 ? `${Math.min(depth, 4) * 2}rem` : "2rem" }}
+    >
       <div className="bg-primary/10 text-primary flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[12px] font-bold">
         <Bot className="h-3.5 w-3.5" />
       </div>
@@ -101,13 +106,15 @@ function InlineReplyInput({
   paperId,
   userPostId,
   parentId,
+  depth,
   onSubmit,
   onCancel,
 }: {
   paperId?: string;
   userPostId?: string;
   parentId: string;
-  onSubmit: () => void;
+  depth: number;
+  onSubmit: (commentId: string) => void;
   onCancel: () => void;
 }) {
   const [content, setContent] = useState("");
@@ -127,8 +134,9 @@ function InlineReplyInput({
         }),
       });
       if (res.ok) {
+        const data = (await res.json()) as { id: string };
         setContent("");
-        onSubmit();
+        onSubmit(data.id);
       } else {
         toast.error("Failed to reply.");
       }
@@ -140,7 +148,10 @@ function InlineReplyInput({
   }
 
   return (
-    <div className="border-border ml-8 mt-2 flex items-center gap-2 rounded-md border bg-[#f6f7f8] px-3 py-2">
+    <div
+      className="border-border mt-2 flex items-center gap-2 rounded-md border bg-[#f6f7f8] px-3 py-2"
+      style={{ marginLeft: `${Math.min(depth + 1, 4) * 2}rem` }}
+    >
       <input
         value={content}
         onChange={(e) => setContent(e.target.value)}
@@ -173,11 +184,15 @@ function InlineReplyInput({
   );
 }
 
-export function DetailTabs({ paperId, userPostId }: DetailTabsProps) {
+export function DetailTabs({ paperId, userPostId, scrollId }: DetailTabsProps) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
-  const [waitingForReply, setWaitingForReply] = useState<string | null>(null);
+  // Track comment IDs that are waiting for AI replies (typing indicator)
+  const [waitingForReply, setWaitingForReply] = useState<Set<string>>(
+    new Set(),
+  );
 
+  const entityId = userPostId || paperId;
   const queryParam = userPostId
     ? `userPostId=${userPostId}`
     : `paperId=${paperId}`;
@@ -198,66 +213,58 @@ export function DetailTabs({ paperId, userPostId }: DetailTabsProps) {
     loadComments();
   }, [loadComments]);
 
-  // Poll for AI reply when waiting
-  useEffect(() => {
-    if (!waitingForReply) return;
+  // Live comment stream — new comments arrive via SSE
+  useCommentStream({
+    scrollId,
+    onComment: useCallback(
+      (comment: Comment) => {
+        // Only process comments for this paper/post
+        const isRelevant = userPostId
+          ? comment.userPostId === userPostId
+          : comment.paperId === paperId && !comment.userPostId;
 
-    const interval = setInterval(async () => {
-      const res = await fetch(`/api/comments?${queryParam}`);
-      if (!res.ok) return;
-      const data = (await res.json()) as Comment[];
+        if (!isRelevant) return;
 
-      // Check if we got a reply to the comment we're waiting on
-      const hasReply = data.some(
-        (c) => c.parentId === waitingForReply && c.isGenerated,
-      );
-      if (hasReply) {
-        setComments(data);
-        setWaitingForReply(null);
-      }
-    }, 2000);
+        setComments((prev) => {
+          // Don't add duplicates
+          if (prev.some((c) => c.id === comment.id)) return prev;
+          return [...prev, comment];
+        });
 
-    // Timeout after 60 seconds
-    const timeout = setTimeout(() => {
-      setWaitingForReply(null);
-    }, 60000);
+        // If this is an AI reply to a comment we were waiting on, clear the indicator
+        if (comment.isGenerated && comment.parentId) {
+          setWaitingForReply((prev) => {
+            if (!prev.has(comment.parentId!)) return prev;
+            const next = new Set(prev);
+            next.delete(comment.parentId!);
+            return next;
+          });
+        }
+      },
+      [paperId, userPostId],
+    ),
+  });
 
-    return () => {
-      clearInterval(interval);
-      clearTimeout(timeout);
-    };
-  }, [waitingForReply, queryParam]);
-
-  function handleReplySubmitted() {
-    // Find the latest user comment (the one we just posted) and wait for AI reply
-    loadComments().then(() => {
-      // After refresh, set waiting state for the latest user comment
-      setReplyingTo(null);
-    });
-    // We need to poll for the AI reply — set a temporary waiting ID
-    // The comment just created will have its reply come in via polling
-    setTimeout(async () => {
-      const res = await fetch(`/api/comments?${queryParam}`);
-      if (!res.ok) return;
-      const data = (await res.json()) as Comment[];
-      setComments(data);
-      // Find the latest user comment to wait for its AI reply
-      const latestUserComment = data.find(
-        (c) => !c.isGenerated && c.author === "You",
-      );
-      if (latestUserComment) {
-        setWaitingForReply(latestUserComment.id);
-      }
-    }, 500);
+  function handleReplySubmitted(commentId: string) {
+    // Reload to get the new comment immediately
+    loadComments();
+    setReplyingTo(null);
+    // Show typing indicator for the AI reply
+    setWaitingForReply((prev) => new Set(prev).add(commentId));
+    // Safety timeout: clear after 90 seconds
+    setTimeout(() => {
+      setWaitingForReply((prev) => {
+        if (!prev.has(commentId)) return prev;
+        const next = new Set(prev);
+        next.delete(commentId);
+        return next;
+      });
+    }, 90000);
   }
 
   // Build thread structure
-  const generated = comments.filter(
-    (c) => c.isGenerated && !c.parentId,
-  );
-  const userComments = comments.filter(
-    (c) => !c.isGenerated && !c.parentId,
-  );
+  const generated = comments.filter((c) => c.isGenerated && !c.parentId);
+  const userComments = comments.filter((c) => !c.isGenerated && !c.parentId);
 
   function getReplies(commentId: string): Comment[] {
     return comments
@@ -268,21 +275,36 @@ export function DetailTabs({ paperId, userPostId }: DetailTabsProps) {
       );
   }
 
-  function renderComment(
-    c: Comment,
-    depth = 0,
-    showReplyButton = true,
-  ) {
+  function getDepth(commentId: string): number {
+    let depth = 0;
+    let current = comments.find((c) => c.id === commentId);
+    while (current?.parentId) {
+      depth++;
+      current = comments.find((c) => c.id === current!.parentId);
+    }
+    return depth;
+  }
+
+  function renderComment(c: Comment, depth = 0) {
     const replies = getReplies(c.id);
-    const isWaiting = waitingForReply === c.id;
+    const isWaiting = waitingForReply.has(c.id);
+    // Cap visual indentation at 4 levels to avoid tiny columns
+    const indent = Math.min(depth, 4) * 2;
 
     return (
       <div key={c.id}>
         <div
           className={`border-border rounded-md border p-3.5 ${
             c.isGenerated ? "bg-muted/30" : "bg-background"
-          } ${depth > 0 ? "ml-8 mt-2" : ""}`}
+          } ${depth > 0 ? "mt-2" : ""}`}
+          style={depth > 0 ? { marginLeft: `${indent}rem` } : undefined}
         >
+          {/* Thread line indicator for deep nesting */}
+          {depth > 1 && (
+            <div className="text-muted-foreground mb-1 text-[11px]">
+              ↳ replying to thread
+            </div>
+          )}
           <div className="mb-2 flex items-center gap-2">
             <div
               className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[12px] font-bold ${
@@ -313,20 +335,18 @@ export function DetailTabs({ paperId, userPostId }: DetailTabsProps) {
             {c.content}
           </p>
 
-          {/* Reply button */}
-          {showReplyButton && c.isGenerated && (
-            <button
-              onClick={() => setReplyingTo(c.id)}
-              className="text-muted-foreground hover:text-primary mt-2 flex items-center gap-1 text-[13px] transition-colors"
-            >
-              <Reply className="h-3 w-3" />
-              Reply
-            </button>
-          )}
+          {/* Reply button — available on all comments */}
+          <button
+            onClick={() => setReplyingTo(c.id)}
+            className="text-muted-foreground hover:text-primary mt-2 flex items-center gap-1 text-[13px] transition-colors"
+          >
+            <Reply className="h-3 w-3" />
+            Reply
+          </button>
         </div>
 
-        {/* Replies */}
-        {replies.map((r) => renderComment(r, depth + 1, false))}
+        {/* Nested replies — recursive rendering */}
+        {replies.map((r) => renderComment(r, depth + 1))}
 
         {/* Inline reply input */}
         {replyingTo === c.id && (
@@ -334,13 +354,14 @@ export function DetailTabs({ paperId, userPostId }: DetailTabsProps) {
             paperId={paperId}
             userPostId={userPostId}
             parentId={c.id}
+            depth={depth}
             onSubmit={handleReplySubmitted}
             onCancel={() => setReplyingTo(null)}
           />
         )}
 
         {/* Typing indicator while waiting for AI reply */}
-        {isWaiting && <TypingIndicator />}
+        {isWaiting && <TypingIndicator depth={depth + 1} />}
       </div>
     );
   }
@@ -367,7 +388,7 @@ export function DetailTabs({ paperId, userPostId }: DetailTabsProps) {
       </h3>
 
       <div className="space-y-2.5">
-        {userComments.map((c) => renderComment(c, 0, false))}
+        {userComments.map((c) => renderComment(c))}
         {userComments.length === 0 && (
           <p className="text-muted-foreground py-6 text-center text-[15px]">
             No comments yet. Be the first to comment!

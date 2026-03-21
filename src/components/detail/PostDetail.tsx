@@ -94,7 +94,7 @@ export function PostDetail({ paper, scrollId }: PostDetailProps) {
 
       {/* Comments */}
       <div className="mt-4" key={refreshKey}>
-        <DetailTabs paperId={paper.id} />
+        <DetailTabs paperId={paper.id} scrollId={scrollId} />
       </div>
 
       {/* Reply */}

@@ -26,8 +26,29 @@
     {
       "idx": 3,
       "version": "6",
-      "when": 1774107726206,
+      "when": 1774107527924,
       "tag": "0003_stormy_mesmero",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1774107627924,
+      "tag": "0004_crazy_veda",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1774109420194,
+      "tag": "0005_reflective_union_jack",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1774114303780,
+      "tag": "0006_fantastic_cloak",
       "breakpoints": true
     }
   ]
