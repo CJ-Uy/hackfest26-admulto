@@ -3,7 +3,8 @@ import { after } from "next/server";
 import { db } from "@/lib/db";
 import { userPosts, papers, comments } from "@/lib/schema";
 import { eq, desc } from "drizzle-orm";
-import { generatePostComments } from "@/lib/ollama";
+import { generateWebInformedComments, generatePostComments } from "@/lib/ollama";
+import { webSearch } from "@/lib/search";
 
 export async function GET(req: NextRequest) {
   const scrollId = req.nextUrl.searchParams.get("scrollId");
@@ -47,48 +48,72 @@ export async function POST(req: NextRequest) {
   // Generate AI comments on the post in background
   after(async () => {
     try {
-      // Get papers from the same scroll for context
+      // Get a paper from the scroll (needed for paperId FK on comments)
       const scrollPapers = await db
         .select()
         .from(papers)
         .where(eq(papers.scrollId, scrollId))
-        .limit(5);
+        .limit(1);
 
       if (scrollPapers.length === 0) return;
+      const anchorPaperId = scrollPapers[0].id;
 
       // Get scroll topic
       const scroll = await db.query.scrolls.findFirst({
         where: (s, { eq }) => eq(s.id, scrollId),
       });
+      const topic = scroll?.title || "";
 
-      const paperContexts = scrollPapers.map((p) => ({
-        title: p.title,
-        synthesis: p.synthesis,
-        authors: JSON.parse(p.authors) as string[],
-      }));
+      // Web search based on the post content for informed comments
+      let aiComments: Array<{ author: string; content: string; relationship: string }> = [];
 
-      const aiComments = await generatePostComments(
-        content,
-        paperContexts.slice(0, 3),
-        scroll?.title || "",
-      );
+      try {
+        const searchQuery = title ? `${title} ${content.slice(0, 100)}` : content.slice(0, 150);
+        const webResults = await webSearch(searchQuery, 4);
+
+        if (webResults.length > 0) {
+          aiComments = await generateWebInformedComments(content, webResults, topic);
+        }
+      } catch (err) {
+        console.error("[user-posts] Web search failed, falling back to paper context:", err);
+      }
+
+      // Fallback: use paper context if web search didn't produce results
+      if (aiComments.length === 0) {
+        const morePapers = await db
+          .select()
+          .from(papers)
+          .where(eq(papers.scrollId, scrollId))
+          .limit(5);
+
+        const paperContexts = morePapers.map((p) => ({
+          title: p.title,
+          synthesis: p.synthesis,
+          authors: JSON.parse(p.authors) as string[],
+        }));
+
+        aiComments = await generatePostComments(content, paperContexts.slice(0, 3), topic);
+      }
 
       if (aiComments.length === 0) return;
 
-      // We need a paper to attach these comments to — use the first paper
-      // that's most relevant. For simplicity, use the first paper in the scroll.
-      // These are "feed comments" attached to a paper but responding to user's post
-      const targetPaper = scrollPapers[0];
-
+      // Store comments with userPostId so they can be queried for the user post
       for (const c of aiComments) {
         await db.insert(comments).values({
-          paperId: targetPaper.id,
+          paperId: anchorPaperId,
+          userPostId: post.id,
           content: c.content,
           author: c.author,
           isGenerated: true,
           relationship: "responds",
         });
       }
+
+      // Update comment count on the user post
+      await db
+        .update(userPosts)
+        .set({ commentCount: aiComments.length })
+        .where(eq(userPosts.id, post.id));
     } catch (err) {
       console.error("Failed to generate post comments:", err);
     }

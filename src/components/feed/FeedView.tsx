@@ -130,7 +130,12 @@ export function FeedView({
 
       {/* User posts at top */}
       {userPosts.map((post) => (
-        <UserPostCard key={post.id} post={post} />
+        <UserPostCard
+          key={post.id}
+          post={post}
+          scrollId={scrollId}
+          commentCount={commentCounts.get(`post:${post.id}`)}
+        />
       ))}
 
       {/* Feed items */}

@@ -101,9 +101,10 @@ export function RightSidebar({
           {userPosts.length > 0 && (
             <div className="space-y-1">
               {userPosts.slice(0, 5).map((post) => (
-                <div
+                <Link
                   key={post.id}
-                  className="rounded-md p-2 transition-colors hover:bg-[#f6f7f8]"
+                  href={`/scroll/${scrollId}/userpost/${post.id}`}
+                  className="block rounded-md p-2 transition-colors hover:bg-[#f6f7f8]"
                 >
                   {post.title && (
                     <p className="text-foreground line-clamp-1 text-[14px] font-semibold">
@@ -113,7 +114,7 @@ export function RightSidebar({
                   <p className="text-muted-foreground line-clamp-2 text-[14px]">
                     {post.content}
                   </p>
-                </div>
+                </Link>
               ))}
             </div>
           )}

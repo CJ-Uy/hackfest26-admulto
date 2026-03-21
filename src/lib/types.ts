@@ -36,6 +36,7 @@ export interface UserPost {
   id: string;
   content: string;
   title?: string;
+  commentCount: number;
   createdAt: string;
 }
 

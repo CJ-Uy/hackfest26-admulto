@@ -16,7 +16,8 @@ import { toast } from "sonner";
 import type { Comment } from "@/lib/types";
 
 interface DetailTabsProps {
-  paperId: string;
+  paperId?: string;
+  userPostId?: string;
 }
 
 const relationshipConfig: Record<
@@ -98,11 +99,13 @@ function TypingIndicator() {
 
 function InlineReplyInput({
   paperId,
+  userPostId,
   parentId,
   onSubmit,
   onCancel,
 }: {
-  paperId: string;
+  paperId?: string;
+  userPostId?: string;
   parentId: string;
   onSubmit: () => void;
   onCancel: () => void;
@@ -118,7 +121,7 @@ function InlineReplyInput({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          paperId,
+          ...(userPostId ? { userPostId } : { paperId }),
           content: content.trim(),
           parentId,
         }),
@@ -170,14 +173,18 @@ function InlineReplyInput({
   );
 }
 
-export function DetailTabs({ paperId }: DetailTabsProps) {
+export function DetailTabs({ paperId, userPostId }: DetailTabsProps) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [waitingForReply, setWaitingForReply] = useState<string | null>(null);
 
+  const queryParam = userPostId
+    ? `userPostId=${userPostId}`
+    : `paperId=${paperId}`;
+
   const loadComments = useCallback(async () => {
     try {
-      const res = await fetch(`/api/comments?paperId=${paperId}`);
+      const res = await fetch(`/api/comments?${queryParam}`);
       if (res.ok) {
         const data = await res.json();
         setComments(data as Comment[]);
@@ -185,7 +192,7 @@ export function DetailTabs({ paperId }: DetailTabsProps) {
     } catch {
       // ignore
     }
-  }, [paperId]);
+  }, [queryParam]);
 
   useEffect(() => {
     loadComments();
@@ -196,7 +203,7 @@ export function DetailTabs({ paperId }: DetailTabsProps) {
     if (!waitingForReply) return;
 
     const interval = setInterval(async () => {
-      const res = await fetch(`/api/comments?paperId=${paperId}`);
+      const res = await fetch(`/api/comments?${queryParam}`);
       if (!res.ok) return;
       const data = (await res.json()) as Comment[];
 
@@ -219,7 +226,7 @@ export function DetailTabs({ paperId }: DetailTabsProps) {
       clearInterval(interval);
       clearTimeout(timeout);
     };
-  }, [waitingForReply, paperId]);
+  }, [waitingForReply, queryParam]);
 
   function handleReplySubmitted() {
     // Find the latest user comment (the one we just posted) and wait for AI reply
@@ -230,7 +237,7 @@ export function DetailTabs({ paperId }: DetailTabsProps) {
     // We need to poll for the AI reply — set a temporary waiting ID
     // The comment just created will have its reply come in via polling
     setTimeout(async () => {
-      const res = await fetch(`/api/comments?paperId=${paperId}`);
+      const res = await fetch(`/api/comments?${queryParam}`);
       if (!res.ok) return;
       const data = (await res.json()) as Comment[];
       setComments(data);
@@ -325,6 +332,7 @@ export function DetailTabs({ paperId }: DetailTabsProps) {
         {replyingTo === c.id && (
           <InlineReplyInput
             paperId={paperId}
+            userPostId={userPostId}
             parentId={c.id}
             onSubmit={handleReplySubmitted}
             onCancel={() => setReplyingTo(null)}

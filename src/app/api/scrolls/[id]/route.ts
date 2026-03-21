@@ -86,6 +86,7 @@ export async function GET(
     id: up.id,
     content: up.content,
     title: up.title ?? undefined,
+    commentCount: up.commentCount,
     createdAt: up.createdAt,
   }));
 

@@ -5,12 +5,13 @@ import { Send } from "lucide-react";
 import { toast } from "sonner";
 
 interface ReplyInputProps {
-  paperId: string;
+  paperId?: string;
+  userPostId?: string;
   parentId?: string;
   onCommentAdded?: (commentId?: string) => void;
 }
 
-export function ReplyInput({ paperId, parentId, onCommentAdded }: ReplyInputProps) {
+export function ReplyInput({ paperId, userPostId, parentId, onCommentAdded }: ReplyInputProps) {
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -23,7 +24,7 @@ export function ReplyInput({ paperId, parentId, onCommentAdded }: ReplyInputProp
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          paperId,
+          ...(userPostId ? { userPostId } : { paperId }),
           content: content.trim(),
           parentId: parentId || undefined,
         }),

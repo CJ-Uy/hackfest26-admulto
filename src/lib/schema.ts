@@ -56,6 +56,9 @@ export const comments = sqliteTable("comment", {
   paperId: text("paper_id")
     .notNull()
     .references(() => papers.id, { onDelete: "cascade" }),
+  userPostId: text("user_post_id").references(() => userPosts.id, {
+    onDelete: "cascade",
+  }),
   parentId: text("parent_id"), // self-referential for threading
   content: text("content").notNull(),
   author: text("author").notNull().default("You"),
@@ -131,6 +134,7 @@ export const userPosts = sqliteTable("user_post", {
     .references(() => scrolls.id, { onDelete: "cascade" }),
   title: text("title"),
   content: text("content").notNull(),
+  commentCount: integer("comment_count").notNull().default(0),
   createdAt: text("created_at")
     .notNull()
     .default(sql`(datetime('now'))`),
@@ -160,6 +164,10 @@ export const commentsRelations = relations(comments, ({ one, many }) => ({
   paper: one(papers, {
     fields: [comments.paperId],
     references: [papers.id],
+  }),
+  userPost: one(userPosts, {
+    fields: [comments.userPostId],
+    references: [userPosts.id],
   }),
   parent: one(comments, {
     fields: [comments.parentId],
@@ -198,9 +206,10 @@ export const bookmarksRelations = relations(bookmarks, ({ one }) => ({
   }),
 }));
 
-export const userPostsRelations = relations(userPosts, ({ one }) => ({
+export const userPostsRelations = relations(userPosts, ({ one, many }) => ({
   scroll: one(scrolls, {
     fields: [userPosts.scrollId],
     references: [scrolls.id],
   }),
+  comments: many(comments),
 }));

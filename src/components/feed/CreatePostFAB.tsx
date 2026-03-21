@@ -44,12 +44,14 @@ export function CreatePostFAB({ scrollId, onPost }: CreatePostFABProps) {
           id: string;
           title?: string | null;
           content: string;
+          commentCount: number;
           createdAt: string;
         };
         const post: UserPost = {
           id: saved.id,
           title: saved.title ?? undefined,
           content: saved.content,
+          commentCount: saved.commentCount ?? 0,
           createdAt: saved.createdAt,
         };
         onPost(post);

@@ -9,7 +9,7 @@ import {
   polls,
   pollResponses,
 } from "@/lib/schema";
-import { eq, and, sql, inArray, notInArray } from "drizzle-orm";
+import { eq, and, inArray, isNull, isNotNull } from "drizzle-orm";
 import { searchPapers } from "@/lib/paper-search";
 import { webSearch } from "@/lib/search";
 import {
@@ -101,10 +101,29 @@ export async function POST(req: Request) {
       );
 
       if (unprotectedIds.length > 0) {
-        // Delete comments for unprotected papers
+        // Reassign user post comments from unprotected papers to a surviving paper
+        const survivingPaperId = protectedIds[0] || null;
+        if (survivingPaperId) {
+          await db
+            .update(comments)
+            .set({ paperId: survivingPaperId })
+            .where(
+              and(
+                inArray(comments.paperId, unprotectedIds),
+                isNotNull(comments.userPostId),
+              ),
+            );
+        }
+
+        // Delete comments for unprotected papers (but preserve user post comments)
         await db
           .delete(comments)
-          .where(inArray(comments.paperId, unprotectedIds));
+          .where(
+            and(
+              inArray(comments.paperId, unprotectedIds),
+              isNull(comments.userPostId),
+            ),
+          );
         // Delete unprotected papers
         await db.delete(papers).where(inArray(papers.id, unprotectedIds));
       }

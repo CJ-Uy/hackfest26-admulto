@@ -1,17 +1,25 @@
 "use client";
 
-import { User } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { User, MessageSquare } from "lucide-react";
 import type { UserPost } from "@/lib/types";
 
 interface UserPostCardProps {
   post: UserPost;
+  scrollId: string;
+  commentCount?: number;
 }
 
-export function UserPostCard({ post }: UserPostCardProps) {
+export function UserPostCard({ post, scrollId, commentCount }: UserPostCardProps) {
+  const router = useRouter();
   const timeAgo = getTimeAgo(new Date(post.createdAt));
+  const displayCount = commentCount ?? post.commentCount ?? 0;
 
   return (
-    <div className="border-border border-b px-4 py-3">
+    <article
+      className="border-border cursor-pointer border-b px-4 py-3 transition-colors hover:bg-[#fafafa]"
+      onClick={() => router.push(`/scroll/${scrollId}/userpost/${post.id}`)}
+    >
       <div className="mb-2 flex items-center gap-2.5">
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f6f7f8]">
           <User className="text-muted-foreground h-4 w-4" />
@@ -26,10 +34,16 @@ export function UserPostCard({ post }: UserPostCardProps) {
           {post.title}
         </h3>
       )}
-      <p className="text-foreground text-[15px] leading-relaxed whitespace-pre-wrap">
+      <p className="text-foreground text-[15px] leading-relaxed whitespace-pre-wrap line-clamp-4">
         {post.content}
       </p>
-    </div>
+      {displayCount > 0 && (
+        <div className="mt-2 flex items-center gap-1.5 text-muted-foreground text-[13px]">
+          <MessageSquare className="h-3.5 w-3.5" />
+          <span>{displayCount} {displayCount === 1 ? "comment" : "comments"}</span>
+        </div>
+      )}
+    </article>
   );
 }
 

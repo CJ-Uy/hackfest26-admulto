@@ -231,6 +231,83 @@ RESPOND ONLY with valid JSON array, no markdown:
 }
 
 /**
+ * Generate comments on a user post using web search results as context.
+ * Unlike generatePostComments which uses existing papers, this creates
+ * knowledgeable commenters based on real web search results.
+ */
+export async function generateWebInformedComments(
+  postContent: string,
+  webResults: Array<{ title: string; snippet: string; url: string }>,
+  topic: string,
+): Promise<Array<{ author: string; content: string; relationship: string }>> {
+  if (webResults.length === 0) return [];
+
+  const sourceList = webResults
+    .slice(0, 4)
+    .map(
+      (r, i) =>
+        `[Source ${i + 1}] "${r.title}"\nKey info: ${r.snippet}`,
+    )
+    .join("\n\n");
+
+  const prompt = `A user posted this on a research feed about "${topic}":
+"${postContent}"
+
+Here are relevant sources found via web search:
+${sourceList}
+
+Generate 2-3 SHORT (1-2 sentence) responses from knowledgeable researchers. Each commenter should:
+- Reference specific findings from the sources above
+- Engage directly with the user's point
+- Sound like a real person casually discussing on social media
+
+RESPOND ONLY with valid JSON array, no markdown:
+[
+  {
+    "author": "A realistic researcher name",
+    "content": "The response text",
+    "relationship": "responds"
+  }
+]`;
+
+  try {
+    const raw = await ollamaChat(
+      "You generate realistic social media responses from researchers. Output ONLY valid JSON arrays.",
+      prompt,
+      SMART_MODEL,
+    );
+
+    const jsonMatch = raw.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) return [];
+
+    const parsed = JSON.parse(jsonMatch[0]) as Array<{
+      author: string;
+      content: string;
+      relationship: string;
+    }>;
+    return parsed.filter((c) => c.author && c.content);
+  } catch (err) {
+    console.error("Failed to generate web-informed comments:", err);
+    return [];
+  }
+}
+
+/**
+ * Generate an AI reply to a user comment on a user post, using web search context.
+ */
+export async function generateUserPostReply(
+  postContent: string,
+  userComment: string,
+  webContext: string,
+): Promise<string> {
+  return ollamaChat(
+    `You are a knowledgeable researcher replying to a comment on a research discussion platform. The original post was about a research topic. Use the web search context to give an informed, helpful reply. Keep it to 1-3 sentences. Sound like a real person, not a formal academic.`,
+    `Original post: "${postContent}"\n\nRelevant context from web search:\n${webContext}\n\nThe user's comment: "${userComment}"\n\nReply to them:`,
+    SMART_MODEL,
+  );
+}
+
+/**
  * Generate fine-tune QnA questions based on current feed content.
  */
 export async function generateFineTuneQuestions(
