@@ -153,3 +153,13 @@
 .animate-shimmer {
   animation: shimmer 2s ease-in-out infinite;
 }
+
+/* Hide scrollbar while keeping element scrollable */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}

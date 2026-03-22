@@ -115,23 +115,21 @@ export function UserPostDetailSkeleton() {
 
 export function RightSidebarSkeleton() {
   return (
-    <aside className="hidden w-[340px] shrink-0 lg:block">
-      <div className="sticky top-0 h-screen overflow-y-auto py-4">
-        <div className="space-y-3">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div
-              key={i}
-              className="border-border bg-background rounded-lg border p-3.5"
-            >
-              <Skeleton className="mb-3 h-4 w-28" />
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-5/6" />
-                <Skeleton className="h-4 w-3/4" />
-              </div>
+    <aside className="no-scrollbar hidden w-[340px] shrink-0 lg:sticky lg:top-4 lg:block lg:max-h-[calc(100vh-32px)] lg:overflow-y-auto">
+      <div className="space-y-3">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div
+            key={i}
+            className="border-border bg-background rounded-lg border p-3.5"
+          >
+            <Skeleton className="mb-3 h-4 w-28" />
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-5/6" />
+              <Skeleton className="h-4 w-3/4" />
             </div>
-          ))}
-        </div>
+          </div>
+        ))}
       </div>
     </aside>
   );

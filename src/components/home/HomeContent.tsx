@@ -205,8 +205,8 @@ export function HomeContent({ scrolls: initialScrolls }: HomeContentProps) {
         </main>
 
         {/* Right sidebar - stats summary */}
-        <aside className="hidden w-[340px] shrink-0 lg:block">
-          <div className="sticky top-0 h-screen space-y-3 overflow-y-auto py-4">
+        <aside className="no-scrollbar hidden w-[340px] shrink-0 lg:sticky lg:top-4 lg:block lg:max-h-[calc(100vh-32px)] lg:overflow-y-auto">
+          <div className="space-y-3">
             {/* App info card */}
             <div className="border-border bg-background rounded-lg border p-4">
               <div className="bg-primary mb-3 rounded-md px-3 py-2.5">

@@ -118,12 +118,12 @@ export function RightSidebar({
         emptyText="No posts yet. Use the compose box or + button."
       >
         {userPosts.length > 0 && (
-          <div className="space-y-1">
+          <div className="divide-border/70 divide-y">
             {userPosts.slice(0, 5).map((post) => (
               <Link
                 key={post.id}
                 href={`/schroll/${scrollId}/userpost/${post.id}`}
-                className="block rounded-md p-2 transition-colors hover:bg-[#f6f7f8]"
+                className="-mx-2 block px-2 py-2.5 transition-colors hover:bg-[#f6f7f8]"
               >
                 {post.title && (
                   <p className="text-foreground line-clamp-1 text-[14px] font-semibold">
@@ -146,7 +146,7 @@ export function RightSidebar({
           title="Uploaded Files"
           emptyText=""
         >
-          <div className="space-y-1">
+          <div className="divide-border/70 divide-y">
             {scroll.pdfKeys.map((key) => {
               const filename = key.split("/").pop() || "document.pdf";
               return (
@@ -155,7 +155,7 @@ export function RightSidebar({
                   href={`/api/pdfs/${encodeURIComponent(key)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2 rounded-md p-2 transition-colors hover:bg-[#f6f7f8]"
+                  className="-mx-2 flex items-center gap-2 px-2 py-2.5 transition-colors hover:bg-[#f6f7f8]"
                 >
                   <FileText className="text-muted-foreground h-4 w-4 shrink-0" />
                   <span className="text-foreground line-clamp-1 text-[14px]">
@@ -237,7 +237,7 @@ export function RightSidebar({
         emptyText="Click on a paper to leave comments."
       >
         {safeYourCommentCounts.size > 0 && (
-          <div className="space-y-1">
+          <div className="divide-border/70 divide-y">
             {Array.from(safeYourCommentCounts.entries()).map(
               ([paperId, count]) => {
                 const paper = papers.find((p) => p.id === paperId);
@@ -246,7 +246,7 @@ export function RightSidebar({
                   <Link
                     key={paperId}
                     href={`/schroll/${scrollId}/post/${paperId}`}
-                    className="block rounded-md p-2 transition-colors hover:bg-[#f6f7f8]"
+                    className="-mx-2 block px-2 py-2.5 transition-colors hover:bg-[#f6f7f8]"
                   >
                     <p className="text-foreground line-clamp-1 text-[14px] font-medium">
                       {paper.title}
@@ -288,10 +288,8 @@ export function RightSidebar({
       </div>
 
       {/* Desktop sidebar */}
-      <aside className="hidden w-[340px] shrink-0 lg:block">
-        <div className="sticky top-0 h-screen overflow-y-auto py-4">
-          {sidebarContent}
-        </div>
+      <aside className="no-scrollbar hidden w-[340px] shrink-0 lg:sticky lg:top-4 lg:block lg:max-h-[calc(100vh-32px)] lg:overflow-y-auto">
+        {sidebarContent}
       </aside>
     </>
   );
@@ -352,14 +350,14 @@ function PaperList({
   scrollId: string;
 }) {
   return (
-    <div className="space-y-1">
+    <div className="divide-border/70 divide-y">
       {papers.map((paper) => (
         <Link
           key={paper.id}
           href={`/schroll/${scrollId}/post/${paper.id}`}
-          className="block rounded-md p-2 transition-colors hover:bg-[#f6f7f8]"
+          className="-mx-2 block px-2 py-2.5 transition-colors hover:bg-[#f6f7f8]"
         >
-          <p className="text-foreground line-clamp-2 text-[14px] leading-snug font-medium">
+          <p className="text-foreground line-clamp-2 text-[14px] leading-snug font-bold">
             {paper.title}
           </p>
           <p className="text-muted-foreground mt-0.5 text-[13px]">
