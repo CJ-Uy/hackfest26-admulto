@@ -15,14 +15,12 @@ function toHttpUrl(url: string): string {
  * Converts a JS value to a Hrana protocol value.
  */
 function toHranaValue(param: unknown) {
-  if (param === null || param === undefined)
-    return { type: "null" as const };
+  if (param === null || param === undefined) return { type: "null" as const };
   if (typeof param === "number" && Number.isInteger(param))
     return { type: "integer" as const, value: String(param) };
   if (typeof param === "number")
     return { type: "float" as const, value: param };
-  if (typeof param === "string")
-    return { type: "text" as const, value: param };
+  if (typeof param === "string") return { type: "text" as const, value: param };
   if (typeof param === "bigint")
     return { type: "integer" as const, value: String(param) };
   return { type: "text" as const, value: String(param) };
