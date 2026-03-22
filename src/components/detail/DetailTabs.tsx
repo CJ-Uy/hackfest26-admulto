@@ -417,14 +417,9 @@ export function DetailTabs({
     const isWaiting = waitingForReply.has(c.id);
     // Try author-match first, then fall back to the paper this comment belongs to
     const sourcePaper = c.isGenerated
-      ? findSourcePaper(c.author) ??
-        scrollPapers.find((p) => p.id === c.paperId)
+      ? (findSourcePaper(c.author) ??
+        scrollPapers.find((p) => p.id === c.paperId))
       : undefined;
-    const sourceDoiUrl = sourcePaper?.doi
-      ? sourcePaper.doi.startsWith("http")
-        ? sourcePaper.doi
-        : `https://doi.org/${sourcePaper.doi}`
-      : null;
 
     return (
       <div key={c.id}>
@@ -493,14 +488,12 @@ export function DetailTabs({
               <Reply className="h-3 w-3" />
               Reply
             </button>
-            {sourceDoiUrl && (
+            {sourcePaper && (
               <a
-                href={sourceDoiUrl}
-                target="_blank"
-                rel="noopener noreferrer"
+                href={`/schroll/${scrollId}/post/${sourcePaper.id}`}
                 className="text-muted-foreground hover:text-primary flex items-center gap-1 rounded px-2 py-0.5 text-[12px] font-medium transition-colors hover:bg-[#f6f7f8]"
                 onClick={(e) => e.stopPropagation()}
-                title={sourcePaper?.title || "View source"}
+                title={sourcePaper.title || "View source"}
               >
                 <ExternalLink className="h-3 w-3" />
                 Source
