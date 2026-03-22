@@ -6,7 +6,7 @@ interface ScrollHeaderProps {
 
 export function ScrollHeader({ scroll }: ScrollHeaderProps) {
   return (
-    <div className="px-4 pt-5 pb-3">
+    <div className="px-4 pt-14 pb-3 md:pt-5">
       <div className="mb-2 flex items-center gap-2">
         <span className="bg-primary/10 text-primary inline-flex items-center rounded-full px-2.5 py-0.5 text-[13px] font-semibold">
           {scroll.mode === "pdf_only"

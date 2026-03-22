@@ -14,6 +14,7 @@ import {
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sidebar } from "@/components/shared/Sidebar";
+import { SchrollarLogo } from "@/components/shared/SchrollarLogo";
 import {
   Dialog,
   DialogContent,
@@ -71,7 +72,7 @@ export function HomeContent({ scrolls: initialScrolls }: HomeContentProps) {
           {hasScrolls ? (
             <>
               {/* Header with CTA */}
-              <div className="border-border border-b px-4 pt-5 pb-4">
+              <div className="border-border border-b px-4 pt-14 pb-4 md:pt-5">
                 <div className="flex items-center justify-between">
                   <div>
                     <h1 className="font-heading text-foreground text-[22px] font-bold">
@@ -173,8 +174,8 @@ export function HomeContent({ scrolls: initialScrolls }: HomeContentProps) {
               </div>
 
               <div className="animate-fade-in relative z-10 max-w-lg text-center">
-                <div className="bg-primary/10 mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-2xl">
-                  <ScrollText className="text-primary h-7 w-7" />
+                <div className="bg-primary/10 text-primary mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-2xl">
+                  <SchrollarLogo showText={false} size="lg" />
                 </div>
 
                 <h1 className="font-heading text-foreground text-[28px] font-bold tracking-tight md:text-[36px]">
@@ -209,9 +210,7 @@ export function HomeContent({ scrolls: initialScrolls }: HomeContentProps) {
             {/* App info card */}
             <div className="border-border bg-background rounded-lg border p-4">
               <div className="bg-primary mb-3 rounded-md px-3 py-2.5">
-                <h3 className="text-primary-foreground text-[15px] font-bold">
-                  Schrollar
-                </h3>
+                <SchrollarLogo size="sm" className="text-primary-foreground" />
               </div>
               <p className="text-muted-foreground text-[14px] leading-relaxed">
                 Discover academic papers through an AI-powered social media
