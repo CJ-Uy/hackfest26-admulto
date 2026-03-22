@@ -21,7 +21,8 @@ export async function GET(
       }
 
       // Track the latest comment timestamp we've seen
-      let lastSeen = new Date().toISOString();
+      // Use SQLite datetime format (space separator) to match datetime('now') in schema
+      let lastSeen = new Date().toISOString().replace("T", " ").replace("Z", "");
 
       // On first connect, send a heartbeat so the client knows we're alive
       send("connected", { scrollId });
