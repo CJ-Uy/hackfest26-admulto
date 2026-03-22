@@ -1,4 +1,5 @@
-import { drizzle } from "drizzle-orm/libsql";
+import { drizzle as drizzleLibsql } from "drizzle-orm/libsql";
+import { drizzle as drizzleWeb } from "drizzle-orm/libsql/web";
 import * as schema from "./schema";
 
 /**
@@ -6,22 +7,23 @@ import * as schema from "./schema";
  *
  * Uses TURSO_DATABASE_URL and TURSO_AUTH_TOKEN env vars.
  * Falls back to a local file-based SQLite for development when no URL is set.
+ * In production (Cloudflare Workers), uses the web/HTTP client.
  */
-type DbClient = ReturnType<typeof createDbClient>;
+type DbClient = ReturnType<typeof drizzleWeb>;
 
-function createDbClient() {
+function createDbClient(): DbClient {
   const url = process.env.TURSO_DATABASE_URL;
   const authToken = process.env.TURSO_AUTH_TOKEN;
 
   if (!url) {
     // Local dev fallback — file-based SQLite
-    return drizzle({
+    return drizzleLibsql({
       connection: "file:./local.db",
       schema,
-    });
+    }) as unknown as DbClient;
   }
 
-  return drizzle({
+  return drizzleWeb({
     connection: { url, authToken },
     schema,
   });
