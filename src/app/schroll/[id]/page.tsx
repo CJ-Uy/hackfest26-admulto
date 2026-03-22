@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { useParams } from "next/navigation";
+import { useState, useEffect, useCallback, Suspense } from "react";
+import { toast } from "sonner";
+import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { Sidebar } from "@/components/shared/Sidebar";
 import { ScrollHeader } from "@/components/shared/ScrollHeader";
@@ -14,11 +15,11 @@ import { RightSidebar } from "@/components/shared/RightSidebar";
 import { CreatePostFAB } from "@/components/feed/CreatePostFAB";
 import { FeedSkeleton } from "@/components/shared/LoadingSkeleton";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useScrollCollapse } from "@/hooks/useScrollCollapse";
+
 import { useScrollStream } from "@/hooks/useScrollStream";
 import { useCommentStream } from "@/hooks/useCommentStream";
 import { fetchScroll } from "@/lib/scroll-store";
-import { cn } from "@/lib/utils";
+
 import type {
   ScrollSession,
   Paper,
@@ -33,15 +34,28 @@ const TABS = [
   { value: "export", label: "Export" },
 ];
 
-export default function ScrollPage() {
+function ScrollPageInner() {
   const params = useParams();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const scrollId = params.id as string;
-  const { isCollapsed } = useScrollCollapse();
+
   const [activeTab, setActiveTab] = useState("feed");
   const [scroll, setScroll] = useState<ScrollSession | null>(null);
   const [papers, setPapers] = useState<Paper[]>([]);
   const [polls, setPolls] = useState<Poll[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(searchParams.get("q") ?? "");
+
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchQuery(value);
+    const params = new URLSearchParams(searchParams.toString());
+    if (value) {
+      params.set("q", value);
+    } else {
+      params.delete("q");
+    }
+    router.replace(`?${params.toString()}`, { scroll: false });
+  }, [searchParams, router]);
   const [upvotedPapers, setUpvotedPapers] = useState<Set<string>>(new Set());
   const [downvotedPapers, setDownvotedPapers] = useState<Set<string>>(
     new Set(),
@@ -137,6 +151,10 @@ export default function ScrollPage() {
     scrollId,
     enabled: scroll?.status === "generating" && !isGeneratingMore,
     onComplete: reloadScroll,
+    onError: useCallback(() => {
+      toast.error("Connection lost. Refreshing...");
+      reloadScroll();
+    }, [reloadScroll]),
   });
 
   // Live comment stream — update comment counts on feed cards in real-time
@@ -350,17 +368,10 @@ export default function ScrollPage() {
       <div className="flex flex-1 justify-center gap-0 lg:gap-6 lg:px-6 lg:py-4">
         {/* Main content column */}
         <main className="bg-background w-full max-w-[780px] flex-1 lg:rounded-t-lg">
-          {/* Sticky top section: search + header + tabs */}
+          <ScrollHeader scroll={scroll} />
+          {/* Sticky top section: search + tabs */}
           <div className="bg-background border-border sticky top-0 z-30 border-b">
-            <SearchBar value={searchQuery} onChange={setSearchQuery} />
-            <div
-              className={cn(
-                "overflow-hidden transition-all duration-300 ease-in-out",
-                isCollapsed ? "max-h-0 opacity-0" : "max-h-40 opacity-100",
-              )}
-            >
-              <ScrollHeader scroll={scroll} />
-            </div>
+            <SearchBar value={searchQuery} onChange={handleSearchChange} />
             <TabNav
               value={activeTab}
               onValueChange={setActiveTab}
@@ -461,5 +472,13 @@ export default function ScrollPage() {
 
       <CreatePostFAB scrollId={scrollId} onPost={handleNewPost} />
     </div>
+  );
+}
+
+export default function ScrollPage() {
+  return (
+    <Suspense>
+      <ScrollPageInner />
+    </Suspense>
   );
 }

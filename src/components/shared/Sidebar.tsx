@@ -31,6 +31,7 @@ import { fetchAllScrollSessions, deleteScroll } from "@/lib/scroll-store";
 import type { ScrollSession } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { SchrollarLogo } from "./SchrollarLogo";
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
@@ -68,12 +69,8 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <div className="flex h-full flex-col">
       <div className="px-4 py-3">
-        <Link
-          href="/"
-          onClick={onNavigate}
-          className="font-heading text-primary text-[22px] font-bold tracking-tight"
-        >
-          Schrollar
+        <Link href="/" onClick={onNavigate}>
+          <SchrollarLogo className="text-primary" />
         </Link>
       </div>
 

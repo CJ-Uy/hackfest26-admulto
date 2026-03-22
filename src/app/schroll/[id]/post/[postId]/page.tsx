@@ -14,8 +14,14 @@ export default function PostPage() {
   const scrollId = params.id as string;
   const postId = params.postId as string;
   const [paper, setPaper] = useState<Paper | null>(null);
+  const [scrollPapers, setScrollPapers] = useState<
+    { id: string; title: string; authors: string[]; doi: string }[]
+  >([]);
+  const [checked, setChecked] = useState(false);
+
+  // Sidebar state (lazy-loaded)
   const [scroll, setScroll] = useState<ScrollSession | null>(null);
-  const [scrollPapers, setScrollPapers] = useState<Paper[]>([]);
+  const [allPapers, setAllPapers] = useState<Paper[]>([]);
   const [userPosts, setUserPosts] = useState<UserPost[]>([]);
   const [upvotedPapers, setUpvotedPapers] = useState<Set<string>>(new Set());
   const [downvotedPapers, setDownvotedPapers] = useState<Set<string>>(
@@ -25,39 +31,65 @@ export default function PostPage() {
     new Set(),
   );
   const [commentCounts] = useState<Map<string, number>>(new Map());
-  const [checked, setChecked] = useState(false);
 
+  // Primary fetch: single paper only
   useEffect(() => {
     let cancelled = false;
 
-    async function load() {
-      const stored = await fetchScroll(scrollId);
-      if (cancelled) return;
-      if (stored) {
-        setPaper(stored.papers.find((p) => p.id === postId) ?? null);
-        setScroll(stored.scroll);
-        setScrollPapers(stored.papers);
-        setUserPosts(stored.userPosts || []);
-        const voted = new Set<string>();
-        const downed = new Set<string>();
-        const saved = new Set<string>();
-        stored.papers.forEach((p) => {
-          if (p.voted) voted.add(p.id);
-          if (p.downvoted) downed.add(p.id);
-          if (p.bookmarked) saved.add(p.id);
-        });
-        setUpvotedPapers(voted);
-        setDownvotedPapers(downed);
-        setBookmarkedPapers(saved);
+    async function loadPaper() {
+      try {
+        const res = await fetch(`/api/papers/${postId}`);
+        if (!res.ok) {
+          setChecked(true);
+          return;
+        }
+        const data = (await res.json()) as {
+          paper: Paper;
+          scrollPapers: { id: string; title: string; authors: string[]; doi: string }[];
+        };
+        if (cancelled) return;
+        setPaper(data.paper);
+        setScrollPapers(data.scrollPapers);
+      } catch {
+        // network error
       }
-      setChecked(true);
+      if (!cancelled) setChecked(true);
     }
 
-    load();
+    loadPaper();
     return () => {
       cancelled = true;
     };
-  }, [scrollId, postId]);
+  }, [postId]);
+
+  // Lazy-load sidebar data (non-blocking)
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadSidebar() {
+      const stored = await fetchScroll(scrollId);
+      if (cancelled || !stored) return;
+      setScroll(stored.scroll);
+      setAllPapers(stored.papers);
+      setUserPosts(stored.userPosts || []);
+      const voted = new Set<string>();
+      const downed = new Set<string>();
+      const saved = new Set<string>();
+      stored.papers.forEach((p) => {
+        if (p.voted) voted.add(p.id);
+        if (p.downvoted) downed.add(p.id);
+        if (p.bookmarked) saved.add(p.id);
+      });
+      setUpvotedPapers(voted);
+      setDownvotedPapers(downed);
+      setBookmarkedPapers(saved);
+    }
+
+    loadSidebar();
+    return () => {
+      cancelled = true;
+    };
+  }, [scrollId]);
 
   if (!checked) {
     return (
@@ -99,7 +131,7 @@ export default function PostPage() {
         {scroll && (
           <RightSidebar
             scroll={scroll}
-            papers={scrollPapers}
+            papers={allPapers}
             upvotedPapers={upvotedPapers}
             downvotedPapers={downvotedPapers}
             bookmarkedPapers={bookmarkedPapers}

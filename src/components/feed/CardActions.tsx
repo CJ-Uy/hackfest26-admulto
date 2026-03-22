@@ -84,6 +84,7 @@ export function CardActions({
       setUpvoted(!newVoted);
       if (wasDownvoted) setDownvoted(true);
       setScore(credibilityScore);
+      toast.error("Vote failed. Please try again.");
     }
   }
 
@@ -109,6 +110,7 @@ export function CardActions({
       setDownvoted(!newDownvoted);
       if (wasUpvoted) setUpvoted(true);
       setScore(credibilityScore);
+      toast.error("Vote failed. Please try again.");
     }
   }
 
@@ -141,6 +143,7 @@ export function CardActions({
       });
     } catch {
       setBookmarked(!next);
+      toast.error("Bookmark failed. Please try again.");
     }
   }
 
@@ -176,8 +179,9 @@ export function CardActions({
         <div className="mr-1 flex items-center rounded-full bg-[#f6f7f8]">
           <button
             onClick={handleUpvote}
+            aria-label={upvoted ? "Remove upvote" : "Upvote"}
             className={cn(
-              "rounded-l-full p-1.5 transition-colors",
+              "rounded-l-full p-2.5 transition-colors",
               upvoted
                 ? "text-[#ff4500]"
                 : "text-muted-foreground hover:bg-[#ffe9e0] hover:text-[#ff4500]",
@@ -218,8 +222,9 @@ export function CardActions({
           </TooltipProvider>
           <button
             onClick={handleDownvote}
+            aria-label={downvoted ? "Remove downvote" : "Downvote"}
             className={cn(
-              "rounded-r-full p-1.5 transition-colors",
+              "rounded-r-full p-2.5 transition-colors",
               downvoted
                 ? "text-[#7193ff]"
                 : "text-muted-foreground hover:text-primary hover:bg-[#dae8f5]",
@@ -265,6 +270,7 @@ export function CardActions({
         {/* Comment */}
         <button
           onClick={handleCommentClick}
+          aria-label={`${commentCount} comments`}
           className="text-muted-foreground relative mr-1 flex items-center gap-1.5 rounded-full bg-[#f6f7f8] px-3.5 py-1.5 text-[14px] font-bold transition-colors hover:bg-[#e8e8e8]"
         >
           <MessageSquare className="h-4.5 w-4.5" />
@@ -288,6 +294,7 @@ export function CardActions({
           <button
             onClick={handleGenerateComments}
             disabled={generatingComments}
+            aria-label="Generate AI comments"
             className={cn(
               "text-muted-foreground flex items-center gap-1.5 rounded-full bg-[#f6f7f8] px-3.5 py-1.5 text-[14px] font-bold transition-colors hover:bg-[#e8e8e8]",
               generatingComments && "opacity-50",
@@ -304,8 +311,9 @@ export function CardActions({
         {/* Bookmark */}
         <button
           onClick={handleBookmark}
+          aria-label={bookmarked ? "Remove bookmark" : "Bookmark"}
           className={cn(
-            "rounded-full p-1.5 transition-colors",
+            "rounded-full p-2.5 transition-colors",
             bookmarked
               ? "text-primary bg-primary/10"
               : "text-muted-foreground hover:bg-[#f6f7f8]",
@@ -318,7 +326,8 @@ export function CardActions({
         {onDelete && (
           <button
             onClick={handleDelete}
-            className="text-muted-foreground rounded-full p-1.5 transition-colors hover:bg-red-50 hover:text-red-500"
+            aria-label="Delete paper"
+            className="text-muted-foreground rounded-full p-2.5 transition-colors hover:bg-red-50 hover:text-red-500"
           >
             <Trash2 className="h-4 w-4" />
           </button>
