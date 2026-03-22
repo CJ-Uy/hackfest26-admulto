@@ -55,7 +55,7 @@ async function tursoFetch(
   sql: string,
   params: unknown[],
   method: "run" | "all" | "values" | "get",
-): Promise<{ rows: unknown[] }> {
+): Promise<{ rows: unknown[][] }> {
   const response = await fetch(`${httpUrl}/v2/pipeline`, {
     method: "POST",
     headers: {
@@ -105,25 +105,12 @@ async function tursoFetch(
   const stmtResult = result.response?.result;
   if (!stmtResult) return { rows: [] };
 
-  const colNames = stmtResult.cols.map((c) => c.name);
-
-  if (method === "values") {
-    // Return raw arrays for 'values' method
-    const rows = stmtResult.rows.map((row) => row.map(fromHranaValue));
-    return { rows };
-  }
-
-  // For 'all', 'get', 'run': return rows as objects keyed by column name
-  const rows = stmtResult.rows.map((row) => {
-    const obj: Record<string, unknown> = {};
-    for (let i = 0; i < colNames.length; i++) {
-      obj[colNames[i]] = fromHranaValue(row[i]);
-    }
-    return obj;
-  });
+  // drizzle-orm/sqlite-proxy expects rows as positional arrays
+  const rows = stmtResult.rows.map((row) => row.map(fromHranaValue));
 
   if (method === "get") {
-    return { rows: rows.slice(0, 1) };
+    // drizzle-orm/sqlite-proxy expects a single flat row for "get", not wrapped in an array
+    return { rows: (rows[0] ?? []) as unknown as unknown[][] };
   }
 
   return { rows };

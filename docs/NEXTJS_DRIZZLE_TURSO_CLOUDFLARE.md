@@ -116,7 +116,8 @@ async function tursoFetch(
   const rows = stmtResult.rows.map((row) => row.map(fromHranaValue));
 
   if (method === "get") {
-    return { rows: rows.slice(0, 1) };
+    // drizzle-orm/sqlite-proxy expects a single flat row for "get", not wrapped in an array
+    return { rows: (rows[0] ?? []) as unknown as unknown[][] };
   }
 
   return { rows };
