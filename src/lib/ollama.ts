@@ -168,8 +168,14 @@ export async function generateReplyComment(
     : "";
 
   return ollamaChat(
-    `You are a researcher replying to a reader's comment on a research paper platform. You are speaking from the perspective of the paper "${paperContext.title}" by ${authorStr}. Reply conversationally and helpfully based on your research findings. Be specific, reference your findings where relevant. Keep it to 1-3 sentences. Sound like a real person, not a formal academic.`,
-    `Your paper's summary: ${paperContext.synthesis}${threadStr}\n\nThe reader's comment: "${userComment}"\n\nReply to them:`,
+    `You are a researcher replying to a reader's comment on a research paper platform. You are speaking from the perspective of the paper "${paperContext.title}" by ${authorStr}.
+
+CRITICAL RULES:
+- ONLY mention facts, findings, or claims that appear in YOUR PAPER'S SUMMARY below. Do NOT invent results, statistics, or methodologies.
+- If the comment asks about something your paper doesn't cover, say so honestly.
+- Keep it to 1-3 sentences. Sound like a real person, not a formal academic.
+- Do NOT use markdown formatting.`,
+    `YOUR PAPER'S SUMMARY (this is the ONLY information you can reference about your work):\n${paperContext.synthesis}${threadStr}\n\nThe reader's comment: "${userComment}"\n\nReply to them using ONLY facts from your summary:`,
     SMART_MODEL,
   );
 }
@@ -299,8 +305,14 @@ export async function generateUserPostReply(
   webContext: string,
 ): Promise<string> {
   return ollamaChat(
-    `You are a knowledgeable researcher replying to a comment on a research discussion platform. The original post was about a research topic. Use the web search context to give an informed, helpful reply. Keep it to 1-3 sentences. Sound like a real person, not a formal academic.`,
-    `Original post: "${postContent}"\n\nRelevant context from web search:\n${webContext}\n\nThe user's comment: "${userComment}"\n\nReply to them:`,
+    `You are a knowledgeable researcher replying to a comment on a research discussion platform. The original post was about a research topic.
+
+CRITICAL RULES:
+- ONLY reference facts that appear in the web search context provided below. Do NOT invent statistics, studies, or claims.
+- If the context doesn't cover what the user is asking about, acknowledge that honestly.
+- Keep it to 1-3 sentences. Sound like a real person, not a formal academic.
+- Do NOT use markdown formatting.`,
+    `Original post: "${postContent}"\n\nRelevant context (ONLY use facts from this):\n${webContext}\n\nThe user's comment: "${userComment}"\n\nReply using ONLY information from the context above:`,
     SMART_MODEL,
   );
 }
@@ -358,6 +370,160 @@ RESPOND ONLY with valid JSON array, no markdown:
   }
 }
 
+// ─── Export summary generation ────────────────────────────────────────────────
+
+/**
+ * Generate an overall research summary for all papers.
+ */
+export async function generateOverallSummary(
+  papers: Array<{ title: string; synthesis: string; authors: string[] }>,
+): Promise<string> {
+  const paperList = papers
+    .map((p, i) => `${i + 1}. "${p.title}" — ${p.synthesis}`)
+    .join("\n");
+
+  return ollamaChat(
+    "You write concise research summaries. Output ONLY the summary text, no markdown headers or formatting. Do NOT invent facts — only synthesize from what is provided.",
+    `Write a 3-5 sentence overall summary that synthesizes the key themes and findings across these research papers:\n\n${paperList}\n\nSummary:`,
+    SMART_MODEL,
+  );
+}
+
+/**
+ * Generate a per-paper summary for export (shorter than synthesis).
+ */
+export async function generatePerPaperSummary(
+  title: string,
+  synthesis: string,
+): Promise<string> {
+  return ollamaChat(
+    "You write concise one-sentence research summaries. Output ONLY the summary, no markdown. Do NOT invent facts.",
+    `Summarize the key contribution of this paper in one sentence:\n\nTitle: "${title}"\nDetails: ${synthesis}\n\nOne-sentence summary:`,
+    FAST_MODEL,
+  );
+}
+
+/**
+ * Generate a themed/grouped export with section summaries.
+ */
+export async function generateThemedExport(
+  papers: Array<{
+    title: string;
+    synthesis: string;
+    authors: string[];
+    year: number;
+    apaCitation: string;
+  }>,
+): Promise<string> {
+  const paperList = papers
+    .map(
+      (p, i) =>
+        `[${i + 1}] "${p.title}" by ${p.authors.join(", ")} (${p.year})\nSummary: ${p.synthesis}\nCitation: ${p.apaCitation}`,
+    )
+    .join("\n\n");
+
+  return ollamaChat(
+    `You are a research outline generator. Given academic papers, create a comprehensive themed export. Group papers into 2-4 thematic categories.
+
+RESPOND ONLY with valid JSON, no markdown:
+{
+  "overallSummary": "3-5 sentence synthesis of all research",
+  "themes": [
+    {
+      "title": "Theme Name",
+      "summary": "2-3 sentence section summary",
+      "sources": [
+        {
+          "title": "Paper Title",
+          "authors": "Author names",
+          "year": 2020,
+          "keyFinding": "One sentence key finding",
+          "apaCitation": "Full APA citation"
+        }
+      ]
+    }
+  ]
+}
+
+Rules:
+- overallSummary must synthesize across ALL papers
+- Each section summary must synthesize the papers within that theme
+- Each source's keyFinding must come from the paper's provided summary — do NOT invent
+- Each paper appears in exactly one theme
+- Use exact APA citations as provided`,
+    `Papers to organize:\n\n${paperList}`,
+    SMART_MODEL,
+  );
+}
+
+// ─── PDF verification Q&A ─────────────────────────────────────────────────────
+
+/**
+ * Generate verification questions about a PDF's contents to confirm the
+ * system understood the paper correctly.
+ */
+export async function generatePdfVerificationQuestions(
+  title: string,
+  abstract: string,
+  fullText: string,
+): Promise<
+  Array<{
+    question: string;
+    options: string[];
+    correctIndex: number;
+  }>
+> {
+  const textSnippet = fullText.slice(0, 3000);
+
+  const prompt = `Based on this academic paper, generate 3 multiple-choice questions that verify whether the system correctly understood the paper's key content.
+
+Paper Title: "${title}"
+Abstract: ${abstract}
+Content excerpt: ${textSnippet}
+
+The questions should test understanding of:
+1. The paper's main research topic or thesis
+2. The methodology or approach used
+3. A key finding or conclusion
+
+Each question should have 4 options with exactly one correct answer.
+
+RESPOND ONLY with valid JSON array, no markdown:
+[
+  {
+    "question": "What is the main focus of this paper?",
+    "options": ["Option A", "Option B", "Option C", "Option D"],
+    "correctIndex": 0
+  }
+]`;
+
+  try {
+    const raw = await ollamaChat(
+      "You generate academic comprehension questions based on paper content. Output ONLY valid JSON arrays. Questions must be answerable from the provided text.",
+      prompt,
+      SMART_MODEL,
+    );
+
+    const jsonMatch = raw.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) return [];
+
+    const parsed = JSON.parse(jsonMatch[0]) as Array<{
+      question: string;
+      options: string[];
+      correctIndex: number;
+    }>;
+    return parsed.filter(
+      (q) =>
+        q.question &&
+        q.options?.length >= 2 &&
+        typeof q.correctIndex === "number",
+    );
+  } catch (err) {
+    console.error("Failed to generate PDF verification questions:", err);
+    return [];
+  }
+}
+
 // ─── Social comment generation ───────────────────────────────────────────────
 
 export interface GeneratedComment {
@@ -404,10 +570,11 @@ THE COMMENTERS (other papers whose authors will react):
 ${commenterList}
 
 For each commenter, write a SHORT (1-2 sentence) social-media-style comment reacting to the post from their research perspective. They should:
+- ONLY reference facts, findings, or claims that appear in THEIR OWN paper summary above. Do NOT invent statistics, methodologies, or results.
 - Reference their own work naturally ("In our study, we found..." or "This aligns with our findings on...")
 - Show genuine academic interaction: agreeing, respectfully disagreeing, asking questions, noting they cited this work, or explaining how they extended it
 - Sound like real researchers casually discussing on social media, NOT formal peer review
-- Be specific about HOW the papers relate
+- Be specific about HOW the papers relate, using ONLY information from the summaries provided
 
 RESPOND ONLY with valid JSON array, no markdown:
 [

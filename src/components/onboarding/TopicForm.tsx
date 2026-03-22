@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { GenerationProgress } from "./GenerationProgress";
 import { PdfUploader, type UploadedFile } from "./PdfUploader";
+import { PdfVerification } from "./PdfVerification";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -113,6 +114,8 @@ export function TopicForm({ initialTopic }: TopicFormProps) {
   const [pdfEnabled, setPdfEnabled] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [sourceMode, setSourceMode] = useState<SourceMode>("include");
+  // PDF verification state
+  const [showVerification, setShowVerification] = useState(false);
 
   const stopPolling = useCallback(() => {
     if (pollingRef.current) {
@@ -210,6 +213,14 @@ export function TopicForm({ initialTopic }: TopicFormProps) {
     models,
   });
 
+  function proceedToGenerate() {
+    const topic = topicRef.current?.value?.trim();
+    setSubmittedTopic(topic || "your uploaded sources");
+    setLoading(true);
+    setProgress({ step: pdfEnabled ? "extracting" : "searching" });
+    doGenerate(topic);
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
@@ -225,9 +236,16 @@ export function TopicForm({ initialTopic }: TopicFormProps) {
       return;
     }
 
-    setSubmittedTopic(topic || "your uploaded sources");
-    setLoading(true);
-    setProgress({ step: pdfEnabled ? "extracting" : "searching" });
+    // Show verification step if PDFs are uploaded
+    if (pdfEnabled && doneFiles.length > 0 && !showVerification) {
+      setShowVerification(true);
+      return;
+    }
+
+    proceedToGenerate();
+  }
+
+  async function doGenerate(topic: string | undefined) {
 
     try {
       const pdfKeys = pdfEnabled ? doneFiles.map((f) => f.key) : undefined;
@@ -262,6 +280,30 @@ export function TopicForm({ initialTopic }: TopicFormProps) {
       setLoading(false);
       setProgress(null);
     }
+  }
+
+  if (showVerification && !loading) {
+    return (
+      <div className="mt-8">
+        <h2 className="text-foreground mb-1 text-lg font-bold">
+          Verify Paper Understanding
+        </h2>
+        <p className="text-muted-foreground mb-4 text-sm">
+          Answer a few questions to confirm the system understood your papers
+          correctly.
+        </p>
+        <PdfVerification
+          pdfKeys={doneFiles.map((f) => f.key)}
+          pdfFilenames={doneFiles.map((f) => f.filename)}
+          onComplete={() => {
+            proceedToGenerate();
+          }}
+          onSkip={() => {
+            proceedToGenerate();
+          }}
+        />
+      </div>
+    );
   }
 
   if (loading) {

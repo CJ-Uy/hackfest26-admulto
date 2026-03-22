@@ -71,6 +71,8 @@ function ScrollPageInner() {
     new Set(),
   );
   const [newCommentIds, setNewCommentIds] = useState<Set<string>>(new Set());
+  // Track papers/posts that have replies to YOUR comments (different marker)
+  const [replyNotifIds, setReplyNotifIds] = useState<Set<string>>(new Set());
   const [isGeneratingMore, setIsGeneratingMore] = useState(false);
   const [generateMoreProgress, setGenerateMoreProgress] = useState<{
     step: string;
@@ -175,6 +177,11 @@ function ScrollPageInner() {
         ? `post:${comment.userPostId}`
         : comment.paperId;
       setNewCommentIds((prev) => new Set(prev).add(notifKey));
+
+      // If this is an AI reply to one of the user's comments, add reply notification
+      if (comment.isGenerated && comment.parentId) {
+        setReplyNotifIds((prev) => new Set(prev).add(notifKey));
+      }
 
       // Clear generating indicator when AI replies to a user post
       if (comment.userPostId && comment.isGenerated) {
@@ -414,8 +421,15 @@ function ScrollPageInner() {
                 onDeletePost={handleDeletePost}
                 generatingPostIds={generatingPostIds}
                 newCommentIds={newCommentIds}
+                replyNotifIds={replyNotifIds}
                 onClearNewComment={(id: string) => {
                   setNewCommentIds((prev) => {
+                    if (!prev.has(id)) return prev;
+                    const next = new Set(prev);
+                    next.delete(id);
+                    return next;
+                  });
+                  setReplyNotifIds((prev) => {
                     if (!prev.has(id)) return prev;
                     const next = new Set(prev);
                     next.delete(id);

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { BadgeCheck } from "lucide-react";
+import { BadgeCheck, MessageCircleReply } from "lucide-react";
 import type { Paper } from "@/lib/types";
 import { CardActions } from "./CardActions";
 
@@ -19,6 +19,7 @@ interface PaperCardProps {
   onGenerateComments?: (paperId: string) => void;
   onDelete?: (paperId: string) => void;
   hasNewComments?: boolean;
+  hasReplyNotif?: boolean;
   onClearNewComment?: () => void;
 }
 
@@ -36,6 +37,7 @@ export function PaperCard({
   onGenerateComments,
   onDelete,
   hasNewComments,
+  hasReplyNotif,
   onClearNewComment,
 }: PaperCardProps) {
   const router = useRouter();
@@ -85,6 +87,14 @@ export function PaperCard({
       <p className="text-muted-foreground line-clamp-3 text-[15px] leading-relaxed">
         {paper.synthesis}
       </p>
+
+      {/* Reply notification badge */}
+      {hasReplyNotif && (
+        <div className="mt-1.5 flex items-center gap-1.5 rounded-md bg-blue-50 px-2.5 py-1.5 text-[12px] font-medium text-blue-600">
+          <MessageCircleReply className="h-3.5 w-3.5" />
+          A researcher replied to your comment
+        </div>
+      )}
 
       {/* Actions */}
       <CardActions

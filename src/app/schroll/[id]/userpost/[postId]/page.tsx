@@ -90,7 +90,16 @@ export default function UserPostPage() {
 
       <div className="flex flex-1 justify-center gap-0 lg:gap-6 lg:px-6 lg:py-4">
         <main className="bg-background w-full max-w-[780px] flex-1 lg:rounded-t-lg">
-          <UserPostDetail post={post} scrollId={scrollId} />
+          <UserPostDetail
+            post={post}
+            scrollId={scrollId}
+            scrollPapers={papers.map((p) => ({
+              id: p.id,
+              title: p.title,
+              authors: p.authors,
+              doi: p.doi,
+            }))}
+          />
         </main>
 
         {scroll && (

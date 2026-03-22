@@ -37,6 +37,7 @@ interface FeedViewProps {
   onDeletePost?: (postId: string) => void;
   generatingPostIds?: Set<string>;
   newCommentIds?: Set<string>;
+  replyNotifIds?: Set<string>;
   onClearNewComment?: (id: string) => void;
 }
 
@@ -63,6 +64,7 @@ export function FeedView({
   onDeletePost,
   generatingPostIds,
   newCommentIds,
+  replyNotifIds,
   onClearNewComment,
 }: FeedViewProps) {
   const router = useRouter();
@@ -160,6 +162,7 @@ export function FeedView({
           onDelete={onDeletePost}
           isGenerating={generatingPostIds?.has(post.id)}
           hasNewComments={newCommentIds?.has(`post:${post.id}`)}
+          hasReplyNotif={replyNotifIds?.has(`post:${post.id}`)}
           onClearNewComment={() => onClearNewComment?.(`post:${post.id}`)}
         />
       ))}
@@ -185,6 +188,7 @@ export function FeedView({
             onGenerateComments={onGenerateComments}
             onDelete={onDelete}
             hasNewComments={newCommentIds?.has((item.data as Paper).id)}
+            hasReplyNotif={replyNotifIds?.has((item.data as Paper).id)}
             onClearNewComment={() =>
               onClearNewComment?.((item.data as Paper).id)
             }

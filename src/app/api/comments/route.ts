@@ -203,27 +203,22 @@ export async function POST(req: NextRequest) {
 
         if (parentComment?.isGenerated) {
           // The user is replying to an AI comment — find the paper that the
-          // parent comment represents (by matching author name), then pick a
-          // DIFFERENT paper to create the back-and-forth debate
+          // parent comment represents (by matching author name) and reply
+          // FROM THAT SAME paper's perspective (the comment's source defends
+          // its position).
           const parentPaper = otherPapers.find((op) => {
             const authors = JSON.parse(op.authors) as string[];
             const authorName = authors[0] ? `${authors[0]} et al.` : op.title;
             return authorName === parentComment.author;
           });
 
-          const excludeId = parentPaper?.id ?? p.id;
-          const candidate = otherPapers.find((op) => op.id !== excludeId);
-
-          if (candidate) {
-            replyPaper = candidate;
+          if (parentPaper) {
+            replyPaper = parentPaper;
           }
         } else {
-          // User is replying to a human comment — pick any paper different
-          // from the post's paper to bring in a fresh perspective
-          const candidate = otherPapers.find((op) => op.id !== p.id);
-          if (candidate) {
-            replyPaper = candidate;
-          }
+          // User is replying to a human comment on a paper post —
+          // the post's own paper source should reply back
+          replyPaper = p;
         }
       }
 

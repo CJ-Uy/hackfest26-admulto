@@ -309,18 +309,35 @@ export function CardActions({
 
       <div className="flex items-center gap-0.5">
         {/* Bookmark */}
-        <button
-          onClick={handleBookmark}
-          aria-label={bookmarked ? "Remove bookmark" : "Bookmark"}
-          className={cn(
-            "rounded-full p-2.5 transition-colors",
-            bookmarked
-              ? "text-primary bg-primary/10"
-              : "text-muted-foreground hover:bg-[#f6f7f8]",
-          )}
-        >
-          <Bookmark className={cn("h-4 w-4", bookmarked && "fill-current")} />
-        </button>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger
+              render={<button />}
+              onClick={handleBookmark}
+              aria-label={bookmarked ? "Remove bookmark" : "Bookmark"}
+              className={cn(
+                "rounded-full p-2.5 transition-colors",
+                bookmarked
+                  ? "text-primary bg-primary/10"
+                  : "text-muted-foreground hover:bg-[#f6f7f8]",
+              )}
+            >
+              <Bookmark
+                className={cn("h-4 w-4", bookmarked && "fill-current")}
+              />
+            </TooltipTrigger>
+            <TooltipContent
+              side="top"
+              className="text-foreground border bg-white text-left shadow-md"
+            >
+              <span className="text-xs">
+                {bookmarked
+                  ? "Remove from saved papers"
+                  : "Save this paper for later"}
+              </span>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
 
         {/* Delete */}
         {onDelete && (

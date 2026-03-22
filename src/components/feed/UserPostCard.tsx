@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { User, MessageSquare, Trash2, Bot } from "lucide-react";
+import { User, MessageSquare, Trash2, Bot, MessageCircleReply } from "lucide-react";
 import type { UserPost } from "@/lib/types";
 
 interface UserPostCardProps {
@@ -11,6 +11,7 @@ interface UserPostCardProps {
   onDelete?: (postId: string) => void;
   isGenerating?: boolean;
   hasNewComments?: boolean;
+  hasReplyNotif?: boolean;
   onClearNewComment?: () => void;
 }
 
@@ -21,6 +22,7 @@ export function UserPostCard({
   onDelete,
   isGenerating,
   hasNewComments,
+  hasReplyNotif,
   onClearNewComment,
 }: UserPostCardProps) {
   const router = useRouter();
@@ -52,6 +54,14 @@ export function UserPostCard({
       <p className="text-foreground line-clamp-4 text-[15px] leading-relaxed whitespace-pre-wrap">
         {post.content}
       </p>
+      {/* Reply notification */}
+      {hasReplyNotif && !isGenerating && (
+        <div className="mt-2 flex items-center gap-1.5 rounded-md bg-blue-50 px-2.5 py-1.5 text-[12px] font-medium text-blue-600">
+          <MessageCircleReply className="h-3.5 w-3.5" />
+          A researcher replied to your comment
+        </div>
+      )}
+
       {/* AI generating indicator */}
       {isGenerating && (
         <div className="mt-2 flex items-center gap-2 rounded-md bg-[#f6f7f8] px-3 py-2">
