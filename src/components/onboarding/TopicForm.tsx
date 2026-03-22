@@ -317,7 +317,7 @@ export function TopicForm({ initialTopic }: TopicFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="mt-8 space-y-6">
-      {/* ── PDF Sources ── */}
+      {/* ── PDF Sources ──
       <div className="border-border space-y-4 rounded-xl border p-4">
         <div className="flex items-center justify-between">
           <label className="flex cursor-pointer items-center gap-2 text-sm font-medium">
@@ -389,7 +389,7 @@ export function TopicForm({ initialTopic }: TopicFormProps) {
             )}
           </>
         )}
-      </div>
+      </div> */}
 
       {/* ── Topic / Description ── */}
       <div>
