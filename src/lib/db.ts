@@ -1,13 +1,13 @@
-import { createClient } from "@libsql/client/web";
-import { drizzle } from "drizzle-orm/libsql/web";
+import { createClient } from "@libsql/client";
+import { drizzle } from "drizzle-orm/libsql";
 import * as schema from "./schema";
 
 /**
  * Creates a Drizzle ORM database client connected to Turso via libSQL.
  *
  * Uses TURSO_DATABASE_URL and TURSO_AUTH_TOKEN env vars.
- * In production (Cloudflare Workers), uses the web/HTTP client.
- * For local dev without TURSO_DATABASE_URL, throws an error.
+ * The @libsql/client package resolves to the web/HTTP client automatically
+ * in Cloudflare Workers via the "workerd" export condition.
  */
 type DbClient = ReturnType<typeof drizzle<typeof schema>>;
 
