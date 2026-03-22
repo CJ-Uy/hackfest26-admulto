@@ -51,9 +51,9 @@ export function FeedPollCard({ poll }: FeedPollCardProps) {
   }
 
   return (
-    <div className="border-border border-b px-4 py-3">
+    <div className="border-border overflow-hidden border-b px-4 py-3">
       <div className="mb-2 flex items-center gap-2.5">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#e8f0fe]">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10">
           <BarChart3 className="text-primary h-4 w-4" />
         </div>
         <span className="text-foreground text-[15px] font-semibold">Poll</span>
@@ -79,7 +79,7 @@ export function FeedPollCard({ poll }: FeedPollCardProps) {
                   ? "border-primary bg-primary/5 text-primary font-medium"
                   : submitted
                     ? "border-border text-muted-foreground cursor-default"
-                    : "border-border hover:border-primary/40 hover:bg-[#f6f7f8]",
+                    : "border-border hover:border-primary/40 hover:bg-subtle",
               )}
             >
               {option}

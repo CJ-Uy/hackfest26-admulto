@@ -123,7 +123,7 @@ export function FeedView({
   });
 
   return (
-    <div>
+    <div className="w-full overflow-hidden">
       {papers.length > 0 && papers.length < 3 && (
         <div className="mx-4 mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4">
           <div className="flex items-start gap-2">

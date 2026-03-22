@@ -32,6 +32,7 @@ import type { ScrollSession } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { SchrollarLogo } from "./SchrollarLogo";
+import { ThemeToggle } from "./ThemeToggle";
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
@@ -99,8 +100,8 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
               <div
                 key={session.id}
                 className={cn(
-                  "group flex items-start gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-[#f6f7f8]",
-                  pathname === `/schroll/${session.id}` && "bg-[#f6f7f8]",
+                  "group flex items-start gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-subtle",
+                  pathname === `/schroll/${session.id}` && "bg-subtle",
                 )}
               >
                 <Link
@@ -133,6 +134,10 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
             ))}
           </nav>
         )}
+      </div>
+
+      <div className="border-border border-t px-3 py-2">
+        <ThemeToggle />
       </div>
 
       <Dialog

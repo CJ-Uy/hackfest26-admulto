@@ -19,7 +19,7 @@ export function TabNav({ value, onValueChange, tabs }: TabNavProps) {
             "relative flex-1 py-3 text-center text-[15px] font-semibold transition-colors",
             value === tab.value
               ? "text-foreground"
-              : "text-muted-foreground hover:text-foreground hover:bg-[#f6f7f8]",
+              : "text-muted-foreground hover:text-foreground hover:bg-subtle",
           )}
         >
           {tab.label}

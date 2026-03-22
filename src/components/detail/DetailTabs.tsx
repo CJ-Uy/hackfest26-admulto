@@ -169,7 +169,7 @@ function InlineReplyInput({
       className="border-border/50 border-l-2 py-1"
       style={{ paddingLeft: `${Math.min(depth + 1, 5) * 1.25 + 0.75}rem` }}
     >
-      <div className="flex items-center gap-2 rounded-md bg-[#f6f7f8] px-3 py-2">
+      <div className="flex items-center gap-2 rounded-md bg-subtle px-3 py-2">
         <input
           value={content}
           onChange={(e) => setContent(e.target.value)}
@@ -415,7 +415,7 @@ export function DetailTabs({
                 "flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold",
                 c.isGenerated
                   ? "bg-primary/10 text-primary"
-                  : "text-muted-foreground bg-[#f6f7f8]",
+                  : "text-muted-foreground bg-subtle",
               )}
             >
               {c.isGenerated ? (
@@ -459,7 +459,7 @@ export function DetailTabs({
           <div className="mt-1.5 ml-8 flex items-center gap-1">
             <button
               onClick={() => setReplyingTo(c.id)}
-              className="text-muted-foreground hover:text-primary flex items-center gap-1 rounded px-2 py-0.5 text-[12px] font-medium transition-colors hover:bg-[#f6f7f8]"
+              className="text-muted-foreground hover:text-primary flex items-center gap-1 rounded px-2 py-0.5 text-[12px] font-medium transition-colors hover:bg-subtle"
             >
               <Reply className="h-3 w-3" />
               Reply
@@ -524,7 +524,7 @@ export function DetailTabs({
               <button
                 onClick={handleGenerateComments}
                 disabled={generatingComments}
-                className="text-muted-foreground hover:text-primary flex items-center gap-1.5 rounded-full bg-[#f6f7f8] px-3 py-1.5 text-[12px] font-semibold transition-colors hover:bg-[#e8e8e8] disabled:opacity-50"
+                className="text-muted-foreground hover:text-primary flex items-center gap-1.5 rounded-full bg-subtle px-3 py-1.5 text-[12px] font-semibold transition-colors hover:bg-subtle-hover disabled:opacity-50"
               >
                 <Sparkles
                   className={`h-3.5 w-3.5 ${generatingComments ? "animate-spin" : ""}`}
@@ -560,7 +560,7 @@ export function DetailTabs({
 
       {/* Integrated reply input */}
       {showReplyInput && (
-        <div className="border-border mt-4 flex items-center gap-2 rounded-md border bg-[#f6f7f8] px-3.5 py-2.5">
+        <div className="border-border mt-4 flex items-center gap-2 rounded-md border bg-subtle px-3.5 py-2.5">
           <input
             value={mainReplyContent}
             onChange={(e) => setMainReplyContent(e.target.value)}

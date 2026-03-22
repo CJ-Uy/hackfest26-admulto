@@ -173,10 +173,10 @@ export function CardActions({
     n >= 1000 ? `${(n / 1000).toFixed(1).replace(/\.0$/, "")}k` : String(n);
 
   return (
-    <div className="-mx-1 mt-2 flex items-center justify-between">
-      <div className="flex items-center">
+    <div className="mt-2 flex flex-wrap items-center justify-between gap-y-1">
+      <div className="flex flex-wrap items-center gap-y-1">
         {/* Vote cluster */}
-        <div className="mr-1 flex items-center rounded-full bg-[#f6f7f8]">
+        <div className="mr-1 flex items-center rounded-full bg-subtle">
           <button
             onClick={handleUpvote}
             aria-label={upvoted ? "Remove upvote" : "Upvote"}
@@ -184,7 +184,7 @@ export function CardActions({
               "rounded-l-full p-2.5 transition-colors",
               upvoted
                 ? "text-[#ff4500]"
-                : "text-muted-foreground hover:bg-[#ffe9e0] hover:text-[#ff4500]",
+                : "text-muted-foreground hover:bg-destructive/10 hover:text-[#ff4500]",
             )}
           >
             <ArrowBigUp className={cn("h-5 w-5", upvoted && "fill-current")} />
@@ -206,7 +206,7 @@ export function CardActions({
               </TooltipTrigger>
               <TooltipContent
                 side="top"
-                className="text-foreground max-w-55 border bg-white text-left shadow-md"
+                className="text-foreground max-w-55 border bg-tooltip-bg text-left shadow-md"
               >
                 <div className="flex flex-col gap-0.5">
                   <span className={cn("text-sm font-semibold", tier.color)}>
@@ -227,7 +227,7 @@ export function CardActions({
               "rounded-r-full p-2.5 transition-colors",
               downvoted
                 ? "text-[#7193ff]"
-                : "text-muted-foreground hover:text-primary hover:bg-[#dae8f5]",
+                : "text-muted-foreground hover:text-primary hover:bg-primary/10",
             )}
           >
             <ArrowBigDown
@@ -255,7 +255,7 @@ export function CardActions({
             </TooltipTrigger>
             <TooltipContent
               side="top"
-              className="text-foreground max-w-55 border bg-white text-left shadow-md"
+              className="text-foreground max-w-55 border bg-tooltip-bg text-left shadow-md"
             >
               <div className="flex flex-col gap-0.5">
                 <span className="text-xs opacity-80">{tier.description}</span>
@@ -271,22 +271,22 @@ export function CardActions({
         <button
           onClick={handleCommentClick}
           aria-label={`${commentCount} comments`}
-          className="text-muted-foreground relative mr-1 flex items-center gap-1.5 rounded-full bg-[#f6f7f8] px-3.5 py-1.5 text-[14px] font-bold transition-colors hover:bg-[#e8e8e8]"
+          className="text-muted-foreground relative mr-1 flex items-center gap-1.5 rounded-full bg-subtle px-3.5 py-1.5 text-[14px] font-bold transition-colors hover:bg-subtle-hover"
         >
           <MessageSquare className="h-4.5 w-4.5" />
           {commentCount}
           {hasNewComments && (
-            <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white" />
+            <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-background" />
           )}
         </button>
 
         {/* Share */}
         <button
           onClick={handleShare}
-          className="text-muted-foreground mr-1 flex items-center gap-1.5 rounded-full bg-[#f6f7f8] px-3.5 py-1.5 text-[14px] font-bold transition-colors hover:bg-[#e8e8e8]"
+          className="text-muted-foreground mr-1 flex items-center gap-1.5 rounded-full bg-subtle px-3.5 py-1.5 text-[14px] font-bold transition-colors hover:bg-subtle-hover"
         >
           <Share2 className="h-4 w-4" />
-          Share
+          <span className="hidden sm:inline">Share</span>
         </button>
 
         {/* Generate Comments */}
@@ -296,7 +296,7 @@ export function CardActions({
             disabled={generatingComments}
             aria-label="Generate AI comments"
             className={cn(
-              "text-muted-foreground relative flex items-center gap-1.5 overflow-hidden rounded-full bg-[#f6f7f8] px-3.5 py-1.5 text-[14px] font-bold transition-colors hover:bg-[#e8e8e8]",
+              "text-muted-foreground relative flex items-center gap-1.5 overflow-hidden rounded-full bg-subtle px-3.5 py-1.5 text-[14px] font-bold transition-colors hover:bg-subtle-hover",
             )}
           >
             {generatingComments && (
@@ -326,7 +326,7 @@ export function CardActions({
                 "rounded-full p-2.5 transition-colors",
                 bookmarked
                   ? "text-primary bg-primary/10"
-                  : "text-muted-foreground hover:bg-[#f6f7f8]",
+                  : "text-muted-foreground hover:bg-subtle",
               )}
             >
               <Bookmark
@@ -335,7 +335,7 @@ export function CardActions({
             </TooltipTrigger>
             <TooltipContent
               side="top"
-              className="text-foreground border bg-white text-left shadow-md"
+              className="text-foreground border bg-tooltip-bg text-left shadow-md"
             >
               <span className="text-xs">
                 {bookmarked
