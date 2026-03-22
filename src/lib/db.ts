@@ -55,7 +55,7 @@ async function tursoFetch(
   sql: string,
   params: unknown[],
   method: "run" | "all" | "values" | "get",
-): Promise<{ rows: unknown[][] }> {
+): Promise<{ rows: unknown[] }> {
   const response = await fetch(`${httpUrl}/v2/pipeline`, {
     method: "POST",
     headers: {
@@ -105,8 +105,22 @@ async function tursoFetch(
   const stmtResult = result.response?.result;
   if (!stmtResult) return { rows: [] };
 
-  // Convert Hrana values to plain JS values
-  const rows = stmtResult.rows.map((row) => row.map(fromHranaValue));
+  const colNames = stmtResult.cols.map((c) => c.name);
+
+  if (method === "values") {
+    // Return raw arrays for 'values' method
+    const rows = stmtResult.rows.map((row) => row.map(fromHranaValue));
+    return { rows };
+  }
+
+  // For 'all', 'get', 'run': return rows as objects keyed by column name
+  const rows = stmtResult.rows.map((row) => {
+    const obj: Record<string, unknown> = {};
+    for (let i = 0; i < colNames.length; i++) {
+      obj[colNames[i]] = fromHranaValue(row[i]);
+    }
+    return obj;
+  });
 
   if (method === "get") {
     return { rows: rows.slice(0, 1) };
