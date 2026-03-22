@@ -109,7 +109,7 @@ export function GenerateMoreProgress({ progress }: GenerateMoreProgressProps) {
   const percent = getProgressPercent(progress);
 
   return (
-    <div className="border-border animate-in fade-in mx-4 my-6 rounded-xl border p-5 duration-500">
+    <div className="border-border animate-in fade-in mx-4 my-6 overflow-hidden rounded-xl border p-5 duration-500">
       {/* Header */}
       <div className="mb-4 flex items-center gap-2">
         <div className="relative h-2 w-2">
@@ -161,7 +161,7 @@ export function GenerateMoreProgress({ progress }: GenerateMoreProgressProps) {
                   />
                 )}
               </div>
-              <div className="flex-1">
+              <div className="min-w-0 flex-1">
                 <p className="text-[13px] font-medium">
                   {step.label}
                   {isDone && (
@@ -199,7 +199,7 @@ export function GenerateMoreProgress({ progress }: GenerateMoreProgressProps) {
       </div>
 
       {/* Fun fact */}
-      <div className="flex items-start gap-2 rounded-lg bg-[#f6f7f8] px-3 py-2">
+      <div className="flex items-start gap-2 rounded-lg bg-subtle px-3 py-2">
         <BookOpen className="text-muted-foreground mt-0.5 h-3.5 w-3.5 shrink-0" />
         <p
           className={`text-foreground/70 text-[12px] transition-opacity duration-400 ${

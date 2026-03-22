@@ -127,7 +127,7 @@ export function ExportActions({ text, papers }: ExportActionsProps) {
   return (
     <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
       {/* Format tabs */}
-      <div className="flex rounded-lg bg-[#f6f7f8] p-0.5">
+      <div className="flex flex-wrap rounded-lg bg-subtle p-0.5">
         {FORMATS.map((f) => {
           const Icon = f.icon;
           return (
@@ -137,7 +137,7 @@ export function ExportActions({ text, papers }: ExportActionsProps) {
               className={cn(
                 "flex items-center gap-1 rounded-md px-2.5 py-1 text-[11px] font-medium transition-all",
                 format === f.value
-                  ? "text-foreground bg-white shadow-sm"
+                  ? "text-foreground bg-background shadow-sm"
                   : "text-muted-foreground hover:text-foreground",
               )}
             >
@@ -152,13 +152,13 @@ export function ExportActions({ text, papers }: ExportActionsProps) {
       <div className="flex gap-1">
         <button
           onClick={handleCopy}
-          className="text-muted-foreground flex items-center gap-1 rounded-full bg-[#f6f7f8] px-3 py-1 text-[12px] font-semibold transition-colors hover:bg-[#e8e8e8]"
+          className="text-muted-foreground flex items-center gap-1 rounded-full bg-subtle px-3 py-1 text-[12px] font-semibold transition-colors hover:bg-subtle-hover"
         >
           <Copy className="h-3.5 w-3.5" /> Copy
         </button>
         <button
           onClick={handleDownload}
-          className="text-muted-foreground flex items-center gap-1 rounded-full bg-[#f6f7f8] px-3 py-1 text-[12px] font-semibold transition-colors hover:bg-[#e8e8e8]"
+          className="text-muted-foreground flex items-center gap-1 rounded-full bg-subtle px-3 py-1 text-[12px] font-semibold transition-colors hover:bg-subtle-hover"
         >
           <Download className="h-3.5 w-3.5" /> Download
         </button>
