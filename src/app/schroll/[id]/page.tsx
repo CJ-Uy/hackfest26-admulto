@@ -14,11 +14,11 @@ import { RightSidebar } from "@/components/shared/RightSidebar";
 import { CreatePostFAB } from "@/components/feed/CreatePostFAB";
 import { FeedSkeleton } from "@/components/shared/LoadingSkeleton";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useScrollCollapse } from "@/hooks/useScrollCollapse";
+
 import { useScrollStream } from "@/hooks/useScrollStream";
 import { useCommentStream } from "@/hooks/useCommentStream";
 import { fetchScroll } from "@/lib/scroll-store";
-import { cn } from "@/lib/utils";
+
 import type {
   ScrollSession,
   Paper,
@@ -36,7 +36,7 @@ const TABS = [
 export default function ScrollPage() {
   const params = useParams();
   const scrollId = params.id as string;
-  const { isCollapsed } = useScrollCollapse();
+
   const [activeTab, setActiveTab] = useState("feed");
   const [scroll, setScroll] = useState<ScrollSession | null>(null);
   const [papers, setPapers] = useState<Paper[]>([]);
@@ -350,17 +350,10 @@ export default function ScrollPage() {
       <div className="flex flex-1 justify-center gap-0 lg:gap-6 lg:px-6 lg:py-4">
         {/* Main content column */}
         <main className="bg-background w-full max-w-[780px] flex-1 lg:rounded-t-lg">
-          {/* Sticky top section: search + header + tabs */}
+          <ScrollHeader scroll={scroll} />
+          {/* Sticky top section: search + tabs */}
           <div className="bg-background border-border sticky top-0 z-30 border-b">
             <SearchBar value={searchQuery} onChange={setSearchQuery} />
-            <div
-              className={cn(
-                "overflow-hidden transition-all duration-300 ease-in-out",
-                isCollapsed ? "max-h-0 opacity-0" : "max-h-40 opacity-100",
-              )}
-            >
-              <ScrollHeader scroll={scroll} />
-            </div>
             <TabNav
               value={activeTab}
               onValueChange={setActiveTab}
