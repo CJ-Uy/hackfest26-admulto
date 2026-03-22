@@ -28,7 +28,8 @@ const TABS = [
 export default function ScrollPage() {
   const params = useParams();
   const scrollId = params.id as string;
-  const { isCollapsed } = useScrollCollapse();
+  const feedScrollRef = useRef<HTMLDivElement>(null);
+  const { isCollapsed } = useScrollCollapse(feedScrollRef);
   const [activeTab, setActiveTab] = useState("feed");
   const [scroll, setScroll] = useState<ScrollSession | null>(null);
   const [papers, setPapers] = useState<Paper[]>([]);
@@ -175,23 +176,23 @@ export default function ScrollPage() {
 
   if (!scroll) {
     return (
-      <div className="flex min-h-screen overflow-x-hidden bg-[#dae0e6]">
+      <div className="flex h-screen overflow-hidden bg-[#dae0e6]">
         <Sidebar />
-        <div className="flex min-w-0 flex-1 justify-center gap-0 lg:gap-6 lg:px-6 lg:py-4">
-          <main className="bg-background w-full min-w-0 max-w-[780px] flex-1 lg:rounded-t-lg">
-            <div className="border-border border-b px-4 pt-5 pb-3">
+        <div className="flex min-h-0 min-w-0 flex-1 justify-center gap-0 overflow-hidden lg:gap-6 lg:px-6 lg:py-4">
+          <main className="bg-background flex w-full min-h-0 min-w-0 max-w-[780px] flex-1 flex-col lg:rounded-t-lg">
+            <div className="border-border shrink-0 border-b px-4 pt-5 pb-3">
               <Skeleton className="mb-2 h-5 w-24" />
               <Skeleton className="mb-2 h-7 w-3/4" />
               <Skeleton className="h-4 w-full" />
             </div>
-            <div className="border-border flex border-b">
+            <div className="border-border flex shrink-0 border-b">
               {Array.from({ length: 3 }).map((_, i) => (
                 <div key={i} className="flex flex-1 justify-center py-3">
                   <Skeleton className="h-5 w-16" />
                 </div>
               ))}
             </div>
-            <div className="pt-4">
+            <div className="flex-1 overflow-y-auto pt-4">
               <FeedSkeleton />
             </div>
           </main>
@@ -201,14 +202,14 @@ export default function ScrollPage() {
   }
 
   return (
-    <div className="flex min-h-screen overflow-x-hidden bg-[#dae0e6]">
+    <div className="flex h-screen overflow-hidden bg-[#dae0e6]">
       <Sidebar />
 
-      <div className="flex min-w-0 flex-1 justify-center gap-0 lg:gap-6 lg:px-6 lg:py-4">
+      <div className="flex min-h-0 min-w-0 flex-1 justify-center gap-0 overflow-hidden lg:gap-6 lg:px-6 lg:py-4">
         {/* Main content column */}
-        <main className="bg-background w-full min-w-0 max-w-[780px] flex-1 lg:rounded-t-lg">
+        <main className="bg-background flex w-full min-h-0 min-w-0 max-w-[780px] flex-1 flex-col lg:rounded-t-lg">
           {/* Sticky top section: search + header + tabs */}
-          <div className="bg-background border-border sticky top-0 z-30 border-b">
+          <div className="bg-background border-border z-30 shrink-0 border-b">
             <SearchBar value={searchQuery} onChange={setSearchQuery} />
             <div
               className={cn(
@@ -225,8 +226,8 @@ export default function ScrollPage() {
             />
           </div>
 
-          {/* Tab content */}
-          <div className="overflow-hidden pb-20">
+          {/* Tab content — independently scrollable */}
+          <div ref={feedScrollRef} className="flex-1 overflow-y-auto pb-20">
             {scroll.status === "generating" && (
               <div className="flex flex-col items-center justify-center px-4 py-16">
                 <Loader2 className="text-primary mb-4 h-8 w-8 animate-spin" />
