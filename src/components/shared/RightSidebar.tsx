@@ -291,7 +291,7 @@ export function RightSidebar({
       </div>
 
       {/* Desktop sidebar */}
-      <aside className="no-scrollbar hidden w-[340px] shrink-0 overflow-y-auto lg:block">
+      <aside className="no-scrollbar hidden w-[340px] shrink-0 lg:sticky lg:top-4 lg:block lg:max-h-[calc(100vh-32px)] lg:overflow-y-auto">
         {sidebarContent}
       </aside>
     </>
