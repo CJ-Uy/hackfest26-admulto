@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { useParams } from "next/navigation";
+import { useState, useEffect, useCallback, Suspense } from "react";
+import { toast } from "sonner";
+import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { Sidebar } from "@/components/shared/Sidebar";
 import { ScrollHeader } from "@/components/shared/ScrollHeader";
@@ -33,15 +34,28 @@ const TABS = [
   { value: "export", label: "Export" },
 ];
 
-export default function ScrollPage() {
+function ScrollPageInner() {
   const params = useParams();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const scrollId = params.id as string;
 
   const [activeTab, setActiveTab] = useState("feed");
   const [scroll, setScroll] = useState<ScrollSession | null>(null);
   const [papers, setPapers] = useState<Paper[]>([]);
   const [polls, setPolls] = useState<Poll[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(searchParams.get("q") ?? "");
+
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchQuery(value);
+    const params = new URLSearchParams(searchParams.toString());
+    if (value) {
+      params.set("q", value);
+    } else {
+      params.delete("q");
+    }
+    router.replace(`?${params.toString()}`, { scroll: false });
+  }, [searchParams, router]);
   const [upvotedPapers, setUpvotedPapers] = useState<Set<string>>(new Set());
   const [downvotedPapers, setDownvotedPapers] = useState<Set<string>>(
     new Set(),
@@ -137,6 +151,10 @@ export default function ScrollPage() {
     scrollId,
     enabled: scroll?.status === "generating" && !isGeneratingMore,
     onComplete: reloadScroll,
+    onError: useCallback(() => {
+      toast.error("Connection lost. Refreshing...");
+      reloadScroll();
+    }, [reloadScroll]),
   });
 
   // Live comment stream — update comment counts on feed cards in real-time
@@ -353,7 +371,7 @@ export default function ScrollPage() {
           <ScrollHeader scroll={scroll} />
           {/* Sticky top section: search + tabs */}
           <div className="bg-background border-border sticky top-0 z-30 border-b">
-            <SearchBar value={searchQuery} onChange={setSearchQuery} />
+            <SearchBar value={searchQuery} onChange={handleSearchChange} />
             <TabNav
               value={activeTab}
               onValueChange={setActiveTab}
@@ -454,5 +472,13 @@ export default function ScrollPage() {
 
       <CreatePostFAB scrollId={scrollId} onPost={handleNewPost} />
     </div>
+  );
+}
+
+export default function ScrollPage() {
+  return (
+    <Suspense>
+      <ScrollPageInner />
+    </Suspense>
   );
 }
