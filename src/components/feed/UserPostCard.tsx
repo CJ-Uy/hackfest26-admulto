@@ -31,14 +31,14 @@ export function UserPostCard({
 
   return (
     <article
-      className="border-border cursor-pointer border-b px-4 py-3 transition-colors hover:bg-[#fafafa]"
+      className="border-border cursor-pointer overflow-hidden border-b px-4 py-3 transition-colors hover:bg-muted/50"
       onClick={() => {
         onClearNewComment?.();
         router.push(`/schroll/${scrollId}/userpost/${post.id}`);
       }}
     >
       <div className="mb-2 flex items-center gap-2.5">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f6f7f8]">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-subtle">
           <User className="text-muted-foreground h-4 w-4" />
         </div>
         <span className="text-foreground text-[15px] font-semibold">You</span>
@@ -51,7 +51,7 @@ export function UserPostCard({
           {post.title}
         </h3>
       )}
-      <p className="text-foreground line-clamp-4 text-[15px] leading-relaxed whitespace-pre-wrap">
+      <p className="text-foreground line-clamp-4 break-words text-[15px] leading-relaxed whitespace-pre-wrap">
         {post.content}
       </p>
       {/* Reply notification */}
@@ -64,7 +64,7 @@ export function UserPostCard({
 
       {/* AI generating indicator */}
       {isGenerating && (
-        <div className="mt-2 flex items-center gap-2 rounded-md bg-[#f6f7f8] px-3 py-2">
+        <div className="mt-2 flex items-center gap-2 rounded-md bg-subtle px-3 py-2">
           <Bot className="text-primary h-3.5 w-3.5" />
           <div className="flex items-center gap-1.5">
             <div className="flex gap-1">

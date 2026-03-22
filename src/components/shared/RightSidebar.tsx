@@ -122,7 +122,7 @@ export function RightSidebar({
               <Link
                 key={post.id}
                 href={`/schroll/${scrollId}/userpost/${post.id}`}
-                className="block rounded-md p-2 transition-colors hover:bg-[#f6f7f8]"
+                className="block rounded-md p-2 transition-colors hover:bg-subtle"
               >
                 {post.title && (
                   <p className="text-foreground line-clamp-1 text-[14px] font-semibold">
@@ -154,7 +154,7 @@ export function RightSidebar({
                   href={`/api/pdfs/${encodeURIComponent(key)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2 rounded-md p-2 transition-colors hover:bg-[#f6f7f8]"
+                  className="flex items-center gap-2 rounded-md p-2 transition-colors hover:bg-subtle"
                 >
                   <FileText className="text-muted-foreground h-4 w-4 shrink-0" />
                   <span className="text-foreground line-clamp-1 text-[14px]">
@@ -244,7 +244,7 @@ export function RightSidebar({
                 <Link
                   key={paperId}
                   href={`/schroll/${scrollId}/post/${paperId}`}
-                  className="block rounded-md p-2 transition-colors hover:bg-[#f6f7f8]"
+                  className="block rounded-md p-2 transition-colors hover:bg-subtle"
                 >
                   <p className="text-foreground line-clamp-1 text-[14px] font-medium">
                     {paper.title}
@@ -277,7 +277,7 @@ export function RightSidebar({
           >
             <BarChart3 className="h-4 w-4" />
           </SheetTrigger>
-          <SheetContent side="right" className="w-[340px] overflow-y-auto p-4">
+          <SheetContent side="right" className="w-[340px] max-w-[90vw] overflow-y-auto p-4">
             <SheetTitle className="sr-only">Session info</SheetTitle>
             {sidebarContent}
           </SheetContent>
@@ -304,7 +304,7 @@ function Stat({
   value: number | string;
 }) {
   return (
-    <div className="rounded-md bg-[#f6f7f8] p-2.5">
+    <div className="rounded-md bg-subtle p-2.5">
       <div className="text-muted-foreground mb-0.5 flex items-center gap-1">
         {icon}
         <span className="text-[13px]">{label}</span>
@@ -354,7 +354,7 @@ function PaperList({
         <Link
           key={paper.id}
           href={`/schroll/${scrollId}/post/${paper.id}`}
-          className="block rounded-md p-2 transition-colors hover:bg-[#f6f7f8]"
+          className="block rounded-md p-2 transition-colors hover:bg-subtle"
         >
           <p className="text-foreground line-clamp-2 text-[14px] leading-snug font-medium">
             {paper.title}

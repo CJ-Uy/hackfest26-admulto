@@ -380,10 +380,10 @@ function ScrollPageInner() {
 
   if (!scroll) {
     return (
-      <div className="flex min-h-screen bg-[#dae0e6]">
+      <div className="flex min-h-screen overflow-x-hidden bg-page-bg">
         <Sidebar />
-        <div className="flex flex-1 justify-center gap-0 lg:gap-6 lg:px-6 lg:py-4">
-          <main className="bg-background w-full max-w-[780px] flex-1 lg:rounded-t-lg">
+        <div className="flex min-w-0 flex-1 justify-center gap-0 lg:gap-6 lg:px-6 lg:py-4">
+          <main className="bg-background w-full min-w-0 max-w-[780px] flex-1 lg:rounded-t-lg">
             <div className="border-border border-b px-4 pt-14 pb-3 md:pt-5">
               <Skeleton className="mb-2 h-5 w-24" />
               <Skeleton className="mb-2 h-7 w-3/4" />
@@ -406,12 +406,12 @@ function ScrollPageInner() {
   }
 
   return (
-    <div className="flex min-h-screen bg-[#dae0e6]">
+    <div className="flex min-h-screen overflow-x-hidden bg-page-bg">
       <Sidebar />
 
-      <div className="flex flex-1 justify-center gap-0 lg:gap-6 lg:px-6 lg:py-4">
+      <div className="flex min-w-0 flex-1 justify-center gap-0 lg:gap-6 lg:px-6 lg:py-4">
         {/* Main content column */}
-        <main className="bg-background w-full max-w-[780px] flex-1 lg:rounded-t-lg">
+        <main className="bg-background w-full min-w-0 max-w-[780px] flex-1 lg:rounded-t-lg">
           <ScrollHeader scroll={scroll} />
           {/* Sticky top section: search + tabs */}
           <div className="bg-background border-border sticky top-0 z-30 border-b">

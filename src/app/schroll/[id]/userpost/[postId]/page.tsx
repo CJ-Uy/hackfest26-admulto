@@ -62,10 +62,10 @@ export default function UserPostPage() {
 
   if (!checked) {
     return (
-      <div className="flex min-h-screen bg-[#dae0e6]">
+      <div className="flex min-h-screen overflow-x-hidden bg-page-bg">
         <Sidebar />
-        <div className="flex flex-1 justify-center gap-0 lg:gap-6 lg:px-6 lg:py-4">
-          <main className="bg-background w-full max-w-[780px] flex-1 lg:rounded-t-lg">
+        <div className="flex min-w-0 flex-1 justify-center gap-0 lg:gap-6 lg:px-6 lg:py-4">
+          <main className="bg-background w-full min-w-0 max-w-[780px] flex-1 lg:rounded-t-lg">
             <DetailSkeleton />
           </main>
         </div>
@@ -75,7 +75,7 @@ export default function UserPostPage() {
 
   if (!post) {
     return (
-      <div className="flex min-h-screen bg-[#dae0e6]">
+      <div className="flex min-h-screen overflow-x-hidden bg-page-bg">
         <Sidebar />
         <main className="flex flex-1 items-center justify-center">
           <p className="text-muted-foreground">Post not found.</p>
@@ -85,11 +85,11 @@ export default function UserPostPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-[#dae0e6]">
+    <div className="flex min-h-screen overflow-x-hidden bg-page-bg">
       <Sidebar />
 
-      <div className="flex flex-1 justify-center gap-0 lg:gap-6 lg:px-6 lg:py-4">
-        <main className="bg-background w-full max-w-[780px] flex-1 lg:rounded-t-lg">
+      <div className="flex min-w-0 flex-1 justify-center gap-0 lg:gap-6 lg:px-6 lg:py-4">
+        <main className="bg-background w-full min-w-0 max-w-[780px] flex-1 lg:rounded-t-lg">
           <UserPostDetail
             post={post}
             scrollId={scrollId}
@@ -109,7 +109,7 @@ export default function UserPostPage() {
             upvotedPapers={upvotedPapers}
             downvotedPapers={downvotedPapers}
             bookmarkedPapers={bookmarkedPapers}
-            commentCounts={commentCounts}
+            yourCommentCounts={commentCounts}
             userPosts={userPosts}
             scrollId={scrollId}
           />

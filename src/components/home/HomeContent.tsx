@@ -63,33 +63,29 @@ export function HomeContent({ scrolls: initialScrolls }: HomeContentProps) {
   const hasScrolls = scrolls.length > 0;
 
   return (
-    <div className="flex min-h-screen bg-[#dae0e6]">
+    <div className="flex min-h-screen overflow-x-hidden bg-page-bg">
       <Sidebar />
 
-      <div className="flex flex-1 justify-center gap-0 lg:gap-6 lg:px-6 lg:py-4">
+      <div className="flex min-w-0 flex-1 justify-center gap-0 lg:gap-6 lg:px-6 lg:py-4">
         {/* Main content */}
-        <main className="bg-background w-full max-w-[780px] flex-1 lg:rounded-t-lg">
+        <main className="bg-background w-full min-w-0 max-w-[780px] flex-1 lg:rounded-t-lg">
           {hasScrolls ? (
             <>
               {/* Header with CTA */}
               <div className="border-border border-b px-4 pt-14 pb-4 md:pt-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h1 className="font-heading text-foreground text-[22px] font-bold">
-                      Your Research Feed
-                    </h1>
-                    <p className="text-muted-foreground mt-0.5 text-[14px]">
-                      {scrolls.length}{" "}
-                      {scrolls.length === 1 ? "schroll" : "schrolls"} created
-                    </p>
-                  </div>
-                  <Link href="/onboarding">
-                    <Button className="gap-2">
-                      <Plus className="h-4 w-4" />
-                      New Schroll
-                    </Button>
-                  </Link>
-                </div>
+                <h1 className="font-heading text-foreground text-[22px] font-bold">
+                  Your Research Feed
+                </h1>
+                <p className="text-muted-foreground mt-0.5 text-[14px]">
+                  {scrolls.length}{" "}
+                  {scrolls.length === 1 ? "schroll" : "schrolls"} created
+                </p>
+                <Link href="/onboarding" className="mt-3 inline-block">
+                  <Button className="gap-2">
+                    <Plus className="h-4 w-4" />
+                    New Schroll
+                  </Button>
+                </Link>
               </div>
 
               {/* Scroll cards */}
@@ -97,7 +93,7 @@ export function HomeContent({ scrolls: initialScrolls }: HomeContentProps) {
                 {scrolls.map((scroll, i) => (
                   <article
                     key={scroll.id}
-                    className="group animate-card-enter cursor-pointer px-4 py-4 transition-colors hover:bg-[#fafafa]"
+                    className="group animate-card-enter cursor-pointer overflow-hidden px-4 py-4 transition-colors hover:bg-muted/50"
                     style={{ animationDelay: `${i * 40}ms` }}
                     onClick={() => router.push(`/schroll/${scroll.id}`)}
                   >
@@ -109,7 +105,7 @@ export function HomeContent({ scrolls: initialScrolls }: HomeContentProps) {
 
                       <div className="min-w-0 flex-1">
                         {/* Title row */}
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <h3 className="font-heading text-foreground truncate text-[16px] font-bold">
                             {scroll.title}
                           </h3>
@@ -218,7 +214,7 @@ export function HomeContent({ scrolls: initialScrolls }: HomeContentProps) {
               </p>
               <div className="border-border mt-3 border-t pt-3">
                 <div className="grid grid-cols-2 gap-2">
-                  <div className="rounded-md bg-[#f6f7f8] p-2.5">
+                  <div className="rounded-md bg-subtle p-2.5">
                     <p className="text-muted-foreground text-[13px]">
                       Schrolls
                     </p>
@@ -226,7 +222,7 @@ export function HomeContent({ scrolls: initialScrolls }: HomeContentProps) {
                       {scrolls.length}
                     </p>
                   </div>
-                  <div className="rounded-md bg-[#f6f7f8] p-2.5">
+                  <div className="rounded-md bg-subtle p-2.5">
                     <p className="text-muted-foreground text-[13px]">Papers</p>
                     <p className="text-foreground text-[18px] font-bold">
                       {scrolls.reduce((sum, s) => sum + s.paperCount, 0)}
