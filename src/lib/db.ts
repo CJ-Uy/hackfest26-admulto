@@ -9,7 +9,7 @@ import * as schema from "./schema";
  * Falls back to a local file-based SQLite for development when no URL is set.
  * In production (Cloudflare Workers), uses the web/HTTP client.
  */
-type DbClient = ReturnType<typeof drizzleWeb>;
+type DbClient = ReturnType<typeof drizzleWeb<typeof schema>>;
 
 function createDbClient(): DbClient {
   const url = process.env.TURSO_DATABASE_URL;
@@ -26,7 +26,7 @@ function createDbClient(): DbClient {
   return drizzleWeb({
     connection: { url, authToken },
     schema,
-  });
+  }) as unknown as DbClient;
 }
 
 const globalForDb = globalThis as unknown as {
