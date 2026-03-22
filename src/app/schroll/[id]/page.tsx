@@ -13,7 +13,10 @@ import { FineTuneView } from "@/components/fine-tune/FineTuneView";
 import { ExportView } from "@/components/export/ExportView";
 import { RightSidebar } from "@/components/shared/RightSidebar";
 import { CreatePostFAB } from "@/components/feed/CreatePostFAB";
-import { FeedSkeleton } from "@/components/shared/LoadingSkeleton";
+import {
+  FeedSkeleton,
+  RightSidebarSkeleton,
+} from "@/components/shared/LoadingSkeleton";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { useScrollStream } from "@/hooks/useScrollStream";
@@ -384,22 +387,34 @@ function ScrollPageInner() {
         <Sidebar />
         <div className="flex flex-1 justify-center gap-0 lg:gap-6 lg:px-6 lg:py-4">
           <main className="bg-background w-full max-w-[780px] flex-1 lg:rounded-t-lg">
-            <div className="border-border border-b px-4 pt-14 pb-3 md:pt-5">
-              <Skeleton className="mb-2 h-5 w-24" />
+            <div className="px-4 pt-14 pb-3 md:pt-5">
+              <div className="mb-2 flex items-center gap-2">
+                <Skeleton className="h-5 w-20 rounded-full" />
+                <Skeleton className="h-4 w-40" />
+              </div>
               <Skeleton className="mb-2 h-7 w-3/4" />
               <Skeleton className="h-4 w-full" />
             </div>
-            <div className="border-border flex border-b">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="flex flex-1 justify-center py-3">
-                  <Skeleton className="h-5 w-16" />
-                </div>
-              ))}
+
+            <div className="bg-background border-border sticky top-0 z-30 border-b">
+              <div className="px-4 py-2 pt-14 md:pt-2">
+                <Skeleton className="h-10 w-full rounded-full" />
+              </div>
+              <div className="flex">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="flex flex-1 justify-center py-3">
+                    <Skeleton className="h-5 w-16" />
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="pt-4">
+
+            <div className="pt-2">
               <FeedSkeleton />
             </div>
           </main>
+
+          <RightSidebarSkeleton />
         </div>
       </div>
     );

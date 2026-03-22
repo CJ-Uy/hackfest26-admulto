@@ -30,31 +30,34 @@ export function FeedSkeleton() {
   );
 }
 
-export function DetailSkeleton() {
+export function PostDetailSkeleton() {
   return (
-    <div className="mx-auto max-w-[780px] px-4 py-4">
+    <div className="mx-auto max-w-[780px] px-4 pt-14 pb-4 md:pt-4">
       {/* Back button */}
       <Skeleton className="mb-3 h-5 w-28" />
-      {/* Paper card */}
-      <div className="border-border rounded-lg border p-5">
-        <div className="mb-3 flex items-center gap-2.5">
-          <Skeleton className="h-10 w-10 rounded-full" />
-          <div>
-            <Skeleton className="mb-1 h-4 w-40" />
-            <Skeleton className="h-3 w-28" />
-          </div>
+
+      {/* Post header area */}
+      <div className="border-border border-b px-1 pb-3">
+        <div className="mb-2 flex items-center gap-2.5">
+          <Skeleton className="h-9 w-9 rounded-full" />
+          <Skeleton className="h-4 w-40" />
+          <Skeleton className="h-4 w-28" />
         </div>
-        <Skeleton className="mb-2 h-7 w-3/4" />
+
+        <Skeleton className="mb-1 h-7 w-3/4" />
         <Skeleton className="mb-1 h-4 w-full" />
         <Skeleton className="mb-1 h-4 w-full" />
         <Skeleton className="h-4 w-2/3" />
+
+        <Skeleton className="mt-2 h-4 w-32" />
+
         <div className="mt-3 flex items-center gap-2">
           <Skeleton className="h-8 w-24 rounded-full" />
           <Skeleton className="h-8 w-16 rounded-full" />
           <Skeleton className="h-8 w-16 rounded-full" />
         </div>
       </div>
-      {/* Comments skeleton */}
+      {/* Comments area */}
       <div className="mt-4 space-y-3">
         {Array.from({ length: 3 }).map((_, i) => (
           <div key={i} className="border-border rounded-lg border p-4">
@@ -70,3 +73,66 @@ export function DetailSkeleton() {
     </div>
   );
 }
+
+export function UserPostDetailSkeleton() {
+  return (
+    <div className="mx-auto max-w-[780px] px-4 pt-14 pb-4 md:pt-4">
+      <Skeleton className="mb-3 h-5 w-28" />
+
+      <div className="border-border border-b px-1 pb-3">
+        <div className="mb-2 flex items-center gap-2.5">
+          <Skeleton className="h-9 w-9 rounded-full" />
+          <Skeleton className="h-4 w-12" />
+          <Skeleton className="h-4 w-16" />
+        </div>
+
+        <Skeleton className="mb-1 h-7 w-1/2" />
+        <Skeleton className="mb-1 h-4 w-full" />
+        <Skeleton className="mb-1 h-4 w-full" />
+        <Skeleton className="h-4 w-4/5" />
+
+        <div className="mt-3 flex items-center gap-1.5">
+          <Skeleton className="h-4 w-4" />
+          <Skeleton className="h-4 w-24" />
+        </div>
+      </div>
+
+      <div className="mt-4 space-y-3">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="border-border rounded-lg border p-4">
+            <div className="mb-2 flex items-center gap-2">
+              <Skeleton className="h-8 w-8 rounded-full" />
+              <Skeleton className="h-4 w-28" />
+            </div>
+            <Skeleton className="mb-1 h-4 w-full" />
+            <Skeleton className="h-4 w-4/5" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function RightSidebarSkeleton() {
+  return (
+    <aside className="hidden w-[340px] shrink-0 lg:block">
+      <div className="sticky top-0 h-screen overflow-y-auto py-4">
+        <div className="space-y-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="border-border bg-background rounded-lg border p-3.5">
+              <Skeleton className="mb-3 h-4 w-28" />
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-5/6" />
+                <Skeleton className="h-4 w-3/4" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+// Backward-compatible alias for existing imports.
+export const DetailSkeleton = PostDetailSkeleton;

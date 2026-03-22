@@ -43,6 +43,7 @@ export function RightSidebar({
   userPosts,
   scrollId,
 }: RightSidebarProps) {
+  const safeYourCommentCounts = yourCommentCounts ?? new Map<string, number>();
   const [showAllBookmarked, setShowAllBookmarked] = useState(false);
   const [voteTab, setVoteTab] = useState<"upvoted" | "downvoted">("upvoted");
 
@@ -235,9 +236,9 @@ export function RightSidebar({
         title="Your Comments"
         emptyText="Click on a paper to leave comments."
       >
-        {yourCommentCounts.size > 0 && (
+        {safeYourCommentCounts.size > 0 && (
           <div className="space-y-1">
-            {Array.from(yourCommentCounts.entries()).map(([paperId, count]) => {
+            {Array.from(safeYourCommentCounts.entries()).map(([paperId, count]) => {
               const paper = papers.find((p) => p.id === paperId);
               if (!paper) return null;
               return (
