@@ -257,6 +257,7 @@ export function FineTuneView({ scrollId, onRegenerated }: FineTuneViewProps) {
   const totalQuestions = questions.length;
   const allAnswered = answeredCount >= totalQuestions && totalQuestions > 0;
   const currentQuestion = questions[currentIndex];
+  const canGoNext = currentQuestion ? answers.has(currentQuestion.id) : false;
 
   if (loading) {
     return (
@@ -360,7 +361,7 @@ export function FineTuneView({ scrollId, onRegenerated }: FineTuneViewProps) {
                 className="bg-primary relative h-full overflow-hidden rounded-full transition-all duration-700 ease-out"
                 style={{ width: `${percent}%` }}
               >
-                <div className="animate-shimmer absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent" />
+                <div className="animate-shimmer absolute inset-0 bg-linear-to-r from-transparent via-white/25 to-transparent" />
               </div>
             </div>
             <div className="text-muted-foreground flex justify-between text-[11px]">
@@ -385,60 +386,58 @@ export function FineTuneView({ scrollId, onRegenerated }: FineTuneViewProps) {
   }
 
   return (
-    <div className="px-4 py-4">
+    <div className="flex flex-col px-4 py-5">
       {/* Header */}
-      <div className="mb-5 text-center">
-        <div className="bg-primary/10 text-primary mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-xl">
-          <Sparkles className="h-5 w-5" />
+      <div className="mb-5">
+        <div className="mb-1 flex items-center gap-2">
+          <div className="bg-primary/10 text-primary flex h-7 w-7 items-center justify-center rounded-lg">
+            <Sparkles className="h-3.5 w-3.5" />
+          </div>
+          <h3 className="text-foreground text-[15px] font-bold">
+            Fine Tune Your Feed
+          </h3>
         </div>
-        <h3 className="text-foreground text-[16px] font-bold">
-          Fine Tune Your Feed
-        </h3>
-        <p className="text-muted-foreground mx-auto mt-1 max-w-md text-[13px]">
-          Answer these questions to help us curate your research feed. Your
-          upvoted, saved, and commented posts will be preserved.
+        <p className="text-muted-foreground text-[12px] leading-relaxed">
+          Select an answer to auto-advance. Your upvoted and saved posts will be
+          preserved.
         </p>
       </div>
 
-      {/* Progress dots */}
-      <div className="mb-4 flex items-center justify-center gap-2">
-        {questions.map((_, i) => (
-          <button
-            key={i}
-            onClick={() => setCurrentIndex(i)}
-            className={`h-2 rounded-full transition-all ${
-              i === currentIndex
-                ? "bg-primary w-6"
-                : answers.has(questions[i].id)
-                  ? "bg-primary/40 w-2"
-                  : "bg-muted w-2"
-            }`}
+      {/* Progress bar + counter */}
+      <div className="mb-5 flex items-center gap-3">
+        <div className="bg-muted h-1.5 flex-1 overflow-hidden rounded-full">
+          <div
+            className="bg-primary h-full rounded-full transition-all duration-500 ease-out"
+            style={{
+              width: `${((currentIndex + (answers.has(currentQuestion?.id ?? "") ? 1 : 0)) / totalQuestions) * 100}%`,
+            }}
           />
-        ))}
+        </div>
+        <span className="text-muted-foreground shrink-0 text-[11px] tabular-nums">
+          {currentIndex + 1} / {totalQuestions}
+        </span>
       </div>
 
-      {/* Current question card */}
+      {/* Current question */}
       {currentQuestion && (
-        <div className="mx-auto max-w-lg">
-          <div className="text-muted-foreground mb-2 text-center text-[12px]">
-            Question {currentIndex + 1} of {totalQuestions}
+        <>
+          <div className="border-border/50 rounded-xl border p-4">
+            <FineTuneCard
+              key={currentQuestion.id}
+              question={currentQuestion}
+              onAnswer={handleAnswer}
+              savedAnswer={answers.get(currentQuestion.id)}
+            />
           </div>
-
-          <FineTuneCard
-            key={currentQuestion.id}
-            question={currentQuestion}
-            index={currentIndex}
-            onAnswer={handleAnswer}
-            savedAnswer={answers.get(currentQuestion.id)}
-          />
 
           {/* Navigation */}
           <div className="mt-4 flex items-center justify-between">
             <Button
-              variant="outline"
+              variant="ghost"
               size="sm"
               onClick={() => setCurrentIndex((i) => Math.max(0, i - 1))}
               disabled={currentIndex === 0}
+              className="text-muted-foreground text-[13px]"
             >
               Previous
             </Button>
@@ -446,10 +445,12 @@ export function FineTuneView({ scrollId, onRegenerated }: FineTuneViewProps) {
             {currentIndex < totalQuestions - 1 ? (
               <Button
                 size="sm"
+                variant={canGoNext ? "default" : "outline"}
                 onClick={() =>
                   setCurrentIndex((i) => Math.min(totalQuestions - 1, i + 1))
                 }
-                disabled={!answers.has(currentQuestion.id)}
+                disabled={!canGoNext}
+                className="text-[13px]"
               >
                 Next
               </Button>
@@ -458,7 +459,7 @@ export function FineTuneView({ scrollId, onRegenerated }: FineTuneViewProps) {
                 size="sm"
                 onClick={handleRegenerate}
                 disabled={!allAnswered}
-                className="gap-2"
+                className="gap-1.5 text-[13px]"
               >
                 <RefreshCw className="h-3.5 w-3.5" />
                 Regenerate Feed
@@ -467,11 +468,11 @@ export function FineTuneView({ scrollId, onRegenerated }: FineTuneViewProps) {
           </div>
 
           {!allAnswered && currentIndex === totalQuestions - 1 && (
-            <p className="text-muted-foreground mt-3 text-center text-[12px]">
-              Answer all {totalQuestions} questions to regenerate
+            <p className="text-muted-foreground mt-2 text-center text-[11px]">
+              Answer all questions to regenerate your feed
             </p>
           )}
-        </div>
+        </>
       )}
     </div>
   );

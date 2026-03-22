@@ -6,7 +6,10 @@ import { Sidebar } from "@/components/shared/Sidebar";
 import { RightSidebar } from "@/components/shared/RightSidebar";
 import { UserPostDetail } from "@/components/detail/UserPostDetail";
 import { fetchScroll } from "@/lib/scroll-store";
-import { DetailSkeleton } from "@/components/shared/LoadingSkeleton";
+import {
+  RightSidebarSkeleton,
+  UserPostDetailSkeleton,
+} from "@/components/shared/LoadingSkeleton";
 import type { UserPost, Paper, ScrollSession } from "@/lib/types";
 
 export default function UserPostPage() {
@@ -24,15 +27,27 @@ export default function UserPostPage() {
   const [bookmarkedPapers, setBookmarkedPapers] = useState<Set<string>>(
     new Set(),
   );
-  const [commentCounts] = useState<Map<string, number>>(new Map());
+  const [yourCommentCounts, setYourCommentCounts] = useState<
+    Map<string, number>
+  >(new Map());
   const [checked, setChecked] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
 
     async function load() {
-      const stored = await fetchScroll(scrollId);
+      const [stored, countRes] = await Promise.all([
+        fetchScroll(scrollId),
+        fetch(`/api/comments/counts?scrollId=${scrollId}&onlyMine=true`),
+      ]);
+
       if (cancelled) return;
+
+      if (countRes.ok) {
+        const counts: Record<string, number> = await countRes.json();
+        setYourCommentCounts(new Map(Object.entries(counts)));
+      }
+
       if (stored) {
         setScroll(stored.scroll);
         setPapers(stored.papers);
@@ -66,8 +81,9 @@ export default function UserPostPage() {
         <Sidebar />
         <div className="flex min-w-0 flex-1 justify-center gap-0 lg:gap-6 lg:px-6 lg:py-4">
           <main className="bg-background w-full min-w-0 max-w-[780px] flex-1 lg:rounded-t-lg">
-            <DetailSkeleton />
+            <UserPostDetailSkeleton />
           </main>
+          <RightSidebarSkeleton />
         </div>
       </div>
     );
@@ -102,17 +118,19 @@ export default function UserPostPage() {
           />
         </main>
 
-        {scroll && (
+        {scroll ? (
           <RightSidebar
             scroll={scroll}
             papers={papers}
             upvotedPapers={upvotedPapers}
             downvotedPapers={downvotedPapers}
             bookmarkedPapers={bookmarkedPapers}
-            yourCommentCounts={commentCounts}
+            yourCommentCounts={yourCommentCounts}
             userPosts={userPosts}
             scrollId={scrollId}
           />
+        ) : (
+          <RightSidebarSkeleton />
         )}
       </div>
     </div>

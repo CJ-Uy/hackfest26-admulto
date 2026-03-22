@@ -195,17 +195,15 @@ export async function POST(req: NextRequest) {
           .where(eq(comments.id, parentId))
           .limit(1);
 
-        // Get all papers in this scroll for candidate selection
-        const otherPapers = await db
-          .select()
-          .from(papers)
-          .where(eq(papers.scrollId, p.scrollId));
-
         if (parentComment?.isGenerated) {
-          // The user is replying to an AI comment — find the paper that the
-          // parent comment represents (by matching author name) and reply
-          // FROM THAT SAME paper's perspective (the comment's source defends
-          // its position).
+          // The user is replying to an AI comment — the commenter should
+          // defend their position, so reply as the same author.
+          // Try to find the matching paper for context.
+          const otherPapers = await db
+            .select()
+            .from(papers)
+            .where(eq(papers.scrollId, p.scrollId));
+
           const parentPaper = otherPapers.find((op) => {
             const authors = JSON.parse(op.authors) as string[];
             const authorName = authors[0] ? `${authors[0]} et al.` : op.title;
@@ -215,17 +213,24 @@ export async function POST(req: NextRequest) {
           if (parentPaper) {
             replyPaper = parentPaper;
           }
+
+          // Always use the parent comment's author name so the commenter replies
+          replyAuthor = parentComment.author;
         } else {
           // User is replying to a human comment on a paper post —
           // the post's own paper source should reply back
           replyPaper = p;
+          const parsedAuthors = JSON.parse(replyPaper.authors) as string[];
+          replyAuthor = parsedAuthors[0]
+            ? `${parsedAuthors[0]} et al.`
+            : replyPaper.title;
         }
+      } else {
+        const parsedAuthors = JSON.parse(replyPaper.authors) as string[];
+        replyAuthor = parsedAuthors[0]
+          ? `${parsedAuthors[0]} et al.`
+          : replyPaper.title;
       }
-
-      const parsedAuthors = JSON.parse(replyPaper.authors) as string[];
-      replyAuthor = parsedAuthors[0]
-        ? `${parsedAuthors[0]} et al.`
-        : replyPaper.title;
 
       if (resolvedUserPostId) {
         // Reply on a user post — use web search for context
@@ -271,11 +276,13 @@ export async function POST(req: NextRequest) {
           .where(eq(userPosts.id, resolvedUserPostId));
       } else {
         // Reply on a paper
+        const replyPaperAuthors = JSON.parse(replyPaper.authors) as string[];
         const replyContent = await generateReplyComment(
           {
             title: replyPaper.title,
             synthesis: replyPaper.synthesis,
-            authors: parsedAuthors,
+            authors: replyPaperAuthors,
+            doi: replyPaper.doi,
           },
           content,
           threadContext.length > 0 ? threadContext : undefined,

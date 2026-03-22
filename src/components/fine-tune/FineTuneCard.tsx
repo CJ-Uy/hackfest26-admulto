@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface FineTuneCardProps {
@@ -10,14 +9,12 @@ interface FineTuneCardProps {
     question: string;
     options: string[];
   };
-  index: number;
   onAnswer: (questionId: string, answer: string) => void;
   savedAnswer?: string;
 }
 
 export function FineTuneCard({
   question,
-  index,
   onAnswer,
   savedAnswer,
 }: FineTuneCardProps) {
@@ -25,47 +22,27 @@ export function FineTuneCard({
   const [otherText, setOtherText] = useState(
     savedAnswer && !question.options.includes(savedAnswer) ? savedAnswer : "",
   );
-  const [submitted, setSubmitted] = useState(!!savedAnswer);
 
   function handleSelect(option: string) {
-    if (submitted) return;
-    if (option === "Other") {
-      setSelected("Other");
+    setSelected(option);
+    if (option !== "Other") {
+      onAnswer(question.id, option);
     } else {
-      setSelected(option);
       setOtherText("");
     }
   }
 
-  function handleSubmit() {
-    const answer = selected === "Other" ? otherText.trim() : selected;
-    if (!answer) return;
-    setSubmitted(true);
-    onAnswer(question.id, answer);
+  function handleOtherSubmit() {
+    const trimmed = otherText.trim();
+    if (!trimmed) return;
+    onAnswer(question.id, trimmed);
   }
 
   return (
-    <div
-      className={cn(
-        "border-border rounded-xl border p-5 transition-all duration-300",
-        submitted ? "bg-muted/30 opacity-80" : "bg-background",
-      )}
-      style={{ animationDelay: `${index * 80}ms` }}
-    >
-      <div className="mb-1 flex items-center gap-2">
-        <span className="bg-primary/10 text-primary flex h-6 w-6 items-center justify-center rounded-full text-[12px] font-bold">
-          {index + 1}
-        </span>
-        {submitted && (
-          <span className="bg-primary/10 text-primary rounded-full px-2 py-0.5 text-[11px] font-semibold">
-            Answered
-          </span>
-        )}
-      </div>
-
-      <h4 className="text-foreground mb-3 text-[15px] font-semibold">
+    <div>
+      <p className="text-foreground mb-4 text-[15px] leading-snug font-semibold">
         {question.question}
-      </h4>
+      </p>
 
       <div className="space-y-2">
         {question.options.map((option) => {
@@ -76,52 +53,51 @@ export function FineTuneCard({
             <div key={option}>
               <button
                 onClick={() => handleSelect(option)}
-                disabled={submitted}
                 className={cn(
-                  "flex w-full items-center gap-3 rounded-lg border px-4 py-2.5 text-left text-[14px] transition-all",
+                  "group flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left text-[14px] transition-all duration-150",
                   isSelected
-                    ? "border-primary bg-primary/5 text-foreground font-medium"
-                    : "border-border hover:border-primary/30 hover:bg-primary/5 text-foreground",
-                  submitted && "cursor-default opacity-70",
+                    ? "border-primary/60 bg-primary/8 text-foreground font-medium shadow-sm"
+                    : "border-border/60 hover:border-primary/30 hover:bg-muted/40 text-foreground/80",
                 )}
               >
                 <div
                   className={cn(
-                    "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-all",
+                    "flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-full border-2 transition-all duration-150",
                     isSelected
                       ? "border-primary bg-primary"
-                      : "border-muted-foreground/40",
+                      : "border-muted-foreground/30 group-hover:border-primary/50",
                   )}
                 >
-                  {isSelected && <Check className="h-3 w-3 text-white" />}
+                  {isSelected && (
+                    <div className="h-1.5 w-1.5 rounded-full bg-white" />
+                  )}
                 </div>
                 <span>{option}</span>
               </button>
 
-              {/* Other text input */}
-              {isOther && isSelected && !submitted && (
-                <input
-                  value={otherText}
-                  onChange={(e) => setOtherText(e.target.value)}
-                  placeholder="Type your answer..."
-                  className="border-border text-foreground placeholder:text-muted-foreground focus:border-primary mt-2 ml-8 w-[calc(100%-2rem)] rounded-lg border bg-transparent px-3 py-2 text-[14px] outline-none"
-                  autoFocus
-                />
+              {isOther && isSelected && (
+                <div className="mt-2 ml-9 flex gap-2">
+                  <input
+                    value={otherText}
+                    onChange={(e) => setOtherText(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleOtherSubmit()}
+                    placeholder="Type your answer..."
+                    className="border-border text-foreground placeholder:text-muted-foreground focus:border-primary flex-1 rounded-lg border bg-transparent px-3 py-2 text-[13px] transition-colors outline-none"
+                    autoFocus
+                  />
+                  <button
+                    onClick={handleOtherSubmit}
+                    disabled={!otherText.trim()}
+                    className="bg-primary text-primary-foreground rounded-lg px-3 py-2 text-[13px] font-medium disabled:opacity-40"
+                  >
+                    OK
+                  </button>
+                </div>
               )}
             </div>
           );
         })}
       </div>
-
-      {!submitted && selected && (
-        <button
-          onClick={handleSubmit}
-          disabled={selected === "Other" && !otherText.trim()}
-          className="bg-primary text-primary-foreground hover:bg-primary/90 mt-4 rounded-lg px-4 py-2 text-[13px] font-semibold transition-colors disabled:opacity-40"
-        >
-          Confirm
-        </button>
-      )}
     </div>
   );
 }

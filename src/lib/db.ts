@@ -7,7 +7,9 @@ import * as schema from "./schema";
  * Uses TURSO_DATABASE_URL and TURSO_AUTH_TOKEN env vars.
  * Falls back to a local file-based SQLite for development when no URL is set.
  */
-function createDb() {
+type DbClient = ReturnType<typeof createDbClient>;
+
+function createDbClient() {
   const url = process.env.TURSO_DATABASE_URL;
   const authToken = process.env.TURSO_AUTH_TOKEN;
 
@@ -26,11 +28,15 @@ function createDb() {
 }
 
 const globalForDb = globalThis as unknown as {
-  db: ReturnType<typeof createDb> | undefined;
+  db: DbClient | undefined;
 };
 
-export const db = globalForDb.db ?? createDb();
-
-if (process.env.NODE_ENV !== "production") {
-  globalForDb.db = db;
-}
+/** Lazily-initialized DB client — avoids crashing during edge build when env vars are absent. */
+export const db = new Proxy({} as DbClient, {
+  get(_target, prop, receiver) {
+    if (!globalForDb.db) {
+      globalForDb.db = createDbClient();
+    }
+    return Reflect.get(globalForDb.db, prop, receiver);
+  },
+});

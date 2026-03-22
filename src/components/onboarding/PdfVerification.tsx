@@ -93,11 +93,11 @@ export function PdfVerification({
     const allCorrect = verification.questions.every(
       (q, i) => answers.get(i) === q.correctIndex,
     );
-    const allAnswered = verification.questions.every((_, i) =>
-      answers.has(i),
-    );
+    const allAnswered = verification.questions.every((_, i) => answers.has(i));
 
-    setResults((prev) => new Map(prev).set(currentKey, allAnswered && allCorrect));
+    setResults((prev) =>
+      new Map(prev).set(currentKey, allAnswered && allCorrect),
+    );
   }
 
   function handleNext() {

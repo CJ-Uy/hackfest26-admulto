@@ -3,6 +3,8 @@ import { scrolls } from "@/lib/schema";
 import { desc } from "drizzle-orm";
 import { HomeContent } from "@/components/home/HomeContent";
 
+export const dynamic = "force-dynamic";
+
 export default async function Home() {
   const allScrolls = await db
     .select({

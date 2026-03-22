@@ -43,6 +43,7 @@ export function RightSidebar({
   userPosts,
   scrollId,
 }: RightSidebarProps) {
+  const safeYourCommentCounts = yourCommentCounts ?? new Map<string, number>();
   const [showAllBookmarked, setShowAllBookmarked] = useState(false);
   const [voteTab, setVoteTab] = useState<"upvoted" | "downvoted">("upvoted");
 
@@ -117,7 +118,7 @@ export function RightSidebar({
         emptyText="No posts yet. Use the compose box or + button."
       >
         {userPosts.length > 0 && (
-          <div className="space-y-1">
+          <div className="divide-border/70 divide-y">
             {userPosts.slice(0, 5).map((post) => (
               <Link
                 key={post.id}
@@ -145,7 +146,7 @@ export function RightSidebar({
           title="Uploaded Files"
           emptyText=""
         >
-          <div className="space-y-1">
+          <div className="divide-border/70 divide-y">
             {scroll.pdfKeys.map((key) => {
               const filename = key.split("/").pop() || "document.pdf";
               return (
@@ -235,9 +236,9 @@ export function RightSidebar({
         title="Your Comments"
         emptyText="Click on a paper to leave comments."
       >
-        {yourCommentCounts.size > 0 && (
+        {safeYourCommentCounts.size > 0 && (
           <div className="space-y-1">
-            {Array.from(yourCommentCounts.entries()).map(([paperId, count]) => {
+            {Array.from(safeYourCommentCounts.entries()).map(([paperId, count]) => {
               const paper = papers.find((p) => p.id === paperId);
               if (!paper) return null;
               return (
@@ -285,10 +286,8 @@ export function RightSidebar({
       </div>
 
       {/* Desktop sidebar */}
-      <aside className="hidden w-[340px] shrink-0 lg:block">
-        <div className="sticky top-0 h-screen overflow-y-auto py-4">
-          {sidebarContent}
-        </div>
+      <aside className="no-scrollbar hidden w-[340px] shrink-0 lg:sticky lg:top-4 lg:block lg:max-h-[calc(100vh-32px)] lg:overflow-y-auto">
+        {sidebarContent}
       </aside>
     </>
   );
@@ -349,14 +348,14 @@ function PaperList({
   scrollId: string;
 }) {
   return (
-    <div className="space-y-1">
+    <div className="divide-border/70 divide-y">
       {papers.map((paper) => (
         <Link
           key={paper.id}
           href={`/schroll/${scrollId}/post/${paper.id}`}
           className="block rounded-md p-2 transition-colors hover:bg-subtle"
         >
-          <p className="text-foreground line-clamp-2 text-[14px] leading-snug font-medium">
+          <p className="text-foreground line-clamp-2 text-[14px] leading-snug font-bold">
             {paper.title}
           </p>
           <p className="text-muted-foreground mt-0.5 text-[13px]">

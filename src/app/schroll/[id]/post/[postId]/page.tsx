@@ -6,7 +6,10 @@ import { Sidebar } from "@/components/shared/Sidebar";
 import { RightSidebar } from "@/components/shared/RightSidebar";
 import { PostDetail } from "@/components/detail/PostDetail";
 import { fetchScroll } from "@/lib/scroll-store";
-import { DetailSkeleton } from "@/components/shared/LoadingSkeleton";
+import {
+  PostDetailSkeleton,
+  RightSidebarSkeleton,
+} from "@/components/shared/LoadingSkeleton";
 import type { Paper, ScrollSession, UserPost } from "@/lib/types";
 
 export default function PostPage() {
@@ -30,7 +33,9 @@ export default function PostPage() {
   const [bookmarkedPapers, setBookmarkedPapers] = useState<Set<string>>(
     new Set(),
   );
-  const [commentCounts] = useState<Map<string, number>>(new Map());
+  const [yourCommentCounts, setYourCommentCounts] = useState<
+    Map<string, number>
+  >(new Map());
 
   // Primary fetch: single paper only
   useEffect(() => {
@@ -45,7 +50,12 @@ export default function PostPage() {
         }
         const data = (await res.json()) as {
           paper: Paper;
-          scrollPapers: { id: string; title: string; authors: string[]; doi: string }[];
+          scrollPapers: {
+            id: string;
+            title: string;
+            authors: string[];
+            doi: string;
+          }[];
         };
         if (cancelled) return;
         setPaper(data.paper);
@@ -67,8 +77,20 @@ export default function PostPage() {
     let cancelled = false;
 
     async function loadSidebar() {
-      const stored = await fetchScroll(scrollId);
-      if (cancelled || !stored) return;
+      const [stored, countRes] = await Promise.all([
+        fetchScroll(scrollId),
+        fetch(`/api/comments/counts?scrollId=${scrollId}&onlyMine=true`),
+      ]);
+
+      if (cancelled) return;
+
+      if (countRes.ok) {
+        const counts: Record<string, number> = await countRes.json();
+        setYourCommentCounts(new Map(Object.entries(counts)));
+      }
+
+      if (!stored) return;
+
       setScroll(stored.scroll);
       setAllPapers(stored.papers);
       setUserPosts(stored.userPosts || []);
@@ -97,8 +119,9 @@ export default function PostPage() {
         <Sidebar />
         <div className="flex min-w-0 flex-1 justify-center gap-0 lg:gap-6 lg:px-6 lg:py-4">
           <main className="bg-background w-full min-w-0 max-w-[780px] flex-1 lg:rounded-t-lg">
-            <DetailSkeleton />
+            <PostDetailSkeleton />
           </main>
+          <RightSidebarSkeleton />
         </div>
       </div>
     );
@@ -128,17 +151,19 @@ export default function PostPage() {
           />
         </main>
 
-        {scroll && (
+        {scroll ? (
           <RightSidebar
             scroll={scroll}
             papers={allPapers}
             upvotedPapers={upvotedPapers}
             downvotedPapers={downvotedPapers}
             bookmarkedPapers={bookmarkedPapers}
-            yourCommentCounts={commentCounts}
+            yourCommentCounts={yourCommentCounts}
             userPosts={userPosts}
             scrollId={scrollId}
           />
+        ) : (
+          <RightSidebarSkeleton />
         )}
       </div>
     </div>

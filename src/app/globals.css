@@ -64,7 +64,7 @@
   --card-foreground: #1a1a1b;
   --popover: #ffffff;
   --popover-foreground: #1a1a1b;
-  --primary: #2B4AC7;
+  --primary: #2b4ac7;
   --primary-foreground: #ffffff;
   --secondary: #f6f7f8;
   --secondary-foreground: #1a1a1b;
@@ -75,21 +75,21 @@
   --destructive: #ff4500;
   --border: #edeff1;
   --input: #edeff1;
-  --ring: #2B4AC7;
-  --chart-1: #2B4AC7;
+  --ring: #2b4ac7;
+  --chart-1: #2b4ac7;
   --chart-2: #ff4500;
   --chart-3: #46d160;
   --chart-4: #ffd635;
-  --chart-5: #8BA3E8;
+  --chart-5: #8ba3e8;
   --radius: 0.5rem;
   --sidebar: #f6f7f8;
   --sidebar-foreground: #1a1a1b;
-  --sidebar-primary: #2B4AC7;
+  --sidebar-primary: #2b4ac7;
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #ebedf0;
   --sidebar-accent-foreground: #1a1a1b;
   --sidebar-border: #edeff1;
-  --sidebar-ring: #2B4AC7;
+  --sidebar-ring: #2b4ac7;
   --page-bg: #dae0e6;
   --subtle: #f6f7f8;
   --subtle-hover: #ebedf0;
@@ -198,4 +198,14 @@
 
 .animate-shimmer {
   animation: shimmer 2s ease-in-out infinite;
+}
+
+/* Hide scrollbar while keeping element scrollable */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }

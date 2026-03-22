@@ -296,12 +296,19 @@ export function CardActions({
             disabled={generatingComments}
             aria-label="Generate AI comments"
             className={cn(
-              "text-muted-foreground flex items-center gap-1.5 rounded-full bg-subtle px-3.5 py-1.5 text-[14px] font-bold transition-colors hover:bg-subtle-hover",
-              generatingComments && "opacity-50",
+              "text-muted-foreground relative flex items-center gap-1.5 overflow-hidden rounded-full bg-subtle px-3.5 py-1.5 text-[14px] font-bold transition-colors hover:bg-subtle-hover",
             )}
           >
+            {generatingComments && (
+              <span className="bg-primary/20 absolute inset-x-0 bottom-0 h-0.75 overflow-hidden rounded-full">
+                <span className="bg-primary absolute inset-y-0 w-1/3 animate-[shimmer_1.2s_ease-in-out_infinite] rounded-full" />
+              </span>
+            )}
             <Sparkles
-              className={cn("h-4 w-4", generatingComments && "animate-spin")}
+              className={cn(
+                "h-4 w-4 transition-colors",
+                generatingComments && "text-primary animate-pulse",
+              )}
             />
           </button>
         )}

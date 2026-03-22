@@ -91,8 +91,8 @@ export function PaperCard({
       {/* Reply notification badge */}
       {hasReplyNotif && (
         <div className="mt-1.5 flex items-center gap-1.5 rounded-md bg-blue-50 px-2.5 py-1.5 text-[12px] font-medium text-blue-600">
-          <MessageCircleReply className="h-3.5 w-3.5" />
-          A researcher replied to your comment
+          <MessageCircleReply className="h-3.5 w-3.5" />A researcher replied to
+          your comment
         </div>
       )}
 

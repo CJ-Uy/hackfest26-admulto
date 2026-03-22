@@ -591,6 +591,7 @@ export async function POST(req: Request) {
                     authors: o.authors,
                     year: o.year,
                     citationCount: o.citationCount,
+                    doi: o.doi,
                   })),
                   3,
                 );
