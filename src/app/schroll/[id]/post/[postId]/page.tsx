@@ -50,7 +50,12 @@ export default function PostPage() {
         }
         const data = (await res.json()) as {
           paper: Paper;
-          scrollPapers: { id: string; title: string; authors: string[]; doi: string }[];
+          scrollPapers: {
+            id: string;
+            title: string;
+            authors: string[];
+            doi: string;
+          }[];
         };
         if (cancelled) return;
         setPaper(data.paper);

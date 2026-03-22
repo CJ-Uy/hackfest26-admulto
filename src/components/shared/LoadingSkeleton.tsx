@@ -119,7 +119,10 @@ export function RightSidebarSkeleton() {
       <div className="sticky top-0 h-screen overflow-y-auto py-4">
         <div className="space-y-3">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="border-border bg-background rounded-lg border p-3.5">
+            <div
+              key={i}
+              className="border-border bg-background rounded-lg border p-3.5"
+            >
               <Skeleton className="mb-3 h-4 w-28" />
               <div className="space-y-2">
                 <Skeleton className="h-4 w-full" />

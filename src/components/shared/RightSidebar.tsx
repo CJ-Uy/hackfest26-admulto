@@ -238,24 +238,26 @@ export function RightSidebar({
       >
         {safeYourCommentCounts.size > 0 && (
           <div className="space-y-1">
-            {Array.from(safeYourCommentCounts.entries()).map(([paperId, count]) => {
-              const paper = papers.find((p) => p.id === paperId);
-              if (!paper) return null;
-              return (
-                <Link
-                  key={paperId}
-                  href={`/schroll/${scrollId}/post/${paperId}`}
-                  className="block rounded-md p-2 transition-colors hover:bg-[#f6f7f8]"
-                >
-                  <p className="text-foreground line-clamp-1 text-[14px] font-medium">
-                    {paper.title}
-                  </p>
-                  <p className="text-muted-foreground text-[13px]">
-                    {count} {count === 1 ? "comment" : "comments"}
-                  </p>
-                </Link>
-              );
-            })}
+            {Array.from(safeYourCommentCounts.entries()).map(
+              ([paperId, count]) => {
+                const paper = papers.find((p) => p.id === paperId);
+                if (!paper) return null;
+                return (
+                  <Link
+                    key={paperId}
+                    href={`/schroll/${scrollId}/post/${paperId}`}
+                    className="block rounded-md p-2 transition-colors hover:bg-[#f6f7f8]"
+                  >
+                    <p className="text-foreground line-clamp-1 text-[14px] font-medium">
+                      {paper.title}
+                    </p>
+                    <p className="text-muted-foreground text-[13px]">
+                      {count} {count === 1 ? "comment" : "comments"}
+                    </p>
+                  </Link>
+                );
+              },
+            )}
           </div>
         )}
       </SidebarSection>

@@ -49,16 +49,19 @@ function ScrollPageInner() {
   const [polls, setPolls] = useState<Poll[]>([]);
   const [searchQuery, setSearchQuery] = useState(searchParams.get("q") ?? "");
 
-  const handleSearchChange = useCallback((value: string) => {
-    setSearchQuery(value);
-    const params = new URLSearchParams(searchParams.toString());
-    if (value) {
-      params.set("q", value);
-    } else {
-      params.delete("q");
-    }
-    router.replace(`?${params.toString()}`, { scroll: false });
-  }, [searchParams, router]);
+  const handleSearchChange = useCallback(
+    (value: string) => {
+      setSearchQuery(value);
+      const params = new URLSearchParams(searchParams.toString());
+      if (value) {
+        params.set("q", value);
+      } else {
+        params.delete("q");
+      }
+      router.replace(`?${params.toString()}`, { scroll: false });
+    },
+    [searchParams, router],
+  );
   const [upvotedPapers, setUpvotedPapers] = useState<Set<string>>(new Set());
   const [downvotedPapers, setDownvotedPapers] = useState<Set<string>>(
     new Set(),
