@@ -1,32 +1,28 @@
-import { drizzle as drizzleLibsql } from "drizzle-orm/libsql";
-import { drizzle as drizzleWeb } from "drizzle-orm/libsql/web";
+import { createClient } from "@libsql/client/web";
+import { drizzle } from "drizzle-orm/libsql/web";
 import * as schema from "./schema";
 
 /**
  * Creates a Drizzle ORM database client connected to Turso via libSQL.
  *
  * Uses TURSO_DATABASE_URL and TURSO_AUTH_TOKEN env vars.
- * Falls back to a local file-based SQLite for development when no URL is set.
  * In production (Cloudflare Workers), uses the web/HTTP client.
+ * For local dev without TURSO_DATABASE_URL, throws an error.
  */
-type DbClient = ReturnType<typeof drizzleWeb<typeof schema>>;
+type DbClient = ReturnType<typeof drizzle<typeof schema>>;
 
 function createDbClient(): DbClient {
   const url = process.env.TURSO_DATABASE_URL;
   const authToken = process.env.TURSO_AUTH_TOKEN;
 
   if (!url) {
-    // Local dev fallback — file-based SQLite
-    return drizzleLibsql({
-      connection: "file:./local.db",
-      schema,
-    }) as unknown as DbClient;
+    throw new Error(
+      "TURSO_DATABASE_URL is not set. Set it in .env for local dev or as a Cloudflare secret for production.",
+    );
   }
 
-  return drizzleWeb({
-    connection: { url, authToken },
-    schema,
-  }) as unknown as DbClient;
+  const client = createClient({ url, authToken });
+  return drizzle(client, { schema }) as unknown as DbClient;
 }
 
 const globalForDb = globalThis as unknown as {
