@@ -257,9 +257,7 @@ export function FineTuneView({ scrollId, onRegenerated }: FineTuneViewProps) {
   const totalQuestions = questions.length;
   const allAnswered = answeredCount >= totalQuestions && totalQuestions > 0;
   const currentQuestion = questions[currentIndex];
-  const canGoNext = currentQuestion
-    ? answers.has(currentQuestion.id)
-    : false;
+  const canGoNext = currentQuestion ? answers.has(currentQuestion.id) : false;
 
   if (loading) {
     return (
@@ -400,7 +398,8 @@ export function FineTuneView({ scrollId, onRegenerated }: FineTuneViewProps) {
           </h3>
         </div>
         <p className="text-muted-foreground text-[12px] leading-relaxed">
-          Select an answer to auto-advance. Your upvoted and saved posts will be preserved.
+          Select an answer to auto-advance. Your upvoted and saved posts will be
+          preserved.
         </p>
       </div>
 
@@ -409,7 +408,9 @@ export function FineTuneView({ scrollId, onRegenerated }: FineTuneViewProps) {
         <div className="bg-muted h-1.5 flex-1 overflow-hidden rounded-full">
           <div
             className="bg-primary h-full rounded-full transition-all duration-500 ease-out"
-            style={{ width: `${((currentIndex + (answers.has(currentQuestion?.id ?? "") ? 1 : 0)) / totalQuestions) * 100}%` }}
+            style={{
+              width: `${((currentIndex + (answers.has(currentQuestion?.id ?? "") ? 1 : 0)) / totalQuestions) * 100}%`,
+            }}
           />
         </div>
         <span className="text-muted-foreground shrink-0 text-[11px] tabular-nums">
@@ -445,7 +446,9 @@ export function FineTuneView({ scrollId, onRegenerated }: FineTuneViewProps) {
               <Button
                 size="sm"
                 variant={canGoNext ? "default" : "outline"}
-                onClick={() => setCurrentIndex((i) => Math.min(totalQuestions - 1, i + 1))}
+                onClick={() =>
+                  setCurrentIndex((i) => Math.min(totalQuestions - 1, i + 1))
+                }
                 disabled={!canGoNext}
                 className="text-[13px]"
               >

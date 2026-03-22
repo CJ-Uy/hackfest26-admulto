@@ -57,6 +57,7 @@ export async function POST(
         authors: JSON.parse(p.authors) as string[],
         year: p.year,
         citationCount: p.citationCount,
+        doi: p.doi,
       }));
 
     // Shuffle and pick 1-2 commenters for variety
@@ -96,6 +97,7 @@ export async function POST(
           authors: JSON.parse(p.authors) as string[],
           year: p.year,
           citationCount: p.citationCount,
+          doi: p.doi,
         }));
 
       const newComments = await generateSocialComments(

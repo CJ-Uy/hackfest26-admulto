@@ -17,7 +17,12 @@ import type { ExportTheme, Paper } from "@/lib/types";
 
 type ExportMode = "references" | "with-summaries" | "themed";
 
-const MODES: { value: ExportMode; label: string; desc: string; icon: typeof List }[] = [
+const MODES: {
+  value: ExportMode;
+  label: string;
+  desc: string;
+  icon: typeof List;
+}[] = [
   {
     value: "references",
     label: "Reference List",
@@ -264,9 +269,7 @@ export function ExportView({ scrollId, papers }: ExportViewProps) {
       {/* Generate AI summaries button (if needed) */}
       {needsGeneration && (
         <button
-          onClick={() =>
-            handleGenerateAI(mode as "with-summaries" | "themed")
-          }
+          onClick={() => handleGenerateAI(mode as "with-summaries" | "themed")}
           disabled={generatingAI}
           className="text-primary hover:bg-primary/5 border-primary mb-4 flex w-full items-center justify-center gap-2 rounded-lg border px-4 py-3 text-sm font-semibold transition-colors disabled:opacity-50"
         >

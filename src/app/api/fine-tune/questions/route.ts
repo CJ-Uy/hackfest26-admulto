@@ -37,7 +37,12 @@ function fallbackFineTuneQuestions(topic: string): FineTuneQuestion[] {
     },
     {
       question: "Which publication window matters most to you?",
-      options: ["Last 2 years", "Last 5 years", "Seminal classics", "No preference"],
+      options: [
+        "Last 2 years",
+        "Last 5 years",
+        "Seminal classics",
+        "No preference",
+      ],
     },
     {
       question: "What format is most helpful for your workflow?",
@@ -76,9 +81,7 @@ function normalizeQuestions(
   const merged = [...cleaned];
   for (const fq of fallback) {
     if (
-      merged.some(
-        (q) => q.question.toLowerCase() === fq.question.toLowerCase(),
-      )
+      merged.some((q) => q.question.toLowerCase() === fq.question.toLowerCase())
     ) {
       continue;
     }

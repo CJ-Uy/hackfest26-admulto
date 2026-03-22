@@ -246,7 +246,6 @@ export function TopicForm({ initialTopic }: TopicFormProps) {
   }
 
   async function doGenerate(topic: string | undefined) {
-
     try {
       const pdfKeys = pdfEnabled ? doneFiles.map((f) => f.key) : undefined;
 

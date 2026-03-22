@@ -126,6 +126,7 @@ export async function POST(req: NextRequest) {
           title: p.title,
           synthesis: p.synthesis,
           authors: JSON.parse(p.authors) as string[],
+          doi: p.doi,
         }));
 
         aiComments = await generatePostComments(

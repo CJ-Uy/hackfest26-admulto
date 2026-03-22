@@ -203,7 +203,12 @@ Rules:
  * Generate a reply to a user's comment from a paper's perspective.
  */
 export async function generateReplyComment(
-  paperContext: { title: string; synthesis: string; authors: string[] },
+  paperContext: {
+    title: string;
+    synthesis: string;
+    authors: string[];
+    doi?: string;
+  },
   userComment: string,
   threadContext?: string[],
 ): Promise<string> {
@@ -220,7 +225,8 @@ CRITICAL RULES:
 - ONLY mention facts, findings, or claims that appear in YOUR PAPER'S SUMMARY below. Do NOT invent results, statistics, or methodologies.
 - If the comment asks about something your paper doesn't cover, say so honestly.
 - Keep it to 1-3 sentences. Sound like a real person, not a formal academic.
-- Do NOT use markdown formatting.`,
+- Do NOT use markdown formatting.
+- Do NOT include any URLs or links.`,
     `YOUR PAPER'S SUMMARY (this is the ONLY information you can reference about your work):\n${paperContext.synthesis}${threadStr}\n\nThe reader's comment: "${userComment}"\n\nReply to them using ONLY facts from your summary:`,
     SMART_MODEL,
   );
@@ -231,13 +237,18 @@ CRITICAL RULES:
  */
 export async function generatePostComments(
   postContent: string,
-  papers: Array<{ title: string; synthesis: string; authors: string[] }>,
+  papers: Array<{
+    title: string;
+    synthesis: string;
+    authors: string[];
+    doi?: string;
+  }>,
   topic: string,
 ): Promise<Array<{ author: string; content: string; relationship: string }>> {
   if (papers.length === 0) return [];
 
-  const paperList = papers
-    .slice(0, 3)
+  const selectedPapers = papers.slice(0, 3);
+  const paperList = selectedPapers
     .map(
       (p, i) =>
         `[Paper ${i + 1}] "${p.title}" by ${p.authors.slice(0, 2).join(", ")}\nSummary: ${p.synthesis}`,
@@ -251,6 +262,7 @@ These researchers want to respond:
 ${paperList}
 
 For each researcher, write a SHORT (1-2 sentence) response to the user's post from their research perspective. They should engage with the user's point and reference their own work naturally.
+Do NOT include any URLs or links in your response text — links are added automatically.
 
 RESPOND ONLY with valid JSON array, no markdown:
 [
@@ -310,6 +322,7 @@ Generate 2-3 SHORT (1-2 sentence) responses from knowledgeable researchers. Each
 - Reference specific findings from the sources above
 - Engage directly with the user's point
 - Sound like a real person casually discussing on social media
+- Do NOT include any URLs or links in your response text — links are added automatically.
 
 RESPOND ONLY with valid JSON array, no markdown:
 [
@@ -603,6 +616,7 @@ export async function generateSocialComments(
     authors: string[];
     year: number;
     citationCount: number;
+    doi?: string;
   }>,
   maxComments = 3,
 ): Promise<GeneratedComment[]> {
@@ -633,6 +647,7 @@ For each commenter, write a SHORT (1-2 sentence) social-media-style comment reac
 - Show genuine academic interaction: agreeing, respectfully disagreeing, asking questions, noting they cited this work, or explaining how they extended it
 - Sound like real researchers casually discussing on social media, NOT formal peer review
 - Be specific about HOW the papers relate, using ONLY information from the summaries provided
+- Do NOT include any URLs or links in your comment text — links are added automatically.
 
 RESPOND ONLY with valid JSON array, no markdown:
 [

@@ -40,7 +40,7 @@ export function FineTuneCard({
 
   return (
     <div>
-      <p className="text-foreground mb-4 text-[15px] font-semibold leading-snug">
+      <p className="text-foreground mb-4 text-[15px] leading-snug font-semibold">
         {question.question}
       </p>
 
@@ -82,7 +82,7 @@ export function FineTuneCard({
                     onChange={(e) => setOtherText(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleOtherSubmit()}
                     placeholder="Type your answer..."
-                    className="border-border text-foreground placeholder:text-muted-foreground focus:border-primary flex-1 rounded-lg border bg-transparent px-3 py-2 text-[13px] outline-none transition-colors"
+                    className="border-border text-foreground placeholder:text-muted-foreground focus:border-primary flex-1 rounded-lg border bg-transparent px-3 py-2 text-[13px] transition-colors outline-none"
                     autoFocus
                   />
                   <button

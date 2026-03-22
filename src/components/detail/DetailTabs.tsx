@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+
 import { useCommentStream } from "@/hooks/useCommentStream";
 import type { Comment } from "@/lib/types";
 
@@ -189,11 +190,7 @@ function InlineReplyInput({
           disabled={!content.trim() || loading}
           className="text-primary text-[13px] font-semibold disabled:opacity-30"
         >
-          {loading ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          ) : (
-            "Reply"
-          )}
+          {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Reply"}
         </button>
         <button
           onClick={onCancel}
@@ -404,11 +401,12 @@ export function DetailTabs({
       <div key={c.id}>
         {/* Comment with left border for threading */}
         <div
-          className={cn(
-            "border-border/50 py-3",
-            depth > 0 && "border-l-2",
-          )}
-          style={depth > 0 ? { paddingLeft: `${Math.min(depth, 5) * 1.25}rem` } : undefined}
+          className={cn("border-border/50 py-3", depth > 0 && "border-l-2")}
+          style={
+            depth > 0
+              ? { paddingLeft: `${Math.min(depth, 5) * 1.25}rem` }
+              : undefined
+          }
         >
           {/* Author row */}
           <div className="mb-1.5 flex items-center gap-2">
@@ -452,31 +450,13 @@ export function DetailTabs({
             </div>
           </div>
 
-          {/* Source paper link */}
-          {sourcePaper && sourceDoiUrl && (
-            <div className="mb-1.5 ml-8">
-              <a
-                href={sourceDoiUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-muted-foreground hover:text-primary inline-flex items-center gap-1 text-[11px] transition-colors"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <ExternalLink className="h-2.5 w-2.5" />
-                {sourcePaper.title.length > 60
-                  ? sourcePaper.title.slice(0, 60) + "..."
-                  : sourcePaper.title}
-              </a>
-            </div>
-          )}
-
           {/* Content */}
           <p className="text-foreground ml-8 text-[14px] leading-relaxed">
             {c.content}
           </p>
 
           {/* Actions */}
-          <div className="ml-8 mt-1.5 flex items-center gap-1">
+          <div className="mt-1.5 ml-8 flex items-center gap-1">
             <button
               onClick={() => setReplyingTo(c.id)}
               className="text-muted-foreground hover:text-primary flex items-center gap-1 rounded px-2 py-0.5 text-[12px] font-medium transition-colors hover:bg-[#f6f7f8]"
@@ -484,6 +464,19 @@ export function DetailTabs({
               <Reply className="h-3 w-3" />
               Reply
             </button>
+            {sourceDoiUrl && (
+              <a
+                href={sourceDoiUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-muted-foreground hover:text-primary flex items-center gap-1 rounded px-2 py-0.5 text-[12px] font-medium transition-colors hover:bg-[#f6f7f8]"
+                onClick={(e) => e.stopPropagation()}
+                title={sourcePaper?.title || "View source"}
+              >
+                <ExternalLink className="h-3 w-3" />
+                Source
+              </a>
+            )}
             <button
               onClick={() => handleDeleteComment(c.id)}
               className="text-muted-foreground flex items-center gap-1 rounded px-2 py-0.5 text-[12px] font-medium transition-colors hover:bg-red-50 hover:text-red-500"

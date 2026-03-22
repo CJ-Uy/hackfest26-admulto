@@ -399,7 +399,7 @@ function ScrollPageInner() {
               <Skeleton className="h-4 w-full" />
             </div>
 
-            <div className="bg-background sticky top-4 z-30 border-border border-b">
+            <div className="bg-background border-border sticky top-4 z-30 border-b">
               <div className="bg-background pointer-events-none absolute -top-4 right-0 left-0 h-4" />
               <div className="relative">
                 <div className="px-4 py-2 pt-14 md:pt-2">
@@ -435,7 +435,7 @@ function ScrollPageInner() {
         <main className="bg-background w-full max-w-[780px] flex-1 lg:rounded-t-lg">
           <ScrollHeader scroll={scroll} />
           {/* Sticky top section: search + tabs */}
-          <div className="bg-background sticky top-4 z-30 border-border border-b">
+          <div className="bg-background border-border sticky top-4 z-30 border-b">
             <div className="bg-background pointer-events-none absolute -top-4 right-0 left-0 h-4" />
             <div className="relative">
               <SearchBar value={searchQuery} onChange={handleSearchChange} />

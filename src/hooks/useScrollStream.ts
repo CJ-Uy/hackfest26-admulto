@@ -101,7 +101,9 @@ export function useScrollStream({
           retryCountRef.current += 1;
           retryTimerRef.current = setTimeout(connect, delay);
         } else {
-          onErrorRef.current?.({ message: "Connection lost. Please refresh the page." });
+          onErrorRef.current?.({
+            message: "Connection lost. Please refresh the page.",
+          });
           retryCountRef.current = 0;
         }
       });

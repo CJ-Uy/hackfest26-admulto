@@ -14,20 +14,34 @@ export async function GET(
 
   const stream = new ReadableStream({
     async start(controller) {
+      let closed = false;
+
       function send(event: string, data: unknown) {
-        controller.enqueue(
-          encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`),
-        );
+        if (closed) return;
+        try {
+          controller.enqueue(
+            encoder.encode(
+              `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`,
+            ),
+          );
+        } catch {
+          // Controller already closed
+          closed = true;
+        }
       }
 
       // Track the latest comment timestamp we've seen
       // Use SQLite datetime format (space separator) to match datetime('now') in schema
-      let lastSeen = new Date().toISOString().replace("T", " ").replace("Z", "");
+      let lastSeen = new Date()
+        .toISOString()
+        .replace("T", " ")
+        .replace("Z", "");
 
       // On first connect, send a heartbeat so the client knows we're alive
       send("connected", { scrollId });
 
       const poll = async () => {
+        if (closed) return;
         try {
           // Find new comments on papers belonging to this scroll
           const newComments = await db
@@ -66,7 +80,9 @@ export async function GET(
             }
           }
         } catch (err) {
-          console.error("Comment stream poll error:", err);
+          if (!closed) {
+            console.error("Comment stream poll error:", err);
+          }
         }
       };
 
@@ -77,6 +93,7 @@ export async function GET(
       setTimeout(
         () => {
           clearInterval(interval);
+          closed = true;
           try {
             send("timeout", { message: "Stream timeout" });
             controller.close();
