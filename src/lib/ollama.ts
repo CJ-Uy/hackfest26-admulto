@@ -20,6 +20,52 @@ export function getSmartModel() {
   return SMART_MODEL;
 }
 
+function extractJsonArrayCandidate(raw: string): unknown[] | null {
+  const trimmed = raw.trim();
+  const candidates: string[] = [];
+
+  // Raw response may already be JSON.
+  if (trimmed) candidates.push(trimmed);
+
+  // Support fenced output like ```json ... ```.
+  const fenceMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fenceMatch?.[1]) {
+    candidates.push(fenceMatch[1].trim());
+  }
+
+  // Extract bracketed array payload.
+  const firstBracket = trimmed.indexOf("[");
+  const lastBracket = trimmed.lastIndexOf("]");
+  if (firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket) {
+    candidates.push(trimmed.slice(firstBracket, lastBracket + 1));
+  }
+
+  // Some models wrap arrays as { "questions": [...] }.
+  const firstBrace = trimmed.indexOf("{");
+  const lastBrace = trimmed.lastIndexOf("}");
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    candidates.push(trimmed.slice(firstBrace, lastBrace + 1));
+  }
+
+  for (const candidate of candidates) {
+    try {
+      const parsed = JSON.parse(candidate) as unknown;
+      if (Array.isArray(parsed)) return parsed;
+      if (
+        parsed &&
+        typeof parsed === "object" &&
+        Array.isArray((parsed as { questions?: unknown[] }).questions)
+      ) {
+        return (parsed as { questions: unknown[] }).questions;
+      }
+    } catch {
+      // Keep trying the next candidate.
+    }
+  }
+
+  return null;
+}
+
 async function ollamaChat(
   systemPrompt: string,
   userPrompt: string,
@@ -356,14 +402,26 @@ RESPOND ONLY with valid JSON array, no markdown:
       SMART_MODEL,
     );
 
-    const jsonMatch = raw.match(/\[[\s\S]*\]/);
-    if (!jsonMatch) return [];
+    const parsed = extractJsonArrayCandidate(raw);
+    if (!parsed) {
+      return [];
+    }
 
-    const parsed = JSON.parse(jsonMatch[0]) as Array<{
-      question: string;
-      options: string[];
-    }>;
-    return parsed.filter((q) => q.question && q.options?.length >= 2);
+    return (parsed as Array<{ question?: unknown; options?: unknown }>)
+      .filter(
+        (q) =>
+          typeof q.question === "string" &&
+          Array.isArray(q.options) &&
+          q.options.length >= 2,
+      )
+      .map((q) => ({
+        question: (q.question as string).trim(),
+        options: (q.options as unknown[])
+          .filter((opt): opt is string => typeof opt === "string")
+          .map((opt) => opt.trim())
+          .filter(Boolean),
+      }))
+      .filter((q) => q.question && q.options.length >= 2);
   } catch (err) {
     console.error("Failed to generate fine-tune questions:", err);
     return [];

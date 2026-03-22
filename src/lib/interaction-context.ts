@@ -74,7 +74,13 @@ export async function gatherInteractionContext(
     })
     .from(comments)
     .innerJoin(papers, eq(comments.paperId, papers.id))
-    .where(and(eq(papers.scrollId, scrollId), eq(comments.isGenerated, false)));
+    .where(
+      and(
+        eq(papers.scrollId, scrollId),
+        eq(comments.isGenerated, false),
+        eq(comments.author, "You"),
+      ),
+    );
 
   const commentedMap = new Map<
     string,

@@ -28,7 +28,7 @@ interface RightSidebarProps {
   upvotedPapers: Set<string>;
   downvotedPapers: Set<string>;
   bookmarkedPapers: Set<string>;
-  commentCounts: Map<string, number>;
+  yourCommentCounts: Map<string, number>;
   userPosts: UserPost[];
   scrollId: string;
 }
@@ -39,7 +39,7 @@ export function RightSidebar({
   upvotedPapers,
   downvotedPapers,
   bookmarkedPapers,
-  commentCounts,
+  yourCommentCounts,
   userPosts,
   scrollId,
 }: RightSidebarProps) {
@@ -235,9 +235,9 @@ export function RightSidebar({
         title="Your Comments"
         emptyText="Click on a paper to leave comments."
       >
-        {commentCounts.size > 0 && (
+        {yourCommentCounts.size > 0 && (
           <div className="space-y-1">
-            {Array.from(commentCounts.entries()).map(([paperId, count]) => {
+            {Array.from(yourCommentCounts.entries()).map(([paperId, count]) => {
               const paper = papers.find((p) => p.id === paperId);
               if (!paper) return null;
               return (

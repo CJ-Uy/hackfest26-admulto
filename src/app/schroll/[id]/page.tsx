@@ -66,6 +66,9 @@ function ScrollPageInner() {
   const [commentCounts, setCommentCounts] = useState<Map<string, number>>(
     new Map(),
   );
+  const [yourCommentCounts, setYourCommentCounts] = useState<
+    Map<string, number>
+  >(new Map());
   const [userPosts, setUserPosts] = useState<UserPost[]>([]);
   const [generatingPostIds, setGeneratingPostIds] = useState<Set<string>>(
     new Set(),
@@ -86,6 +89,20 @@ function ScrollPageInner() {
       if (res.ok) {
         const counts: Record<string, number> = await res.json();
         setCommentCounts(new Map(Object.entries(counts)));
+      }
+    } catch {
+      // ignore
+    }
+  }, [scrollId]);
+
+  const fetchYourCommentCounts = useCallback(async () => {
+    try {
+      const res = await fetch(
+        `/api/comments/counts?scrollId=${scrollId}&onlyMine=true`,
+      );
+      if (res.ok) {
+        const counts: Record<string, number> = await res.json();
+        setYourCommentCounts(new Map(Object.entries(counts)));
       }
     } catch {
       // ignore
@@ -120,10 +137,11 @@ function ScrollPageInner() {
 
     load();
     fetchCommentCounts();
+    fetchYourCommentCounts();
     return () => {
       cancelled = true;
     };
-  }, [scrollId, fetchCommentCounts]);
+  }, [scrollId, fetchCommentCounts, fetchYourCommentCounts]);
 
   // Helper to reload full scroll data from the API
   const reloadScroll = useCallback(async () => {
@@ -146,7 +164,8 @@ function ScrollPageInner() {
       setBookmarkedPapers(saved);
     }
     fetchCommentCounts();
-  }, [scrollId, fetchCommentCounts]);
+    fetchYourCommentCounts();
+  }, [scrollId, fetchCommentCounts, fetchYourCommentCounts]);
 
   // Live SSE stream for initial feed generation
   useScrollStream({
@@ -172,6 +191,16 @@ function ScrollPageInner() {
         next.set(key, (next.get(key) || 0) + 1);
         return next;
       });
+
+      // Track only user-authored comments for the right sidebar section.
+      if (!comment.isGenerated && comment.author === "You") {
+        setYourCommentCounts((prev) => {
+          const next = new Map(prev);
+          next.set(key, (next.get(key) || 0) + 1);
+          return next;
+        });
+      }
+
       // Track new comments for notification dots
       const notifKey = comment.userPostId
         ? `post:${comment.userPostId}`
@@ -216,10 +245,12 @@ function ScrollPageInner() {
     function handleVisibility() {
       if (document.visibilityState === "visible") {
         fetchCommentCounts();
+        fetchYourCommentCounts();
       }
     }
     function handleFocus() {
       fetchCommentCounts();
+      fetchYourCommentCounts();
     }
     document.addEventListener("visibilitychange", handleVisibility);
     window.addEventListener("focus", handleFocus);
@@ -227,7 +258,7 @@ function ScrollPageInner() {
       document.removeEventListener("visibilitychange", handleVisibility);
       window.removeEventListener("focus", handleFocus);
     };
-  }, [fetchCommentCounts]);
+  }, [fetchCommentCounts, fetchYourCommentCounts]);
 
   const handleUpvote = useCallback((paperId: string, voted: boolean) => {
     setUpvotedPapers((prev) => {
@@ -261,6 +292,12 @@ function ScrollPageInner() {
 
   const handleComment = useCallback((paperId: string) => {
     setCommentCounts((prev) => {
+      const next = new Map(prev);
+      next.set(paperId, (next.get(paperId) || 0) + 1);
+      return next;
+    });
+
+    setYourCommentCounts((prev) => {
       const next = new Map(prev);
       next.set(paperId, (next.get(paperId) || 0) + 1);
       return next;
@@ -461,6 +498,7 @@ function ScrollPageInner() {
                     setBookmarkedPapers(saved);
                   }
                   fetchCommentCounts();
+                  fetchYourCommentCounts();
                   setActiveTab("feed");
                 }}
               />
@@ -478,7 +516,7 @@ function ScrollPageInner() {
           upvotedPapers={upvotedPapers}
           downvotedPapers={downvotedPapers}
           bookmarkedPapers={bookmarkedPapers}
-          commentCounts={commentCounts}
+          yourCommentCounts={yourCommentCounts}
           userPosts={userPosts}
           scrollId={scrollId}
         />
