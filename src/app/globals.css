@@ -119,7 +119,7 @@
   --chart-2: #ff5722;
   --chart-3: #46d160;
   --chart-4: #ffd635;
-  --chart-5: #8BA3E8;
+  --chart-5: #8ba3e8;
   --sidebar: #111112;
   --sidebar-foreground: #d7dadc;
   --sidebar-primary: #4a6cf7;
@@ -145,7 +145,7 @@
     -webkit-font-smoothing: antialiased;
   }
   html {
-    @apply font-sans overflow-x-hidden;
+    @apply overflow-x-hidden font-sans;
   }
 }
 

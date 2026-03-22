@@ -127,7 +127,7 @@ export function ExportActions({ text, papers }: ExportActionsProps) {
   return (
     <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
       {/* Format tabs */}
-      <div className="flex flex-wrap rounded-lg bg-subtle p-0.5">
+      <div className="bg-subtle flex flex-wrap rounded-lg p-0.5">
         {FORMATS.map((f) => {
           const Icon = f.icon;
           return (
@@ -152,13 +152,13 @@ export function ExportActions({ text, papers }: ExportActionsProps) {
       <div className="flex gap-1">
         <button
           onClick={handleCopy}
-          className="text-muted-foreground flex items-center gap-1 rounded-full bg-subtle px-3 py-1 text-[12px] font-semibold transition-colors hover:bg-subtle-hover"
+          className="text-muted-foreground bg-subtle hover:bg-subtle-hover flex items-center gap-1 rounded-full px-3 py-1 text-[12px] font-semibold transition-colors"
         >
           <Copy className="h-3.5 w-3.5" /> Copy
         </button>
         <button
           onClick={handleDownload}
-          className="text-muted-foreground flex items-center gap-1 rounded-full bg-subtle px-3 py-1 text-[12px] font-semibold transition-colors hover:bg-subtle-hover"
+          className="text-muted-foreground bg-subtle hover:bg-subtle-hover flex items-center gap-1 rounded-full px-3 py-1 text-[12px] font-semibold transition-colors"
         >
           <Download className="h-3.5 w-3.5" /> Download
         </button>

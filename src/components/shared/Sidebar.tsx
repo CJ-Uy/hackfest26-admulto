@@ -100,7 +100,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
               <div
                 key={session.id}
                 className={cn(
-                  "group flex items-start gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-subtle",
+                  "group hover:bg-subtle flex items-start gap-2 rounded-md px-2 py-1.5 transition-colors",
                   pathname === `/schroll/${session.id}` && "bg-subtle",
                 )}
               >

@@ -75,8 +75,8 @@ export function GroundingPanel({ data }: GroundingPanelProps) {
               className={cn(
                 "rounded-md border px-3 py-2",
                 claim.passed
-                  ? "border-green-200 bg-background"
-                  : "border-amber-200 bg-background",
+                  ? "bg-background border-green-200"
+                  : "bg-background border-amber-200",
               )}
             >
               <div className="flex items-start justify-between gap-2">

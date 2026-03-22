@@ -199,7 +199,7 @@ export function GenerateMoreProgress({ progress }: GenerateMoreProgressProps) {
       </div>
 
       {/* Fun fact */}
-      <div className="flex items-start gap-2 rounded-lg bg-subtle px-3 py-2">
+      <div className="bg-subtle flex items-start gap-2 rounded-lg px-3 py-2">
         <BookOpen className="text-muted-foreground mt-0.5 h-3.5 w-3.5 shrink-0" />
         <p
           className={`text-foreground/70 text-[12px] transition-opacity duration-400 ${

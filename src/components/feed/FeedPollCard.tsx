@@ -53,7 +53,7 @@ export function FeedPollCard({ poll }: FeedPollCardProps) {
   return (
     <div className="border-border overflow-hidden border-b px-4 py-3">
       <div className="mb-2 flex items-center gap-2.5">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10">
+        <div className="bg-primary/10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full">
           <BarChart3 className="text-primary h-4 w-4" />
         </div>
         <span className="text-foreground text-[15px] font-semibold">Poll</span>

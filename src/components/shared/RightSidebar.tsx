@@ -123,7 +123,7 @@ export function RightSidebar({
               <Link
                 key={post.id}
                 href={`/schroll/${scrollId}/userpost/${post.id}`}
-                className="block rounded-md p-2 transition-colors hover:bg-subtle"
+                className="hover:bg-subtle block rounded-md p-2 transition-colors"
               >
                 {post.title && (
                   <p className="text-foreground line-clamp-1 text-[14px] font-semibold">
@@ -155,7 +155,7 @@ export function RightSidebar({
                   href={`/api/pdfs/${encodeURIComponent(key)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2 rounded-md p-2 transition-colors hover:bg-subtle"
+                  className="hover:bg-subtle flex items-center gap-2 rounded-md p-2 transition-colors"
                 >
                   <FileText className="text-muted-foreground h-4 w-4 shrink-0" />
                   <span className="text-foreground line-clamp-1 text-[14px]">
@@ -238,24 +238,26 @@ export function RightSidebar({
       >
         {safeYourCommentCounts.size > 0 && (
           <div className="space-y-1">
-            {Array.from(safeYourCommentCounts.entries()).map(([paperId, count]) => {
-              const paper = papers.find((p) => p.id === paperId);
-              if (!paper) return null;
-              return (
-                <Link
-                  key={paperId}
-                  href={`/schroll/${scrollId}/post/${paperId}`}
-                  className="block rounded-md p-2 transition-colors hover:bg-subtle"
-                >
-                  <p className="text-foreground line-clamp-1 text-[14px] font-medium">
-                    {paper.title}
-                  </p>
-                  <p className="text-muted-foreground text-[13px]">
-                    {count} {count === 1 ? "comment" : "comments"}
-                  </p>
-                </Link>
-              );
-            })}
+            {Array.from(safeYourCommentCounts.entries()).map(
+              ([paperId, count]) => {
+                const paper = papers.find((p) => p.id === paperId);
+                if (!paper) return null;
+                return (
+                  <Link
+                    key={paperId}
+                    href={`/schroll/${scrollId}/post/${paperId}`}
+                    className="hover:bg-subtle block rounded-md p-2 transition-colors"
+                  >
+                    <p className="text-foreground line-clamp-1 text-[14px] font-medium">
+                      {paper.title}
+                    </p>
+                    <p className="text-muted-foreground text-[13px]">
+                      {count} {count === 1 ? "comment" : "comments"}
+                    </p>
+                  </Link>
+                );
+              },
+            )}
           </div>
         )}
       </SidebarSection>
@@ -278,7 +280,10 @@ export function RightSidebar({
           >
             <BarChart3 className="h-4 w-4" />
           </SheetTrigger>
-          <SheetContent side="right" className="w-[340px] max-w-[90vw] overflow-y-auto p-4">
+          <SheetContent
+            side="right"
+            className="w-[340px] max-w-[90vw] overflow-y-auto p-4"
+          >
             <SheetTitle className="sr-only">Session info</SheetTitle>
             {sidebarContent}
           </SheetContent>
@@ -303,7 +308,7 @@ function Stat({
   value: number | string;
 }) {
   return (
-    <div className="rounded-md bg-subtle p-2.5">
+    <div className="bg-subtle rounded-md p-2.5">
       <div className="text-muted-foreground mb-0.5 flex items-center gap-1">
         {icon}
         <span className="text-[13px]">{label}</span>
@@ -353,7 +358,7 @@ function PaperList({
         <Link
           key={paper.id}
           href={`/schroll/${scrollId}/post/${paper.id}`}
-          className="block rounded-md p-2 transition-colors hover:bg-subtle"
+          className="hover:bg-subtle block rounded-md p-2 transition-colors"
         >
           <p className="text-foreground line-clamp-2 text-[14px] leading-snug font-bold">
             {paper.title}

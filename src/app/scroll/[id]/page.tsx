@@ -179,7 +179,7 @@ export default function ScrollPage() {
       <div className="flex h-screen overflow-hidden bg-[#dae0e6]">
         <Sidebar />
         <div className="flex min-h-0 min-w-0 flex-1 justify-center gap-0 overflow-hidden lg:gap-6 lg:px-6 lg:py-4">
-          <main className="bg-background flex w-full min-h-0 min-w-0 max-w-[780px] flex-1 flex-col lg:rounded-t-lg">
+          <main className="bg-background flex min-h-0 w-full max-w-[780px] min-w-0 flex-1 flex-col lg:rounded-t-lg">
             <div className="border-border shrink-0 border-b px-4 pt-5 pb-3">
               <Skeleton className="mb-2 h-5 w-24" />
               <Skeleton className="mb-2 h-7 w-3/4" />
@@ -207,7 +207,7 @@ export default function ScrollPage() {
 
       <div className="flex min-h-0 min-w-0 flex-1 justify-center gap-0 overflow-hidden lg:gap-6 lg:px-6 lg:py-4">
         {/* Main content column */}
-        <main className="bg-background flex w-full min-h-0 min-w-0 max-w-[780px] flex-1 flex-col lg:rounded-t-lg">
+        <main className="bg-background flex min-h-0 w-full max-w-[780px] min-w-0 flex-1 flex-col lg:rounded-t-lg">
           {/* Sticky top section: search + header + tabs */}
           <div className="bg-background border-border z-30 shrink-0 border-b">
             <SearchBar value={searchQuery} onChange={setSearchQuery} />
@@ -252,7 +252,9 @@ export default function ScrollPage() {
                 onComment={handleComment}
               />
             )}
-            {scroll.status !== "generating" && activeTab === "polls" && <PollsView polls={polls} />}
+            {scroll.status !== "generating" && activeTab === "polls" && (
+              <PollsView polls={polls} />
+            )}
             {scroll.status !== "generating" && activeTab === "export" && (
               <ExportView scrollId={scrollId} papers={papers} />
             )}

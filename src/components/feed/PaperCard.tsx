@@ -56,7 +56,7 @@ export function PaperCard({
 
   return (
     <article
-      className="animate-card-enter border-border cursor-pointer overflow-hidden border-b px-4 py-3 transition-colors hover:bg-muted/50"
+      className="animate-card-enter border-border hover:bg-muted/50 cursor-pointer overflow-hidden border-b px-4 py-3 transition-colors"
       style={{ animationDelay: `${index * 40}ms` }}
       onClick={navigateToDetail}
     >

@@ -39,7 +39,7 @@ export function UserPostDetail({
       <div className="border-border border-b px-1 pb-3">
         {/* Author row */}
         <div className="mb-2 flex items-center gap-2.5">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-subtle">
+          <div className="bg-subtle flex h-9 w-9 shrink-0 items-center justify-center rounded-full">
             <User className="text-muted-foreground h-4 w-4" />
           </div>
           <span className="text-foreground text-[15px] font-semibold">You</span>

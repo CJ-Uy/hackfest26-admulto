@@ -169,7 +169,7 @@ function InlineReplyInput({
       className="border-border/50 border-l-2 py-1"
       style={{ paddingLeft: `${Math.min(depth + 1, 5) * 1.25 + 0.75}rem` }}
     >
-      <div className="flex items-center gap-2 rounded-md bg-subtle px-3 py-2">
+      <div className="bg-subtle flex items-center gap-2 rounded-md px-3 py-2">
         <input
           value={content}
           onChange={(e) => setContent(e.target.value)}
@@ -328,13 +328,38 @@ export function DetailTabs({
     }
   }
 
-  // Find the source paper for a generated comment by matching author name
+  // Find the source paper for a generated comment by matching author name.
+  // LLM-generated author names may use just the last name or vary in format,
+  // so we try exact match first, then fall back to last-name matching.
   function findSourcePaper(authorName: string): ScrollPaperRef | undefined {
-    return scrollPapers.find((p) => {
+    const normalised = authorName
+      .replace(/\s*et\s*al\.?\s*$/i, "")
+      .trim()
+      .toLowerCase();
+
+    // Exact match first
+    const exact = scrollPapers.find((p) => {
       const firstAuthor = p.authors[0];
       if (!firstAuthor) return false;
       return (
         authorName === `${firstAuthor} et al.` || authorName === firstAuthor
+      );
+    });
+    if (exact) return exact;
+
+    // Fuzzy: match by last name (LLM often outputs "Smith et al." while author is "John Smith")
+    return scrollPapers.find((p) => {
+      const firstAuthor = p.authors[0];
+      if (!firstAuthor) return false;
+      const authorLower = firstAuthor.toLowerCase();
+      // Check if the normalised comment author is the last name of the paper author
+      const lastNameParts = authorLower.split(/\s+/);
+      const lastName = lastNameParts[lastNameParts.length - 1];
+      return (
+        normalised === authorLower ||
+        normalised === lastName ||
+        authorLower.includes(normalised) ||
+        normalised.includes(authorLower)
       );
     });
   }
@@ -390,8 +415,12 @@ export function DetailTabs({
   function renderComment(c: Comment, depth = 0) {
     const replies = getReplies(c.id);
     const isWaiting = waitingForReply.has(c.id);
-    const sourcePaper = c.isGenerated ? findSourcePaper(c.author) : undefined;
-    const sourceDoiUrl = sourcePaper
+    // Try author-match first, then fall back to the paper this comment belongs to
+    const sourcePaper = c.isGenerated
+      ? findSourcePaper(c.author) ??
+        scrollPapers.find((p) => p.id === c.paperId)
+      : undefined;
+    const sourceDoiUrl = sourcePaper?.doi
       ? sourcePaper.doi.startsWith("http")
         ? sourcePaper.doi
         : `https://doi.org/${sourcePaper.doi}`
@@ -459,7 +488,7 @@ export function DetailTabs({
           <div className="mt-1.5 ml-8 flex items-center gap-1">
             <button
               onClick={() => setReplyingTo(c.id)}
-              className="text-muted-foreground hover:text-primary flex items-center gap-1 rounded px-2 py-0.5 text-[12px] font-medium transition-colors hover:bg-subtle"
+              className="text-muted-foreground hover:text-primary hover:bg-subtle flex items-center gap-1 rounded px-2 py-0.5 text-[12px] font-medium transition-colors"
             >
               <Reply className="h-3 w-3" />
               Reply
@@ -524,7 +553,7 @@ export function DetailTabs({
               <button
                 onClick={handleGenerateComments}
                 disabled={generatingComments}
-                className="text-muted-foreground hover:text-primary flex items-center gap-1.5 rounded-full bg-subtle px-3 py-1.5 text-[12px] font-semibold transition-colors hover:bg-subtle-hover disabled:opacity-50"
+                className="text-muted-foreground hover:text-primary bg-subtle hover:bg-subtle-hover flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-semibold transition-colors disabled:opacity-50"
               >
                 <Sparkles
                   className={`h-3.5 w-3.5 ${generatingComments ? "animate-spin" : ""}`}
@@ -560,7 +589,7 @@ export function DetailTabs({
 
       {/* Integrated reply input */}
       {showReplyInput && (
-        <div className="border-border mt-4 flex items-center gap-2 rounded-md border bg-subtle px-3.5 py-2.5">
+        <div className="border-border bg-subtle mt-4 flex items-center gap-2 rounded-md border px-3.5 py-2.5">
           <input
             value={mainReplyContent}
             onChange={(e) => setMainReplyContent(e.target.value)}

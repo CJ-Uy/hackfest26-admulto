@@ -33,8 +33,7 @@ function toHranaValue(param: unknown) {
     return { type: "integer" as const, value: String(param) };
   if (typeof param === "number")
     return { type: "float" as const, value: param };
-  if (typeof param === "string")
-    return { type: "text" as const, value: param };
+  if (typeof param === "string") return { type: "text" as const, value: param };
   if (typeof param === "bigint")
     return { type: "integer" as const, value: String(param) };
   return { type: "text" as const, value: String(param) };

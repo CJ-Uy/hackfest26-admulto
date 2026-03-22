@@ -115,10 +115,10 @@ export default function PostPage() {
 
   if (!checked) {
     return (
-      <div className="flex min-h-screen overflow-x-hidden bg-page-bg">
+      <div className="bg-page-bg flex min-h-screen overflow-x-hidden">
         <Sidebar />
         <div className="flex min-w-0 flex-1 justify-center gap-0 lg:gap-6 lg:px-6 lg:py-4">
-          <main className="bg-background w-full min-w-0 max-w-[780px] flex-1 lg:rounded-t-lg">
+          <main className="bg-background w-full max-w-[780px] min-w-0 flex-1 lg:rounded-t-lg">
             <PostDetailSkeleton />
           </main>
           <RightSidebarSkeleton />
@@ -129,7 +129,7 @@ export default function PostPage() {
 
   if (!paper) {
     return (
-      <div className="flex min-h-screen overflow-x-hidden bg-page-bg">
+      <div className="bg-page-bg flex min-h-screen overflow-x-hidden">
         <Sidebar />
         <main className="flex flex-1 items-center justify-center">
           <p className="text-muted-foreground">Paper not found.</p>
@@ -139,11 +139,11 @@ export default function PostPage() {
   }
 
   return (
-    <div className="flex min-h-screen overflow-x-hidden bg-page-bg">
+    <div className="bg-page-bg flex min-h-screen overflow-x-hidden">
       <Sidebar />
 
       <div className="flex min-w-0 flex-1 justify-center gap-0 lg:gap-6 lg:px-6 lg:py-4">
-        <main className="bg-background w-full min-w-0 max-w-[780px] flex-1 lg:rounded-t-lg">
+        <main className="bg-background w-full max-w-[780px] min-w-0 flex-1 lg:rounded-t-lg">
           <PostDetail
             paper={paper}
             scrollId={scrollId}

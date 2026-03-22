@@ -57,7 +57,7 @@ export function ComposeBox({ scrollId, onPost }: ComposeBoxProps) {
   return (
     <div className="border-border border-b px-4 py-3">
       <div className="flex items-start gap-2.5">
-        <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-subtle">
+        <div className="bg-subtle mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full">
           <User className="text-muted-foreground h-4.5 w-4.5" />
         </div>
         <div className="min-w-0 flex-1">
@@ -76,7 +76,7 @@ export function ComposeBox({ scrollId, onPost }: ComposeBoxProps) {
                     setExpanded(false);
                     setContent("");
                   }}
-                  className="text-muted-foreground rounded-full px-3.5 py-1.5 text-[14px] font-semibold transition-colors hover:bg-subtle"
+                  className="text-muted-foreground hover:bg-subtle rounded-full px-3.5 py-1.5 text-[14px] font-semibold transition-colors"
                 >
                   Cancel
                 </button>
@@ -92,7 +92,7 @@ export function ComposeBox({ scrollId, onPost }: ComposeBoxProps) {
           ) : (
             <button
               onClick={() => setExpanded(true)}
-              className="border-border text-muted-foreground w-full rounded-full border bg-subtle px-4 py-2 text-left text-[15px] transition-colors hover:border-subtle-hover"
+              className="border-border text-muted-foreground bg-subtle hover:border-subtle-hover w-full rounded-full border px-4 py-2 text-left text-[15px] transition-colors"
             >
               Create a post
             </button>

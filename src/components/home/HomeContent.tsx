@@ -63,12 +63,12 @@ export function HomeContent({ scrolls: initialScrolls }: HomeContentProps) {
   const hasScrolls = scrolls.length > 0;
 
   return (
-    <div className="flex min-h-screen overflow-x-hidden bg-page-bg">
+    <div className="bg-page-bg flex min-h-screen overflow-x-hidden">
       <Sidebar />
 
       <div className="flex min-w-0 flex-1 justify-center gap-0 lg:gap-6 lg:px-6 lg:py-4">
         {/* Main content */}
-        <main className="bg-background w-full min-w-0 max-w-[780px] flex-1 lg:rounded-t-lg">
+        <main className="bg-background w-full max-w-[780px] min-w-0 flex-1 lg:rounded-t-lg">
           {hasScrolls ? (
             <>
               {/* Header with CTA */}
@@ -93,7 +93,7 @@ export function HomeContent({ scrolls: initialScrolls }: HomeContentProps) {
                 {scrolls.map((scroll, i) => (
                   <article
                     key={scroll.id}
-                    className="group animate-card-enter cursor-pointer overflow-hidden px-4 py-4 transition-colors hover:bg-muted/50"
+                    className="group animate-card-enter hover:bg-muted/50 cursor-pointer overflow-hidden px-4 py-4 transition-colors"
                     style={{ animationDelay: `${i * 40}ms` }}
                     onClick={() => router.push(`/schroll/${scroll.id}`)}
                   >
@@ -214,7 +214,7 @@ export function HomeContent({ scrolls: initialScrolls }: HomeContentProps) {
               </p>
               <div className="border-border mt-3 border-t pt-3">
                 <div className="grid grid-cols-2 gap-2">
-                  <div className="rounded-md bg-subtle p-2.5">
+                  <div className="bg-subtle rounded-md p-2.5">
                     <p className="text-muted-foreground text-[13px]">
                       Schrolls
                     </p>
@@ -222,7 +222,7 @@ export function HomeContent({ scrolls: initialScrolls }: HomeContentProps) {
                       {scrolls.length}
                     </p>
                   </div>
-                  <div className="rounded-md bg-subtle p-2.5">
+                  <div className="bg-subtle rounded-md p-2.5">
                     <p className="text-muted-foreground text-[13px]">Papers</p>
                     <p className="text-foreground text-[18px] font-bold">
                       {scrolls.reduce((sum, s) => sum + s.paperCount, 0)}

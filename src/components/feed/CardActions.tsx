@@ -176,7 +176,7 @@ export function CardActions({
     <div className="mt-2 flex flex-wrap items-center justify-between gap-y-1">
       <div className="flex flex-wrap items-center gap-y-1">
         {/* Vote cluster */}
-        <div className="mr-1 flex items-center rounded-full bg-subtle">
+        <div className="bg-subtle mr-1 flex items-center rounded-full">
           <button
             onClick={handleUpvote}
             aria-label={upvoted ? "Remove upvote" : "Upvote"}
@@ -206,7 +206,7 @@ export function CardActions({
               </TooltipTrigger>
               <TooltipContent
                 side="top"
-                className="text-foreground max-w-55 border bg-tooltip-bg text-left shadow-md"
+                className="text-foreground bg-tooltip-bg max-w-55 border text-left shadow-md"
               >
                 <div className="flex flex-col gap-0.5">
                   <span className={cn("text-sm font-semibold", tier.color)}>
@@ -255,7 +255,7 @@ export function CardActions({
             </TooltipTrigger>
             <TooltipContent
               side="top"
-              className="text-foreground max-w-55 border bg-tooltip-bg text-left shadow-md"
+              className="text-foreground bg-tooltip-bg max-w-55 border text-left shadow-md"
             >
               <div className="flex flex-col gap-0.5">
                 <span className="text-xs opacity-80">{tier.description}</span>
@@ -271,19 +271,19 @@ export function CardActions({
         <button
           onClick={handleCommentClick}
           aria-label={`${commentCount} comments`}
-          className="text-muted-foreground relative mr-1 flex items-center gap-1.5 rounded-full bg-subtle px-3.5 py-1.5 text-[14px] font-bold transition-colors hover:bg-subtle-hover"
+          className="text-muted-foreground bg-subtle hover:bg-subtle-hover relative mr-1 flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[14px] font-bold transition-colors"
         >
           <MessageSquare className="h-4.5 w-4.5" />
           {commentCount}
           {hasNewComments && (
-            <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-background" />
+            <span className="ring-background absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-red-500 ring-2" />
           )}
         </button>
 
         {/* Share */}
         <button
           onClick={handleShare}
-          className="text-muted-foreground mr-1 flex items-center gap-1.5 rounded-full bg-subtle px-3.5 py-1.5 text-[14px] font-bold transition-colors hover:bg-subtle-hover"
+          className="text-muted-foreground bg-subtle hover:bg-subtle-hover mr-1 flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[14px] font-bold transition-colors"
         >
           <Share2 className="h-4 w-4" />
           <span className="hidden sm:inline">Share</span>
@@ -299,7 +299,7 @@ export function CardActions({
                 disabled={generatingComments}
                 aria-label="Generate AI comments"
                 className={cn(
-                  "text-muted-foreground relative flex items-center gap-1.5 overflow-hidden rounded-full bg-subtle px-3.5 py-1.5 text-[14px] font-bold transition-colors hover:bg-subtle-hover",
+                  "text-muted-foreground bg-subtle hover:bg-subtle-hover relative flex items-center gap-1.5 overflow-hidden rounded-full px-3.5 py-1.5 text-[14px] font-bold transition-colors",
                 )}
               >
                 {generatingComments && (
@@ -316,7 +316,7 @@ export function CardActions({
               </TooltipTrigger>
               <TooltipContent
                 side="top"
-                className="text-foreground border bg-tooltip-bg text-left shadow-md"
+                className="text-foreground bg-tooltip-bg border text-left shadow-md"
               >
                 <span className="text-xs">This will generate comments</span>
               </TooltipContent>
@@ -346,7 +346,7 @@ export function CardActions({
             </TooltipTrigger>
             <TooltipContent
               side="top"
-              className="text-foreground border bg-tooltip-bg text-left shadow-md"
+              className="text-foreground bg-tooltip-bg border text-left shadow-md"
             >
               <span className="text-xs">
                 {bookmarked
