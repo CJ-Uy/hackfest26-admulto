@@ -387,7 +387,7 @@ function ScrollPageInner() {
 
   if (!scroll) {
     return (
-      <div className="bg-page-bg flex min-h-screen overflow-x-hidden md:overflow-x-visible">
+      <div className="bg-page-bg flex min-h-screen overflow-x-visible">
         <Sidebar showMobileTrigger={false} />
         <div className="flex min-w-0 flex-1 justify-center gap-0 lg:gap-6 lg:px-6 lg:py-4">
           <main className="bg-background w-full max-w-[780px] min-w-0 flex-1 lg:rounded-t-lg">
@@ -400,10 +400,25 @@ function ScrollPageInner() {
               <Skeleton className="h-4 w-full" />
             </div>
 
-            <div className="bg-background border-border sticky top-4 z-30 border-b">
+            <div className="md:hidden">
+              <div className="bg-background px-4 py-2 pt-14">
+                <Skeleton className="h-10 w-full rounded-full" />
+              </div>
+              <div className="bg-background border-border sticky top-0 z-30 border-b">
+                <div className="flex">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="flex flex-1 justify-center py-3">
+                      <Skeleton className="h-5 w-16" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-background border-border sticky top-4 z-30 hidden border-b md:block">
               <div className="bg-background pointer-events-none absolute -top-4 right-0 left-0 h-4" />
               <div className="relative">
-                <div className="px-4 py-2 pt-14 md:pt-2">
+                <div className="px-4 py-2 pt-2">
                   <Skeleton className="h-10 w-full rounded-full" />
                 </div>
                 <div className="flex">
@@ -428,15 +443,28 @@ function ScrollPageInner() {
   }
 
   return (
-    <div className="bg-page-bg flex min-h-screen overflow-x-hidden md:overflow-x-visible">
+    <div className="bg-page-bg flex min-h-screen overflow-x-visible">
       <Sidebar showMobileTrigger={false} />
 
       <div className="flex min-w-0 flex-1 justify-center gap-0 lg:gap-6 lg:px-6 lg:py-4">
         {/* Main content column */}
         <main className="bg-background w-full max-w-[780px] min-w-0 flex-1 lg:rounded-t-lg">
           <ScrollHeader scroll={scroll} />
-          {/* Sticky top section: search + tabs */}
-          <div className="bg-background border-border sticky top-4 z-30 border-b">
+
+          {/* Mobile: keep tabs sticky, search remains non-sticky */}
+          <div className="md:hidden">
+            <SearchBar value={searchQuery} onChange={handleSearchChange} />
+            <div className="bg-background border-border sticky top-0 z-30 border-b">
+              <TabNav
+                value={activeTab}
+                onValueChange={setActiveTab}
+                tabs={TABS}
+              />
+            </div>
+          </div>
+
+          {/* Desktop: preserve original sticky behavior */}
+          <div className="bg-background border-border sticky top-4 z-30 hidden border-b md:block">
             <div className="bg-background pointer-events-none absolute -top-4 right-0 left-0 h-4" />
             <div className="relative">
               <SearchBar value={searchQuery} onChange={handleSearchChange} />

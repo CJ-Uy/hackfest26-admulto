@@ -68,20 +68,24 @@ export function MobileBottomNav({
           </SheetTrigger>
           <SheetContent
             side="bottom"
-            className="h-[80vh] overflow-y-auto rounded-t-2xl p-4"
+            showCloseButton={false}
+            className="h-auto max-h-[72vh] overflow-hidden rounded-t-2xl p-0"
           >
             <SheetTitle className="sr-only">Session info</SheetTitle>
-            <RightSidebar
-              scroll={scroll}
-              papers={papers}
-              upvotedPapers={upvotedPapers}
-              downvotedPapers={downvotedPapers}
-              bookmarkedPapers={bookmarkedPapers}
-              yourCommentCounts={yourCommentCounts}
-              userPosts={userPosts}
-              scrollId={scrollId}
-              contentOnly
-            />
+            <div className="mx-auto mt-2 h-1.5 w-10 rounded-full bg-muted" />
+            <div className="max-h-[calc(72vh-24px)] overflow-y-auto p-4 pb-8">
+              <RightSidebar
+                scroll={scroll}
+                papers={papers}
+                upvotedPapers={upvotedPapers}
+                downvotedPapers={downvotedPapers}
+                bookmarkedPapers={bookmarkedPapers}
+                yourCommentCounts={yourCommentCounts}
+                userPosts={userPosts}
+                scrollId={scrollId}
+                contentOnly
+              />
+            </div>
           </SheetContent>
         </Sheet>
       </div>

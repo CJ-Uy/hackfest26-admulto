@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { Sidebar } from "@/components/shared/Sidebar";
 import { RightSidebar } from "@/components/shared/RightSidebar";
+import { MobileBottomNav } from "@/components/shared/MobileBottomNav";
 import { PostDetail } from "@/components/detail/PostDetail";
 import { fetchScroll } from "@/lib/scroll-store";
 import {
@@ -36,6 +37,10 @@ export default function PostPage() {
   const [yourCommentCounts, setYourCommentCounts] = useState<
     Map<string, number>
   >(new Map());
+
+  const handleNewPost = (newPost: UserPost) => {
+    setUserPosts((prev) => [newPost, ...prev]);
+  };
 
   // Primary fetch: single paper only
   useEffect(() => {
@@ -116,7 +121,7 @@ export default function PostPage() {
   if (!checked) {
     return (
       <div className="bg-page-bg flex min-h-screen overflow-x-hidden md:overflow-x-visible">
-        <Sidebar />
+        <Sidebar showMobileTrigger={false} />
         <div className="flex min-w-0 flex-1 justify-center gap-0 lg:gap-6 lg:px-6 lg:py-4">
           <main className="bg-background w-full max-w-[780px] min-w-0 flex-1 lg:rounded-t-lg">
             <PostDetailSkeleton />
@@ -130,7 +135,7 @@ export default function PostPage() {
   if (!paper) {
     return (
       <div className="bg-page-bg flex min-h-screen overflow-x-hidden md:overflow-x-visible">
-        <Sidebar />
+        <Sidebar showMobileTrigger={false} />
         <main className="flex flex-1 items-center justify-center">
           <p className="text-muted-foreground">Paper not found.</p>
         </main>
@@ -140,10 +145,10 @@ export default function PostPage() {
 
   return (
     <div className="bg-page-bg flex min-h-screen overflow-x-hidden md:overflow-x-visible">
-      <Sidebar />
+      <Sidebar showMobileTrigger={false} />
 
       <div className="flex min-w-0 flex-1 justify-center gap-0 lg:gap-6 lg:px-6 lg:py-4">
-        <main className="bg-background w-full max-w-[780px] min-w-0 flex-1 lg:rounded-t-lg">
+        <main className="bg-background w-full max-w-[780px] min-w-0 flex-1 pb-24 md:pb-0 lg:rounded-t-lg">
           <PostDetail
             paper={paper}
             scrollId={scrollId}
@@ -161,11 +166,26 @@ export default function PostPage() {
             yourCommentCounts={yourCommentCounts}
             userPosts={userPosts}
             scrollId={scrollId}
+            showMobileTrigger={false}
           />
         ) : (
           <RightSidebarSkeleton />
         )}
       </div>
+
+      {scroll && (
+        <MobileBottomNav
+          scrollId={scrollId}
+          onPost={handleNewPost}
+          scroll={scroll}
+          papers={allPapers}
+          upvotedPapers={upvotedPapers}
+          downvotedPapers={downvotedPapers}
+          bookmarkedPapers={bookmarkedPapers}
+          yourCommentCounts={yourCommentCounts}
+          userPosts={userPosts}
+        />
+      )}
     </div>
   );
 }

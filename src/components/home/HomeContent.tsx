@@ -6,6 +6,7 @@ import {
   ArrowRight,
   ScrollText,
   Plus,
+  BarChart3,
   FileText,
   Sparkles,
   Trash2,
@@ -13,8 +14,9 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Sidebar } from "@/components/shared/Sidebar";
+import { Sidebar, SidebarContent } from "@/components/shared/Sidebar";
 import { SchrollarLogo } from "@/components/shared/SchrollarLogo";
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import {
   Dialog,
   DialogContent,
@@ -61,14 +63,76 @@ export function HomeContent({ scrolls: initialScrolls }: HomeContentProps) {
   }
 
   const hasScrolls = scrolls.length > 0;
+  const navTriggerClassName =
+    "hover:bg-subtle text-foreground flex h-12 w-full items-center justify-center gap-1.5 rounded-lg px-2 text-[13px] font-semibold transition-colors";
+
+  const homeSidebarContent = (
+    <div className="space-y-3">
+      {/* App info card */}
+      <div className="border-border bg-background rounded-lg border p-4">
+        <div className="bg-primary mb-3 rounded-md px-3 py-2.5">
+          <SchrollarLogo size="sm" className="text-primary-foreground" />
+        </div>
+        <p className="text-muted-foreground text-[14px] leading-relaxed">
+          Discover academic papers through an AI-powered social media feed.
+          Upvote, comment, and fine-tune your research experience.
+        </p>
+        <div className="border-border mt-3 border-t pt-3">
+          <div className="grid grid-cols-2 gap-2">
+            <div className="bg-subtle rounded-md p-2.5">
+              <p className="text-muted-foreground text-[13px]">Schrolls</p>
+              <p className="text-foreground text-[18px] font-bold">
+                {scrolls.length}
+              </p>
+            </div>
+            <div className="bg-subtle rounded-md p-2.5">
+              <p className="text-muted-foreground text-[13px]">Papers</p>
+              <p className="text-foreground text-[18px] font-bold">
+                {scrolls.reduce((sum, s) => sum + s.paperCount, 0)}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Quick start */}
+      {!hasScrolls && (
+        <div className="border-border bg-background rounded-lg border p-4">
+          <h4 className="text-foreground mb-2 text-[13px] font-bold tracking-wide uppercase">
+            Getting Started
+          </h4>
+          <ol className="text-muted-foreground space-y-2 text-[14px]">
+            <li className="flex gap-2">
+              <span className="bg-primary/10 text-primary flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold">
+                1
+              </span>
+              Choose a research topic
+            </li>
+            <li className="flex gap-2">
+              <span className="bg-primary/10 text-primary flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold">
+                2
+              </span>
+              AI finds and synthesizes papers
+            </li>
+            <li className="flex gap-2">
+              <span className="bg-primary/10 text-primary flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold">
+                3
+              </span>
+              Browse your personalized feed
+            </li>
+          </ol>
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <div className="bg-page-bg flex min-h-screen overflow-x-hidden md:overflow-x-visible">
-      <Sidebar />
+      <Sidebar showMobileTrigger={false} />
 
       <div className="flex min-w-0 flex-1 justify-center gap-0 lg:gap-6 lg:px-6 lg:py-4">
         {/* Main content */}
-        <main className="bg-background w-full max-w-[780px] min-w-0 flex-1 lg:rounded-t-lg">
+        <main className="bg-background w-full max-w-[780px] min-w-0 flex-1 pb-24 md:pb-0 lg:rounded-t-lg">
           {hasScrolls ? (
             <>
               {/* Header with CTA */}
@@ -202,66 +266,46 @@ export function HomeContent({ scrolls: initialScrolls }: HomeContentProps) {
 
         {/* Right sidebar - stats summary */}
         <aside className="no-scrollbar hidden w-[340px] shrink-0 lg:sticky lg:top-4 lg:block lg:max-h-[calc(100vh-32px)] lg:overflow-y-auto">
-          <div className="space-y-3">
-            {/* App info card */}
-            <div className="border-border bg-background rounded-lg border p-4">
-              <div className="bg-primary mb-3 rounded-md px-3 py-2.5">
-                <SchrollarLogo size="sm" className="text-primary-foreground" />
-              </div>
-              <p className="text-muted-foreground text-[14px] leading-relaxed">
-                Discover academic papers through an AI-powered social media
-                feed. Upvote, comment, and fine-tune your research experience.
-              </p>
-              <div className="border-border mt-3 border-t pt-3">
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="bg-subtle rounded-md p-2.5">
-                    <p className="text-muted-foreground text-[13px]">
-                      Schrolls
-                    </p>
-                    <p className="text-foreground text-[18px] font-bold">
-                      {scrolls.length}
-                    </p>
-                  </div>
-                  <div className="bg-subtle rounded-md p-2.5">
-                    <p className="text-muted-foreground text-[13px]">Papers</p>
-                    <p className="text-foreground text-[18px] font-bold">
-                      {scrolls.reduce((sum, s) => sum + s.paperCount, 0)}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Quick start */}
-            {!hasScrolls && (
-              <div className="border-border bg-background rounded-lg border p-4">
-                <h4 className="text-foreground mb-2 text-[13px] font-bold tracking-wide uppercase">
-                  Getting Started
-                </h4>
-                <ol className="text-muted-foreground space-y-2 text-[14px]">
-                  <li className="flex gap-2">
-                    <span className="bg-primary/10 text-primary flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold">
-                      1
-                    </span>
-                    Choose a research topic
-                  </li>
-                  <li className="flex gap-2">
-                    <span className="bg-primary/10 text-primary flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold">
-                      2
-                    </span>
-                    AI finds and synthesizes papers
-                  </li>
-                  <li className="flex gap-2">
-                    <span className="bg-primary/10 text-primary flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold">
-                      3
-                    </span>
-                    Browse your personalized feed
-                  </li>
-                </ol>
-              </div>
-            )}
-          </div>
+          {homeSidebarContent}
         </aside>
+      </div>
+
+      <div className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-background/95 px-3 py-2 pb-[calc(env(safe-area-inset-bottom)+8px)] backdrop-blur md:hidden">
+        <div className="grid grid-cols-3 gap-2">
+          <Sheet>
+            <SheetTrigger render={<button className={navTriggerClassName} />}>
+              <SchrollarLogo showText={false} size="sm" />
+              Menu
+            </SheetTrigger>
+            <SheetContent side="left" className="w-72 p-0">
+              <SheetTitle className="sr-only">Navigation</SheetTitle>
+              <SidebarContent />
+            </SheetContent>
+          </Sheet>
+
+          <Link href="/onboarding" className={navTriggerClassName}>
+            <Plus className="h-4 w-4" />
+            New
+          </Link>
+
+          <Sheet>
+            <SheetTrigger render={<button className={navTriggerClassName} />}>
+              <BarChart3 className="h-4 w-4" />
+              Insights
+            </SheetTrigger>
+            <SheetContent
+              side="bottom"
+              showCloseButton={false}
+              className="h-auto max-h-[72vh] overflow-hidden rounded-t-2xl p-0"
+            >
+              <SheetTitle className="sr-only">Home insights</SheetTitle>
+              <div className="mx-auto mt-2 h-1.5 w-10 rounded-full bg-muted" />
+              <div className="max-h-[calc(72vh-24px)] overflow-y-auto p-4 pb-8">
+                {homeSidebarContent}
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
       </div>
 
       {/* Delete dialog */}

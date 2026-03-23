@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { Sidebar } from "@/components/shared/Sidebar";
 import { RightSidebar } from "@/components/shared/RightSidebar";
+import { MobileBottomNav } from "@/components/shared/MobileBottomNav";
 import { UserPostDetail } from "@/components/detail/UserPostDetail";
 import { fetchScroll } from "@/lib/scroll-store";
 import {
@@ -78,7 +79,7 @@ export default function UserPostPage() {
   if (!checked) {
     return (
       <div className="bg-page-bg flex min-h-screen overflow-x-hidden md:overflow-x-visible">
-        <Sidebar />
+        <Sidebar showMobileTrigger={false} />
         <div className="flex min-w-0 flex-1 justify-center gap-0 lg:gap-6 lg:px-6 lg:py-4">
           <main className="bg-background w-full max-w-[780px] min-w-0 flex-1 lg:rounded-t-lg">
             <UserPostDetailSkeleton />
@@ -92,7 +93,7 @@ export default function UserPostPage() {
   if (!post) {
     return (
       <div className="bg-page-bg flex min-h-screen overflow-x-hidden md:overflow-x-visible">
-        <Sidebar />
+        <Sidebar showMobileTrigger={false} />
         <main className="flex flex-1 items-center justify-center">
           <p className="text-muted-foreground">Post not found.</p>
         </main>
@@ -102,10 +103,10 @@ export default function UserPostPage() {
 
   return (
     <div className="bg-page-bg flex min-h-screen overflow-x-hidden md:overflow-x-visible">
-      <Sidebar />
+      <Sidebar showMobileTrigger={false} />
 
       <div className="flex min-w-0 flex-1 justify-center gap-0 lg:gap-6 lg:px-6 lg:py-4">
-        <main className="bg-background w-full max-w-[780px] min-w-0 flex-1 lg:rounded-t-lg">
+        <main className="bg-background w-full max-w-[780px] min-w-0 flex-1 pb-24 md:pb-0 lg:rounded-t-lg">
           <UserPostDetail
             post={post}
             scrollId={scrollId}
@@ -128,11 +129,26 @@ export default function UserPostPage() {
             yourCommentCounts={yourCommentCounts}
             userPosts={userPosts}
             scrollId={scrollId}
+            showMobileTrigger={false}
           />
         ) : (
           <RightSidebarSkeleton />
         )}
       </div>
+
+      {scroll && (
+        <MobileBottomNav
+          scrollId={scrollId}
+          onPost={(newPost) => setUserPosts((prev) => [newPost, ...prev])}
+          scroll={scroll}
+          papers={papers}
+          upvotedPapers={upvotedPapers}
+          downvotedPapers={downvotedPapers}
+          bookmarkedPapers={bookmarkedPapers}
+          yourCommentCounts={yourCommentCounts}
+          userPosts={userPosts}
+        />
+      )}
     </div>
   );
 }
