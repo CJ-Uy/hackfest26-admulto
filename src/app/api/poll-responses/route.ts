@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
       .set({ answer })
       .where(eq(pollResponses.id, existing.id))
       .returning();
-    return NextResponse.json(updated);
+    return NextResponse.json({ ...updated });
   }
 
   const [created] = await db
@@ -46,5 +46,5 @@ export async function POST(req: NextRequest) {
     .values({ pollId, answer })
     .returning();
 
-  return NextResponse.json(created);
+  return NextResponse.json({ ...created });
 }

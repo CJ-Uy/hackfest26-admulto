@@ -407,7 +407,7 @@ export function TopicForm({ initialTopic }: TopicFormProps) {
           id="topic"
           ref={topicRef}
           defaultValue={initialTopic}
-          placeholder="e.g., Cognitive Psychology and Decision-Making"
+          placeholder="e.g., Cognitive Psychology"
           required={topicRequired}
           disabled={loading}
         />
