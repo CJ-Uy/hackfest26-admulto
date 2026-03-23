@@ -222,8 +222,7 @@ export async function POST(req: Request) {
         }
         // context_only: pdfPapers not added to academicPapers — used as context only
 
-        // ── Embedding-based ranking ──
-        await updateProgress(scrollId, "ranking");
+        // ── Embedding-based ranking (merged into "searching" progress step to reduce DB calls) ──
 
         // Embed the query for relevance ranking
         const queryText = [topic, description, ...(subfields || [])]
@@ -410,10 +409,17 @@ export async function POST(req: Request) {
             }
           }
           papersProcessed = Math.min(i + CONCURRENCY, academicPapers.length);
-          await updateProgress(scrollId, "processing", {
-            papersProcessed: Math.min(papersProcessed, total),
-            total,
-          });
+          // Only update progress every 4 papers to reduce DB calls (Turso rate limit)
+          if (
+            i === 0 ||
+            papersProcessed % 4 === 0 ||
+            papersProcessed >= total
+          ) {
+            await updateProgress(scrollId, "processing", {
+              papersProcessed: Math.min(papersProcessed, total),
+              total,
+            });
+          }
         }
 
         // 3. Supplement with web results (always fill up to 12 total) — skip if only_sources
@@ -486,7 +492,6 @@ export async function POST(req: Request) {
 
         // 4. Generate export outline
         const effectiveTopic = topic || scroll.title;
-        await updateProgress(scrollId, "exporting");
 
         const fallbackOutline = (): ExportTheme[] => [
           {

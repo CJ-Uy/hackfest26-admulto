@@ -80,11 +80,11 @@ export async function GET(
         }
       };
 
-      // Poll DB every 1 second and push changes
+      // Poll DB every 3 seconds and push changes
       const interval = setInterval(async () => {
         const done = await poll();
         if (done) clearInterval(interval);
-      }, 1000);
+      }, 3000);
 
       // Initial check immediately
       await poll();

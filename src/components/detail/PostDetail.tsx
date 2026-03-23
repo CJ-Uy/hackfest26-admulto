@@ -6,7 +6,6 @@ import type { Paper } from "@/lib/types";
 import { CardActions } from "@/components/feed/CardActions";
 import { DetailTabs } from "./DetailTabs";
 
-
 interface PostDetailProps {
   paper: Paper;
   scrollId: string;

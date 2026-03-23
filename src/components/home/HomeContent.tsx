@@ -16,7 +16,12 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sidebar, SidebarContent } from "@/components/shared/Sidebar";
 import { SchrollarLogo } from "@/components/shared/SchrollarLogo";
-import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import {
   Dialog,
   DialogContent,
@@ -270,7 +275,7 @@ export function HomeContent({ scrolls: initialScrolls }: HomeContentProps) {
         </aside>
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-background/95 px-3 py-2 pb-[calc(env(safe-area-inset-bottom)+8px)] backdrop-blur md:hidden">
+      <div className="border-border bg-background/95 fixed inset-x-0 bottom-0 z-50 border-t px-3 py-2 pb-[calc(env(safe-area-inset-bottom)+8px)] backdrop-blur md:hidden">
         <div className="grid grid-cols-3 gap-2">
           <Sheet>
             <SheetTrigger render={<button className={navTriggerClassName} />}>
@@ -299,7 +304,7 @@ export function HomeContent({ scrolls: initialScrolls }: HomeContentProps) {
               className="h-auto max-h-[72vh] overflow-hidden rounded-t-2xl p-0"
             >
               <SheetTitle className="sr-only">Home insights</SheetTitle>
-              <div className="mx-auto mt-2 h-1.5 w-10 rounded-full bg-muted" />
+              <div className="bg-muted mx-auto mt-2 h-1.5 w-10 rounded-full" />
               <div className="max-h-[calc(72vh-24px)] overflow-y-auto p-4 pb-8">
                 {homeSidebarContent}
               </div>

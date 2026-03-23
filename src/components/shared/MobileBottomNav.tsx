@@ -1,7 +1,12 @@
 "use client";
 
 import { BarChart3, Plus } from "lucide-react";
-import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { SidebarContent } from "@/components/shared/Sidebar";
 import { SchrollarLogo } from "@/components/shared/SchrollarLogo";
 import { CreatePostFAB } from "@/components/feed/CreatePostFAB";
@@ -35,7 +40,7 @@ export function MobileBottomNav({
     "hover:bg-subtle text-foreground flex h-12 w-full items-center justify-center gap-1.5 rounded-lg px-2 text-[13px] font-semibold transition-colors";
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-background/95 px-3 py-2 pb-[calc(env(safe-area-inset-bottom)+8px)] backdrop-blur md:hidden">
+    <div className="border-border bg-background/95 fixed inset-x-0 bottom-0 z-50 border-t px-3 py-2 pb-[calc(env(safe-area-inset-bottom)+8px)] backdrop-blur md:hidden">
       <div className="grid grid-cols-3 gap-2">
         <Sheet>
           <SheetTrigger render={<button className={navTriggerClassName} />}>
@@ -72,7 +77,7 @@ export function MobileBottomNav({
             className="h-auto max-h-[72vh] overflow-hidden rounded-t-2xl p-0"
           >
             <SheetTitle className="sr-only">Session info</SheetTitle>
-            <div className="mx-auto mt-2 h-1.5 w-10 rounded-full bg-muted" />
+            <div className="bg-muted mx-auto mt-2 h-1.5 w-10 rounded-full" />
             <div className="max-h-[calc(72vh-24px)] overflow-y-auto p-4 pb-8">
               <RightSidebar
                 scroll={scroll}

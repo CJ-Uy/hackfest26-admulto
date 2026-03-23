@@ -63,10 +63,12 @@ export function CardActions({
   const [score, setScore] = useState(credibilityScore);
   const [bookmarked, setBookmarked] = useState(initialBookmarked);
   const [moreOpen, setMoreOpen] = useState(false);
-  const [moreMenuPos, setMoreMenuPos] = useState<{ top: number; left: number }>({
-    top: 0,
-    left: 0,
-  });
+  const [moreMenuPos, setMoreMenuPos] = useState<{ top: number; left: number }>(
+    {
+      top: 0,
+      left: 0,
+    },
+  );
   const moreMenuRef = useRef<HTMLDivElement>(null);
   const moreButtonRef = useRef<HTMLButtonElement>(null);
   const tier = getCredibilityTier(credibilityScore);
@@ -243,7 +245,10 @@ export function CardActions({
             )}
           >
             <ArrowBigUp
-              className={cn("h-4.5 w-4.5 md:h-5 md:w-5", upvoted && "fill-current")}
+              className={cn(
+                "h-4.5 w-4.5 md:h-5 md:w-5",
+                upvoted && "fill-current",
+              )}
             />
           </button>
           <TooltipProvider>
@@ -288,7 +293,10 @@ export function CardActions({
             )}
           >
             <ArrowBigDown
-              className={cn("h-4.5 w-4.5 md:h-5 md:w-5", downvoted && "fill-current")}
+              className={cn(
+                "h-4.5 w-4.5 md:h-5 md:w-5",
+                downvoted && "fill-current",
+              )}
             />
           </button>
         </div>
@@ -299,7 +307,7 @@ export function CardActions({
             <TooltipTrigger
               render={<span />}
               className={cn(
-                "inline-flex h-8 items-center justify-center cursor-help rounded-full px-3 text-[13px] font-semibold md:h-9 md:text-[14px]",
+                "inline-flex h-8 cursor-help items-center justify-center rounded-full px-3 text-[13px] font-semibold md:h-9 md:text-[14px]",
                 tier.bg,
                 tier.textOnBg,
               )}
@@ -417,17 +425,17 @@ export function CardActions({
                     e.stopPropagation();
                   }}
                 >
-                <button
-                  type="button"
-                  onClick={(e) => {
+                  <button
+                    type="button"
+                    onClick={(e) => {
                       handleShare(e);
-                    setMoreOpen(false);
-                  }}
+                      setMoreOpen(false);
+                    }}
                     className="hover:bg-subtle flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[13px] font-medium"
-                >
+                  >
                     <Share2 className="h-4 w-4" />
                     Share
-                </button>
+                  </button>
 
                   {onGenerateComments && (
                     <button
@@ -464,7 +472,7 @@ export function CardActions({
                         void handleDelete(e);
                         setMoreOpen(false);
                       }}
-                      className="hover:bg-red-50 text-destructive flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[13px] font-medium"
+                      className="text-destructive flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[13px] font-medium hover:bg-red-50"
                     >
                       <Trash2 className="h-4 w-4" />
                       Delete

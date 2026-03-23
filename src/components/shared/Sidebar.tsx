@@ -77,7 +77,10 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
       <div className="px-3">
         <Link href="/onboarding" onClick={onNavigate}>
-          <Button className="h-10 w-full justify-start gap-2 text-[15px]" size="sm">
+          <Button
+            className="h-10 w-full justify-start gap-2 text-[15px]"
+            size="sm"
+          >
             <Plus className="h-3.5 w-3.5" />
             New Schroll
           </Button>

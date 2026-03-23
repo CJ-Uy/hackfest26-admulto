@@ -207,7 +207,9 @@ export function GenerationProgress({
 
               {/* Active spinner */}
               {isActive && (
-                <div className={`shrink-0 ${showPaperCount ? "hidden sm:block" : ""}`}>
+                <div
+                  className={`shrink-0 ${showPaperCount ? "hidden sm:block" : ""}`}
+                >
                   <div className="border-primary/30 border-t-primary h-5 w-5 animate-spin rounded-full border-2" />
                 </div>
               )}

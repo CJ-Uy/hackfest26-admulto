@@ -481,7 +481,9 @@ export function DetailTabs({
 
           {/* Actions */}
           <div className="mt-1.5 ml-8 flex flex-wrap items-center gap-1 md:flex-nowrap">
-            {c.relationship && <RelationshipBadge relationship={c.relationship} />}
+            {c.relationship && (
+              <RelationshipBadge relationship={c.relationship} />
+            )}
             <button
               onClick={() => setReplyingTo(c.id)}
               className="text-muted-foreground hover:text-primary hover:bg-subtle flex items-center gap-1 rounded px-2 py-0.5 text-[12px] font-medium transition-colors"
@@ -538,7 +540,7 @@ export function DetailTabs({
       {/* AI-generated "reactions" from other papers */}
       {generated.length > 0 && (
         <div className="mb-4">
-          <div className="mb-3 rounded-lg border border-border/60 p-3 md:mb-2 md:rounded-none md:border-0 md:p-0">
+          <div className="border-border/60 mb-3 rounded-lg border p-3 md:mb-2 md:rounded-none md:border-0 md:p-0">
             <h3 className="text-foreground flex items-center gap-2 text-[15px] font-bold">
               <Bot className="text-muted-foreground h-4 w-4" />
               What other researchers say ({generated.length})

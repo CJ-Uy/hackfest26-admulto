@@ -48,6 +48,7 @@ function fromHranaValue(val: { type: string; value?: unknown }): unknown {
 
 /**
  * Executes a SQL statement against Turso's HTTP API (Hrana v2 pipeline).
+ * Retries on 429 (rate limit) with exponential backoff.
  */
 async function tursoFetch(
   httpUrl: string,
@@ -56,88 +57,111 @@ async function tursoFetch(
   params: unknown[],
   method: "run" | "all" | "values" | "get",
 ): Promise<{ rows: unknown[][] }> {
-  let response: Response;
-  try {
-    response = await fetch(`${httpUrl}/v2/pipeline`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(authToken && { Authorization: `Bearer ${authToken}` }),
-      },
-      body: JSON.stringify({
-        requests: [
-          {
-            type: "execute",
-            stmt: {
-              sql,
-              args: params.map(toHranaValue),
-              named_args: [],
-              want_rows: method !== "run",
+  const MAX_RETRIES = 4;
+  let lastError: Error | undefined;
+
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    if (attempt > 0) {
+      // Exponential backoff: 500ms, 1s, 2s, 4s
+      const delay = 500 * Math.pow(2, attempt - 1);
+      await new Promise((r) => setTimeout(r, delay));
+    }
+
+    let response: Response;
+    try {
+      response = await fetch(`${httpUrl}/v2/pipeline`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(authToken && { Authorization: `Bearer ${authToken}` }),
+        },
+        body: JSON.stringify({
+          requests: [
+            {
+              type: "execute",
+              stmt: {
+                sql,
+                args: params.map(toHranaValue),
+                named_args: [],
+                want_rows: method !== "run",
+              },
             },
-          },
-          { type: "close" },
-        ],
-      }),
-    });
-  } catch (fetchErr) {
-    console.error(
-      `[tursoFetch] Network error for ${method} query: ${sql}`,
-      fetchErr,
-    );
-    throw fetchErr;
-  }
+            { type: "close" },
+          ],
+        }),
+      });
+    } catch (fetchErr) {
+      console.error(
+        `[tursoFetch] Network error (attempt ${attempt + 1}) for ${method} query: ${sql}`,
+        fetchErr,
+      );
+      lastError =
+        fetchErr instanceof Error ? fetchErr : new Error(String(fetchErr));
+      continue;
+    }
 
-  if (!response.ok) {
-    const text = await response.text();
-    console.error(
-      `[tursoFetch] HTTP ${response.status} for ${method} query: ${sql}`,
-      text,
-    );
-    throw new Error(`Turso HTTP ${response.status}: ${text}`);
-  }
+    if (response.status === 429) {
+      console.warn(
+        `[tursoFetch] Rate limited (attempt ${attempt + 1}/${MAX_RETRIES + 1}) for: ${sql.slice(0, 80)}`,
+      );
+      lastError = new Error("Turso HTTP 429: rate limited");
+      continue;
+    }
 
-  const data = (await response.json()) as {
-    results: {
-      type: string;
-      response?: {
+    if (!response.ok) {
+      const text = await response.text();
+      console.error(
+        `[tursoFetch] HTTP ${response.status} for ${method} query: ${sql}`,
+        text,
+      );
+      throw new Error(`Turso HTTP ${response.status}: ${text}`);
+    }
+
+    const data = (await response.json()) as {
+      results: {
         type: string;
-        result?: {
-          cols: { name: string }[];
-          rows: { type: string; value?: unknown }[][];
+        response?: {
+          type: string;
+          result?: {
+            cols: { name: string }[];
+            rows: { type: string; value?: unknown }[][];
+          };
         };
-      };
-      error?: { message: string };
-    }[];
-  };
+        error?: { message: string };
+      }[];
+    };
 
-  const result = data.results[0];
-  if (!result) {
-    console.error(
-      `[tursoFetch] Empty results for ${method} query: ${sql}`,
-      JSON.stringify(data),
-    );
-    throw new Error(`Turso returned empty results for query: ${sql}`);
+    const result = data.results[0];
+    if (!result) {
+      console.error(
+        `[tursoFetch] Empty results for ${method} query: ${sql}`,
+        JSON.stringify(data),
+      );
+      throw new Error(`Turso returned empty results for query: ${sql}`);
+    }
+    if (result.type === "error") {
+      console.error(
+        `[tursoFetch] SQL error for ${method} query: ${sql}`,
+        result.error?.message,
+      );
+      throw new Error(`Turso SQL error: ${result.error?.message}`);
+    }
+
+    // Success — return the result
+    const stmtResult = result.response?.result;
+    if (!stmtResult) return { rows: [] };
+
+    const rows = stmtResult.rows.map((row) => row.map(fromHranaValue));
+
+    if (method === "get") {
+      return { rows: rows[0] as unknown as unknown[][] };
+    }
+
+    return { rows };
   }
-  if (result.type === "error") {
-    console.error(
-      `[tursoFetch] SQL error for ${method} query: ${sql}`,
-      result.error?.message,
-    );
-    throw new Error(`Turso SQL error: ${result.error?.message}`);
-  }
 
-  const stmtResult = result.response?.result;
-  if (!stmtResult) return { rows: [] };
-
-  // drizzle-orm/sqlite-proxy expects rows as positional arrays
-  const rows = stmtResult.rows.map((row) => row.map(fromHranaValue));
-
-  if (method === "get") {
-    // drizzle-orm/sqlite-proxy expects a single flat row for "get", or undefined if no row found
-    return { rows: (rows[0] as unknown as unknown[][]) };
-  }
-
-  return { rows };
+  // All retries exhausted
+  throw lastError || new Error("Turso request failed after retries");
 }
 
 type DbClient = ReturnType<typeof drizzle<typeof schema>>;

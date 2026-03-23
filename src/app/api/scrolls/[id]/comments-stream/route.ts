@@ -84,8 +84,8 @@ export async function GET(
         }
       };
 
-      // Poll every 2 seconds for new comments
-      const interval = setInterval(poll, 2000);
+      // Poll every 5 seconds for new comments
+      const interval = setInterval(poll, 5000);
 
       // Safety timeout: close after 30 minutes
       setTimeout(
