@@ -29,7 +29,9 @@ import {
   cosineSimilarity,
 } from "@/lib/embeddings";
 
-const CONCURRENCY = 2;
+import { OLLAMA_CONCURRENCY } from "@/lib/ollama";
+
+const CONCURRENCY = OLLAMA_CONCURRENCY;
 
 async function updateProgress(
   scrollId: string,

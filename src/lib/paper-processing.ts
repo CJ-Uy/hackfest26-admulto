@@ -2,12 +2,14 @@ import {
   generateSynthesis,
   generateApaCitation,
   generateSocialComments,
+  OLLAMA_CONCURRENCY,
+  OLLAMA_COMMENT_CONCURRENCY as commentBatchSize,
 } from "@/lib/ollama";
 import { verifyCard, type GroundingResult } from "@/lib/grounding";
 import { safeEmbedBatch, findSimilarPairs } from "@/lib/embeddings";
 import type { Paper } from "@/lib/types";
 
-const CONCURRENCY = 2;
+const CONCURRENCY = OLLAMA_CONCURRENCY;
 
 export function computeCredibilityScore(paper: {
   citationCount: number;
@@ -186,7 +188,6 @@ export async function generateCommentsForPapers(
     }
   }
 
-  const commentBatchSize = 3;
   for (let i = 0; i < processedPapers.length; i += commentBatchSize) {
     const batch = processedPapers.slice(i, i + commentBatchSize);
     const batchPromises = batch.map(async (paper, batchIdx) => {

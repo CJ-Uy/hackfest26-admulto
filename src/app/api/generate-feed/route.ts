@@ -5,6 +5,8 @@ import {
   generateExportOutline,
   generateSocialComments,
   setModels,
+  OLLAMA_CONCURRENCY,
+  OLLAMA_COMMENT_CONCURRENCY,
 } from "@/lib/ollama";
 import { verifyCard } from "@/lib/grounding";
 import { webSearch } from "@/lib/search";
@@ -22,7 +24,7 @@ import {
   findSimilarPairs,
 } from "@/lib/embeddings";
 
-const CONCURRENCY = 2; // Ollama processes sequentially, so keep low to avoid timeouts
+const CONCURRENCY = OLLAMA_CONCURRENCY;
 
 async function processInBatches<T, R>(
   items: T[],
@@ -243,7 +245,9 @@ export async function POST(req: Request) {
               .set({ queryEmbedding: JSON.stringify(queryEmbedding) })
               .where(eq(scrolls.id, scrollId));
           } catch {
-            console.warn("[generate-feed] Failed to store query embedding (non-fatal)");
+            console.warn(
+              "[generate-feed] Failed to store query embedding (non-fatal)",
+            );
           }
         }
 
@@ -575,9 +579,15 @@ export async function POST(req: Request) {
           const rawComments = new Map<number, RawComment[]>();
           if (processedPapers.length < 2) return rawComments;
 
-          const commentBatchSize = 3;
-          for (let i = 0; i < processedPapers.length; i += commentBatchSize) {
-            const batch = processedPapers.slice(i, i + commentBatchSize);
+          for (
+            let i = 0;
+            i < processedPapers.length;
+            i += OLLAMA_COMMENT_CONCURRENCY
+          ) {
+            const batch = processedPapers.slice(
+              i,
+              i + OLLAMA_COMMENT_CONCURRENCY,
+            );
             const batchPromises = batch.map(async (paper, batchIdx) => {
               const paperIdx = i + batchIdx;
 
@@ -757,9 +767,7 @@ export async function POST(req: Request) {
               progress: JSON.stringify({
                 step: "error",
                 message:
-                  err instanceof Error
-                    ? err.message
-                    : "Feed generation failed",
+                  err instanceof Error ? err.message : "Feed generation failed",
               }),
             })
             .where(eq(scrolls.id, scrollId));

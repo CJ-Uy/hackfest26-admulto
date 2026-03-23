@@ -3,6 +3,10 @@ type AnyRecord = Record<string, any>;
 
 const OLLAMA_URL = process.env.OLLAMA_URL || "http://localhost:11434";
 
+// Concurrency control for Ollama calls - keep low (1) for tunnelled/local setups
+export const OLLAMA_CONCURRENCY = 1;
+export const OLLAMA_COMMENT_CONCURRENCY = 1;
+
 // phi4-mini is fastest for short generations (synthesis, citations)
 // Use llama3 for more complex reasoning tasks (comments, outlines)
 export const DEFAULT_FAST_MODEL = "phi4-mini:3.8b";
@@ -70,30 +74,58 @@ async function ollamaChat(
   systemPrompt: string,
   userPrompt: string,
   model: string = FAST_MODEL,
+  retries: number = 3,
 ): Promise<string> {
-  const res = await fetch(`${OLLAMA_URL}/api/chat`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model,
-      stream: false,
-      options: {
-        num_predict: 256, // cap token output for speed
-        temperature: 0.7,
-      },
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-    }),
-  });
+  let attempt = 0;
+  while (attempt <= retries) {
+    try {
+      const res = await fetch(`${OLLAMA_URL}/api/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model,
+          stream: false,
+          options: {
+            num_predict: 256, // cap token output for speed
+            temperature: 0.7,
+          },
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
+          ],
+        }),
+      });
 
-  if (!res.ok) {
-    throw new Error(`Ollama request failed: ${res.status}`);
+      if (!res.ok) {
+        if (res.status === 429 && attempt < retries) {
+          attempt++;
+          const retryAfter = res.headers.get("Retry-After");
+          const delay = retryAfter
+            ? parseInt(retryAfter) * 1000
+            : Math.pow(2, attempt) * 1000 + Math.random() * 1000;
+
+          console.warn(
+            `[ollamaChat] Rate limited (429), retrying in ${delay}ms (attempt ${attempt}/${retries})`,
+          );
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          continue;
+        }
+        throw new Error(`Ollama request failed: ${res.status}`);
+      }
+
+      const data = (await res.json()) as AnyRecord;
+      return (data.message?.content as string) ?? "";
+    } catch (err) {
+      if (attempt >= retries) throw err;
+      attempt++;
+      const delay = Math.pow(2, attempt) * 1000 + Math.random() * 1000;
+      console.warn(
+        `[ollamaChat] Request failed (${(err as Error).message}), retrying in ${delay}ms (attempt ${attempt}/${retries})`,
+      );
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
   }
-
-  const data = (await res.json()) as AnyRecord;
-  return (data.message?.content as string) ?? "";
+  return "";
 }
 
 export async function generateSynthesis(

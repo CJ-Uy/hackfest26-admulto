@@ -21,7 +21,9 @@ import {
   cosineSimilarity,
 } from "@/lib/embeddings";
 
-const CONCURRENCY = 2;
+import { OLLAMA_CONCURRENCY } from "@/lib/ollama";
+
+const CONCURRENCY = OLLAMA_CONCURRENCY;
 
 /** Best-effort progress update — never throws so rate-limit errors don't kill generation. */
 async function updateProgress(
