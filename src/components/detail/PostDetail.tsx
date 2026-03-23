@@ -5,7 +5,7 @@ import { ArrowLeft, BadgeCheck, ExternalLink } from "lucide-react";
 import type { Paper } from "@/lib/types";
 import { CardActions } from "@/components/feed/CardActions";
 import { DetailTabs } from "./DetailTabs";
-import { GroundingPanel } from "./GroundingPanel";
+
 
 interface PostDetailProps {
   paper: Paper;
@@ -91,9 +91,6 @@ export function PostDetail({
           View Full Paper
           <ExternalLink className="h-3.5 w-3.5" />
         </a>
-
-        {/* Grounding verification */}
-        {paper.groundingData && <GroundingPanel data={paper.groundingData} />}
 
         {/* Actions — same as feed card */}
         <CardActions
