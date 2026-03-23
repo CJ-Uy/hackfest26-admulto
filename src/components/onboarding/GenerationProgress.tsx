@@ -182,7 +182,7 @@ export function GenerationProgress({
               {/* Text */}
               <div className="min-w-0 flex-1">
                 <p
-                  className={`text-sm font-medium ${
+                  className={`min-w-0 truncate text-sm font-medium ${
                     isPending ? "text-muted-foreground" : "text-foreground"
                   }`}
                 >
@@ -200,14 +200,14 @@ export function GenerationProgress({
 
               {/* Paper count badge */}
               {isActive && showPaperCount && (
-                <div className="text-primary bg-primary/10 shrink-0 rounded-full px-2.5 py-1 text-xs font-medium tabular-nums">
+                <div className="text-primary bg-primary/10 shrink-0 rounded-full px-2 py-1 text-[11px] font-medium tabular-nums sm:px-2.5 sm:text-xs">
                   {papersProcessed}/{totalPapers}
                 </div>
               )}
 
               {/* Active spinner */}
               {isActive && (
-                <div className="shrink-0">
+                <div className={`shrink-0 ${showPaperCount ? "hidden sm:block" : ""}`}>
                   <div className="border-primary/30 border-t-primary h-5 w-5 animate-spin rounded-full border-2" />
                 </div>
               )}

@@ -111,16 +111,16 @@ export function GenerateMoreProgress({ progress }: GenerateMoreProgressProps) {
   return (
     <div className="border-border animate-in fade-in mx-4 my-6 overflow-hidden rounded-xl border p-5 duration-500">
       {/* Header */}
-      <div className="mb-4 flex items-center gap-2">
+      <div className="mb-4 flex min-w-0 items-center gap-2">
         <div className="relative h-2 w-2">
           <div className="bg-primary absolute inset-0 animate-ping rounded-full" />
           <div className="bg-primary relative h-2 w-2 rounded-full" />
         </div>
-        <span className="text-primary text-[14px] font-semibold">
+        <span className="text-primary min-w-0 truncate text-[14px] font-semibold">
           Generating more papers
         </span>
         {showPaperCount && (
-          <span className="bg-primary/10 text-primary rounded-full px-2 py-0.5 text-[12px] font-medium tabular-nums">
+          <span className="bg-primary/10 text-primary shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium tabular-nums sm:text-[12px]">
             {progress!.papersProcessed}/{progress!.total}
           </span>
         )}
@@ -170,7 +170,7 @@ export function GenerateMoreProgress({ progress }: GenerateMoreProgressProps) {
                     </span>
                   )}
                 </p>
-                <p className="text-muted-foreground text-[11px]">
+                <p className="text-muted-foreground truncate text-[11px]">
                   {step.detail}
                 </p>
               </div>
