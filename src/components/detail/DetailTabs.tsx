@@ -44,38 +44,38 @@ const relationshipConfig: Record<
   agrees: {
     label: "Agrees",
     icon: ThumbsUp,
-    color: "text-green-600",
-    bg: "bg-green-50",
+    color: "text-green-600 dark:text-green-300",
+    bg: "bg-green-50 dark:bg-green-950/60",
   },
   disagrees: {
     label: "Disagrees",
     icon: ThumbsDown,
-    color: "text-red-500",
-    bg: "bg-red-50",
+    color: "text-red-500 dark:text-red-300",
+    bg: "bg-red-50 dark:bg-red-950/60",
   },
   extends: {
     label: "Built on this",
     icon: GitBranch,
-    color: "text-blue-600",
-    bg: "bg-blue-50",
+    color: "text-blue-600 dark:text-blue-300",
+    bg: "bg-blue-50 dark:bg-blue-950/60",
   },
   cites: {
     label: "Cited this",
     icon: Quote,
-    color: "text-purple-600",
-    bg: "bg-purple-50",
+    color: "text-purple-600 dark:text-violet-300",
+    bg: "bg-purple-50 dark:bg-violet-950/60",
   },
   questions: {
     label: "Questions",
     icon: HelpCircle,
-    color: "text-amber-600",
-    bg: "bg-amber-50",
+    color: "text-amber-600 dark:text-amber-300",
+    bg: "bg-amber-50 dark:bg-amber-950/60",
   },
   responds: {
     label: "Replied",
     icon: MessageCircleReply,
-    color: "text-primary",
-    bg: "bg-primary/10",
+    color: "text-primary dark:text-blue-300",
+    bg: "bg-primary/10 dark:bg-blue-950/60",
   },
 };
 
@@ -463,11 +463,6 @@ export function DetailTabs({
                   {c.author}
                 </span>
               )}
-              {c.relationship && (
-                <span className="hidden md:inline-flex">
-                  <RelationshipBadge relationship={c.relationship} />
-                </span>
-              )}
               <span className="text-muted-foreground shrink-0 text-[11px]">
                 {c.isGenerated
                   ? "AI"
@@ -483,11 +478,7 @@ export function DetailTabs({
 
           {/* Actions */}
           <div className="mt-1.5 ml-8 flex flex-wrap items-center gap-1 md:flex-nowrap">
-            {c.relationship && (
-              <span className="md:hidden">
-                <RelationshipBadge relationship={c.relationship} />
-              </span>
-            )}
+            {c.relationship && <RelationshipBadge relationship={c.relationship} />}
             <button
               onClick={() => setReplyingTo(c.id)}
               className="text-muted-foreground hover:text-primary hover:bg-subtle flex items-center gap-1 rounded px-2 py-0.5 text-[12px] font-medium transition-colors"

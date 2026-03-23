@@ -299,7 +299,7 @@ export function CardActions({
             <TooltipTrigger
               render={<span />}
               className={cn(
-                "cursor-help rounded-full px-3 py-1 text-[12px] leading-none font-semibold md:px-2 md:py-0.5 md:text-xs",
+                "inline-flex h-8 items-center justify-center cursor-help rounded-full px-3 text-[13px] font-semibold md:h-9 md:text-[14px]",
                 tier.bg,
                 tier.textOnBg,
               )}
