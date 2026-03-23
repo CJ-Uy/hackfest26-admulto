@@ -454,7 +454,7 @@ function ScrollPageInner() {
             <SearchBar
               value={searchQuery}
               onChange={handleSearchChange}
-              mobileTopPaddingClass="pt-8"
+              mobileTopPaddingClass="pt-4"
             />
             <TabNav
               value={activeTab}

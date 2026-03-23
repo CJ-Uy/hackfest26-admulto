@@ -11,7 +11,7 @@ interface SearchBarProps {
 export function SearchBar({
   value,
   onChange,
-  mobileTopPaddingClass = "pt-8",
+  mobileTopPaddingClass = "pt-4",
 }: SearchBarProps) {
   return (
     <div className={`px-4 py-2 ${mobileTopPaddingClass} md:pt-2`}>
