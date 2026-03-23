@@ -120,7 +120,7 @@ export default function PostPage() {
 
   if (!checked) {
     return (
-      <div className="bg-page-bg flex min-h-screen overflow-x-hidden md:overflow-x-visible">
+      <div className="bg-page-bg flex min-h-screen overflow-x-visible">
         <Sidebar showMobileTrigger={false} />
         <div className="flex min-w-0 flex-1 justify-center gap-0 lg:gap-6 lg:px-6 lg:py-4">
           <main className="bg-background w-full max-w-[780px] min-w-0 flex-1 lg:rounded-t-lg">
@@ -134,7 +134,7 @@ export default function PostPage() {
 
   if (!paper) {
     return (
-      <div className="bg-page-bg flex min-h-screen overflow-x-hidden md:overflow-x-visible">
+      <div className="bg-page-bg flex min-h-screen overflow-x-visible">
         <Sidebar showMobileTrigger={false} />
         <main className="flex flex-1 items-center justify-center">
           <p className="text-muted-foreground">Paper not found.</p>
@@ -144,7 +144,7 @@ export default function PostPage() {
   }
 
   return (
-    <div className="bg-page-bg flex min-h-screen overflow-x-hidden md:overflow-x-visible">
+    <div className="bg-page-bg flex min-h-screen overflow-x-visible">
       <Sidebar showMobileTrigger={false} />
 
       <div className="flex min-w-0 flex-1 justify-center gap-0 lg:gap-6 lg:px-6 lg:py-4">

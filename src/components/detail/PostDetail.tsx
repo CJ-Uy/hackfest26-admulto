@@ -37,13 +37,18 @@ export function PostDetail({
   return (
     <div className="mx-auto max-w-[780px] px-4 pt-14 pb-4 md:pt-4">
       {/* Back */}
-      <button
-        onClick={() => router.push(`/schroll/${scrollId}`)}
-        className="text-muted-foreground hover:text-foreground mb-3 flex items-center gap-1.5 text-[15px] font-semibold transition-colors"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to feed
-      </button>
+      <div className="bg-background border-border sticky top-4 z-30 -mx-4 mb-3 border-b px-4 py-2 md:mx-0">
+        <div className="bg-background pointer-events-none absolute -top-4 right-0 left-0 h-4" />
+        <div className="relative">
+          <button
+            onClick={() => router.push(`/schroll/${scrollId}`)}
+            className="text-muted-foreground hover:text-foreground flex items-center gap-1.5 text-[15px] font-semibold transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to feed
+          </button>
+        </div>
+      </div>
 
       {/* Paper card — matching feed card style */}
       <div className="border-border border-b px-1 pb-3">

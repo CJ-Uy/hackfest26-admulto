@@ -464,7 +464,9 @@ export function DetailTabs({
                 </span>
               )}
               {c.relationship && (
-                <RelationshipBadge relationship={c.relationship} />
+                <span className="hidden md:inline-flex">
+                  <RelationshipBadge relationship={c.relationship} />
+                </span>
               )}
               <span className="text-muted-foreground shrink-0 text-[11px]">
                 {c.isGenerated
@@ -480,7 +482,12 @@ export function DetailTabs({
           </p>
 
           {/* Actions */}
-          <div className="mt-1.5 ml-8 flex items-center gap-1">
+          <div className="mt-1.5 ml-8 flex flex-wrap items-center gap-1 md:flex-nowrap">
+            {c.relationship && (
+              <span className="md:hidden">
+                <RelationshipBadge relationship={c.relationship} />
+              </span>
+            )}
             <button
               onClick={() => setReplyingTo(c.id)}
               className="text-muted-foreground hover:text-primary hover:bg-subtle flex items-center gap-1 rounded px-2 py-0.5 text-[12px] font-medium transition-colors"
@@ -537,7 +544,7 @@ export function DetailTabs({
       {/* AI-generated "reactions" from other papers */}
       {generated.length > 0 && (
         <div className="mb-4">
-          <div className="mb-2 flex items-center justify-between">
+          <div className="mb-3 rounded-lg border border-border/60 p-3 md:mb-2 md:rounded-none md:border-0 md:p-0">
             <h3 className="text-foreground flex items-center gap-2 text-[15px] font-bold">
               <Bot className="text-muted-foreground h-4 w-4" />
               What other researchers say ({generated.length})
@@ -546,7 +553,7 @@ export function DetailTabs({
               <button
                 onClick={handleGenerateComments}
                 disabled={generatingComments}
-                className="text-muted-foreground hover:text-primary bg-subtle hover:bg-subtle-hover flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-semibold transition-colors disabled:opacity-50"
+                className="text-muted-foreground hover:text-primary bg-subtle hover:bg-subtle-hover mt-2 flex w-full items-center justify-center gap-1.5 rounded-full px-3 py-2 text-[13px] font-semibold transition-colors disabled:opacity-50 md:mt-0 md:ml-auto md:w-auto md:justify-start md:py-1.5 md:text-[12px]"
               >
                 <Sparkles
                   className={`h-3.5 w-3.5 ${generatingComments ? "animate-spin" : ""}`}

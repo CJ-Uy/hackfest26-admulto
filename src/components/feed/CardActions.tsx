@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   ArrowBigUp,
   ArrowBigDown,
@@ -9,6 +10,7 @@ import {
   Bookmark,
   Sparkles,
   Trash2,
+  MoreHorizontal,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -60,7 +62,60 @@ export function CardActions({
   const [generatingComments, setGeneratingComments] = useState(false);
   const [score, setScore] = useState(credibilityScore);
   const [bookmarked, setBookmarked] = useState(initialBookmarked);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [moreMenuPos, setMoreMenuPos] = useState<{ top: number; left: number }>({
+    top: 0,
+    left: 0,
+  });
+  const moreMenuRef = useRef<HTMLDivElement>(null);
+  const moreButtonRef = useRef<HTMLButtonElement>(null);
   const tier = getCredibilityTier(credibilityScore);
+
+  function placeMoreMenu() {
+    if (!moreButtonRef.current) return;
+    const rect = moreButtonRef.current.getBoundingClientRect();
+    const menuWidth = 176; // w-44
+    const viewportPadding = 8;
+    const preferredLeft = rect.right - menuWidth;
+    const left = Math.max(
+      viewportPadding,
+      Math.min(preferredLeft, window.innerWidth - menuWidth - viewportPadding),
+    );
+    const top = rect.bottom + 6;
+    setMoreMenuPos({ top, left });
+  }
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (!moreMenuRef.current) return;
+      if (!moreMenuRef.current.contains(event.target as Node)) {
+        setMoreOpen(false);
+      }
+    }
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setMoreOpen(false);
+      }
+    }
+
+    function handleReposition() {
+      if (moreOpen) {
+        placeMoreMenu();
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+    window.addEventListener("resize", handleReposition);
+    window.addEventListener("scroll", handleReposition, true);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+      window.removeEventListener("resize", handleReposition);
+      window.removeEventListener("scroll", handleReposition, true);
+    };
+  }, [moreOpen]);
 
   async function handleUpvote(e: React.MouseEvent) {
     e.preventDefault();
@@ -173,28 +228,30 @@ export function CardActions({
     n >= 1000 ? `${(n / 1000).toFixed(1).replace(/\.0$/, "")}k` : String(n);
 
   return (
-    <div className="mt-2 flex flex-wrap items-center justify-between gap-y-1">
-      <div className="flex flex-wrap items-center gap-y-1">
+    <div className="mt-2 flex items-center justify-between md:flex-wrap md:gap-y-1">
+      <div className="flex min-w-0 flex-nowrap items-center gap-1 md:flex-wrap md:gap-y-1">
         {/* Vote cluster */}
-        <div className="bg-subtle mr-1 flex items-center rounded-full">
+        <div className="bg-subtle flex items-center rounded-full">
           <button
             onClick={handleUpvote}
             aria-label={upvoted ? "Remove upvote" : "Upvote"}
             className={cn(
-              "rounded-l-full p-2.5 transition-colors",
+              "rounded-l-full p-2 transition-colors md:p-2.5",
               upvoted
                 ? "text-[#ff4500]"
                 : "text-muted-foreground hover:bg-destructive/10 hover:text-[#ff4500]",
             )}
           >
-            <ArrowBigUp className={cn("h-5 w-5", upvoted && "fill-current")} />
+            <ArrowBigUp
+              className={cn("h-4.5 w-4.5 md:h-5 md:w-5", upvoted && "fill-current")}
+            />
           </button>
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger
                 render={<span />}
                 className={cn(
-                  "min-w-6 cursor-help text-center text-[14px] font-bold",
+                  "min-w-6 cursor-help px-0.5 text-center text-[13px] font-bold md:text-[14px]",
                   upvoted ? "text-[#ff4500]" : "text-foreground",
                 )}
                 onClick={(e) => {
@@ -224,14 +281,14 @@ export function CardActions({
             onClick={handleDownvote}
             aria-label={downvoted ? "Remove downvote" : "Downvote"}
             className={cn(
-              "rounded-r-full p-2.5 transition-colors",
+              "rounded-r-full p-2 transition-colors md:p-2.5",
               downvoted
                 ? "text-[#7193ff]"
                 : "text-muted-foreground hover:text-primary hover:bg-primary/10",
             )}
           >
             <ArrowBigDown
-              className={cn("h-5 w-5", downvoted && "fill-current")}
+              className={cn("h-4.5 w-4.5 md:h-5 md:w-5", downvoted && "fill-current")}
             />
           </button>
         </div>
@@ -242,7 +299,7 @@ export function CardActions({
             <TooltipTrigger
               render={<span />}
               className={cn(
-                "mr-1 cursor-help rounded-full px-2 py-0.5 text-xs font-semibold",
+                "cursor-help rounded-full px-3 py-1 text-[12px] leading-none font-semibold md:px-2 md:py-0.5 md:text-xs",
                 tier.bg,
                 tier.textOnBg,
               )}
@@ -271,9 +328,9 @@ export function CardActions({
         <button
           onClick={handleCommentClick}
           aria-label={`${commentCount} comments`}
-          className="text-muted-foreground bg-subtle hover:bg-subtle-hover relative mr-1 flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[14px] font-bold transition-colors"
+          className="text-muted-foreground bg-subtle hover:bg-subtle-hover relative flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-bold transition-colors md:px-3.5 md:text-[14px]"
         >
-          <MessageSquare className="h-4.5 w-4.5" />
+          <MessageSquare className="h-4 w-4 md:h-4.5 md:w-4.5" />
           {commentCount}
           {hasNewComments && (
             <span className="ring-background absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-red-500 ring-2" />
@@ -283,7 +340,7 @@ export function CardActions({
         {/* Share */}
         <button
           onClick={handleShare}
-          className="text-muted-foreground bg-subtle hover:bg-subtle-hover mr-1 flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[14px] font-bold transition-colors"
+          className="text-muted-foreground bg-subtle hover:bg-subtle-hover hidden items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[14px] font-bold transition-colors md:flex"
         >
           <Share2 className="h-4 w-4" />
           <span className="hidden sm:inline">Share</span>
@@ -299,7 +356,7 @@ export function CardActions({
                 disabled={generatingComments}
                 aria-label="Generate AI comments"
                 className={cn(
-                  "text-muted-foreground bg-subtle hover:bg-subtle-hover relative flex items-center gap-1.5 overflow-hidden rounded-full px-3.5 py-1.5 text-[14px] font-bold transition-colors",
+                  "text-muted-foreground bg-subtle hover:bg-subtle-hover relative hidden items-center gap-1.5 overflow-hidden rounded-full px-3.5 py-1.5 text-[14px] font-bold transition-colors md:flex",
                 )}
               >
                 {generatingComments && (
@@ -323,9 +380,104 @@ export function CardActions({
             </Tooltip>
           </TooltipProvider>
         )}
+
+        {/* Mobile overflow menu */}
+        <div className="relative ml-auto md:hidden" ref={moreMenuRef}>
+          <button
+            ref={moreButtonRef}
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setMoreOpen((prev) => {
+                const next = !prev;
+                if (next) {
+                  placeMoreMenu();
+                }
+                return next;
+              });
+            }}
+            aria-label="More actions"
+            className="text-muted-foreground bg-subtle hover:bg-subtle-hover flex items-center justify-center rounded-full p-2 transition-colors"
+          >
+            <MoreHorizontal className="h-4 w-4" />
+          </button>
+
+          {moreOpen &&
+            createPortal(
+              <div
+                className="fixed inset-0 z-[120]"
+                onClick={() => setMoreOpen(false)}
+              >
+                <div
+                  className="bg-background border-border fixed z-[121] w-44 rounded-xl border p-1 shadow-lg"
+                  style={{ top: moreMenuPos.top, left: moreMenuPos.left }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                >
+                <button
+                  type="button"
+                  onClick={(e) => {
+                      handleShare(e);
+                    setMoreOpen(false);
+                  }}
+                    className="hover:bg-subtle flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[13px] font-medium"
+                >
+                    <Share2 className="h-4 w-4" />
+                    Share
+                </button>
+
+                  {onGenerateComments && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        void handleGenerateComments(e);
+                        setMoreOpen(false);
+                      }}
+                      className="hover:bg-subtle flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[13px] font-medium"
+                    >
+                      <Sparkles className="h-4 w-4" />
+                      Generate Comments
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      void handleBookmark(e);
+                      setMoreOpen(false);
+                    }}
+                    className="hover:bg-subtle flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[13px] font-medium"
+                  >
+                    <Bookmark
+                      className={cn("h-4 w-4", bookmarked && "fill-current")}
+                    />
+                    {bookmarked ? "Unsave" : "Save"}
+                  </button>
+
+                  {onDelete && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        void handleDelete(e);
+                        setMoreOpen(false);
+                      }}
+                      className="hover:bg-red-50 text-destructive flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[13px] font-medium"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Delete
+                    </button>
+                  )}
+                </div>
+              </div>,
+              document.body,
+            )}
+        </div>
       </div>
 
-      <div className="flex items-center gap-0.5">
+      <div className="hidden items-center gap-0.5 md:flex">
         {/* Bookmark */}
         <TooltipProvider>
           <Tooltip>
