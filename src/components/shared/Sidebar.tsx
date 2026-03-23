@@ -34,7 +34,7 @@ import { toast } from "sonner";
 import { SchrollarLogo } from "./SchrollarLogo";
 import { ThemeToggle } from "./ThemeToggle";
 
-function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
+export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
   const [sessions, setSessions] = useState<ScrollSession[]>([]);
@@ -177,27 +177,33 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
-export function Sidebar() {
+export function Sidebar({
+  showMobileTrigger = true,
+}: {
+  showMobileTrigger?: boolean;
+}) {
   const [collapsed, setCollapsed] = useState(false);
 
   return (
     <>
       {/* Mobile hamburger */}
-      <div className="fixed top-0 left-0 z-50 p-3 md:hidden">
-        <Sheet>
-          <SheetTrigger
-            render={
-              <Button variant="outline" size="icon" className="h-9 w-9" />
-            }
-          >
-            <Menu className="h-4 w-4" />
-          </SheetTrigger>
-          <SheetContent side="left" className="w-72 p-0">
-            <SheetTitle className="sr-only">Navigation</SheetTitle>
-            <SidebarContent />
-          </SheetContent>
-        </Sheet>
-      </div>
+      {showMobileTrigger && (
+        <div className="fixed top-0 left-0 z-50 p-3 md:hidden">
+          <Sheet>
+            <SheetTrigger
+              render={
+                <Button variant="outline" size="icon" className="h-9 w-9" />
+              }
+            >
+              <Menu className="h-4 w-4" />
+            </SheetTrigger>
+            <SheetContent side="left" className="w-72 p-0">
+              <SheetTitle className="sr-only">Navigation</SheetTitle>
+              <SidebarContent />
+            </SheetContent>
+          </Sheet>
+        </div>
+      )}
 
       {/* Desktop sidebar */}
       <aside

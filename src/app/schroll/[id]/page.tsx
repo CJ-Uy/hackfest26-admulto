@@ -13,6 +13,7 @@ import { FineTuneView } from "@/components/fine-tune/FineTuneView";
 import { ExportView } from "@/components/export/ExportView";
 import { RightSidebar } from "@/components/shared/RightSidebar";
 import { CreatePostFAB } from "@/components/feed/CreatePostFAB";
+import { MobileBottomNav } from "@/components/shared/MobileBottomNav";
 import {
   FeedSkeleton,
   RightSidebarSkeleton,
@@ -387,7 +388,7 @@ function ScrollPageInner() {
   if (!scroll) {
     return (
       <div className="bg-page-bg flex min-h-screen overflow-x-hidden md:overflow-x-visible">
-        <Sidebar />
+        <Sidebar showMobileTrigger={false} />
         <div className="flex min-w-0 flex-1 justify-center gap-0 lg:gap-6 lg:px-6 lg:py-4">
           <main className="bg-background w-full max-w-[780px] min-w-0 flex-1 lg:rounded-t-lg">
             <div className="px-4 pt-14 pb-3 md:pt-5">
@@ -428,7 +429,7 @@ function ScrollPageInner() {
 
   return (
     <div className="bg-page-bg flex min-h-screen overflow-x-hidden md:overflow-x-visible">
-      <Sidebar />
+      <Sidebar showMobileTrigger={false} />
 
       <div className="flex min-w-0 flex-1 justify-center gap-0 lg:gap-6 lg:px-6 lg:py-4">
         {/* Main content column */}
@@ -543,10 +544,24 @@ function ScrollPageInner() {
           yourCommentCounts={yourCommentCounts}
           userPosts={userPosts}
           scrollId={scrollId}
+          showMobileTrigger={false}
         />
       </div>
 
-      <CreatePostFAB scrollId={scrollId} onPost={handleNewPost} />
+      <div className="hidden md:block">
+        <CreatePostFAB scrollId={scrollId} onPost={handleNewPost} />
+      </div>
+      <MobileBottomNav
+        scrollId={scrollId}
+        onPost={handleNewPost}
+        scroll={scroll}
+        papers={papers}
+        upvotedPapers={upvotedPapers}
+        downvotedPapers={downvotedPapers}
+        bookmarkedPapers={bookmarkedPapers}
+        yourCommentCounts={yourCommentCounts}
+        userPosts={userPosts}
+      />
     </div>
   );
 }

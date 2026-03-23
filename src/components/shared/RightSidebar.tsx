@@ -31,6 +31,8 @@ interface RightSidebarProps {
   yourCommentCounts: Map<string, number>;
   userPosts: UserPost[];
   scrollId: string;
+  showMobileTrigger?: boolean;
+  contentOnly?: boolean;
 }
 
 export function RightSidebar({
@@ -42,6 +44,8 @@ export function RightSidebar({
   yourCommentCounts,
   userPosts,
   scrollId,
+  showMobileTrigger = true,
+  contentOnly = false,
 }: RightSidebarProps) {
   const safeYourCommentCounts = yourCommentCounts ?? new Map<string, number>();
   const [showAllBookmarked, setShowAllBookmarked] = useState(false);
@@ -60,6 +64,11 @@ export function RightSidebar({
         papers.reduce((sum, p) => sum + p.credibilityScore, 0) / papers.length,
       )
     : 0;
+  const hasMobileInsightsActivity =
+    bookmarkedList.length > 0 ||
+    upvotedPapers.size > 0 ||
+    downvotedPapers.size > 0 ||
+    safeYourCommentCounts.size > 0;
 
   const sidebarContent = (
     <div className="space-y-3">
@@ -264,31 +273,40 @@ export function RightSidebar({
     </div>
   );
 
+  if (contentOnly) {
+    return sidebarContent;
+  }
+
   return (
     <>
-      {/* Mobile trigger - fixed bottom-left */}
-      <div className="fixed bottom-6 left-6 z-50 lg:hidden">
-        <Sheet>
-          <SheetTrigger
-            render={
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-10 w-10 rounded-full shadow-md"
-              />
-            }
-          >
-            <BarChart3 className="h-4 w-4" />
-          </SheetTrigger>
-          <SheetContent
-            side="right"
-            className="w-[340px] max-w-[90vw] overflow-y-auto p-4"
-          >
-            <SheetTitle className="sr-only">Session info</SheetTitle>
-            {sidebarContent}
-          </SheetContent>
-        </Sheet>
-      </div>
+      {/* Mobile trigger - floating insights button */}
+      {showMobileTrigger && (
+        <div className="fixed bottom-6 left-6 z-50 lg:hidden">
+          <Sheet>
+            <SheetTrigger
+              render={
+                <Button
+                  variant="outline"
+                  className="border-border bg-background/95 hover:bg-background relative h-11 rounded-full px-4 shadow-lg backdrop-blur"
+                />
+              }
+            >
+              <BarChart3 className="mr-1.5 h-4 w-4" />
+              Insights
+              {hasMobileInsightsActivity && (
+                <span className="bg-primary absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full" />
+              )}
+            </SheetTrigger>
+            <SheetContent
+              side="bottom"
+              className="h-[80vh] overflow-y-auto rounded-t-2xl p-4"
+            >
+              <SheetTitle className="sr-only">Session info</SheetTitle>
+              {sidebarContent}
+            </SheetContent>
+          </Sheet>
+        </div>
+      )}
 
       {/* Desktop sidebar */}
       <aside className="no-scrollbar hidden w-[340px] shrink-0 lg:sticky lg:top-4 lg:block lg:max-h-[calc(100vh-32px)] lg:overflow-y-auto">

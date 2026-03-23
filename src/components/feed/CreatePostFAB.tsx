@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { Plus, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,9 +19,18 @@ import type { UserPost } from "@/lib/types";
 interface CreatePostFABProps {
   scrollId: string;
   onPost: (post: UserPost) => void;
+  showFloatingButton?: boolean;
+  triggerRender?: ReactElement;
+  triggerContent?: ReactNode;
 }
 
-export function CreatePostFAB({ scrollId, onPost }: CreatePostFABProps) {
+export function CreatePostFAB({
+  scrollId,
+  onPost,
+  showFloatingButton = true,
+  triggerRender,
+  triggerContent,
+}: CreatePostFABProps) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -71,14 +81,20 @@ export function CreatePostFAB({ scrollId, onPost }: CreatePostFABProps) {
     }
   }
 
+  const resolvedTriggerRender =
+    triggerRender ??
+    (showFloatingButton ? (
+      <button className="bg-primary text-primary-foreground fixed right-6 bottom-6 z-50 flex h-12 w-12 items-center justify-center rounded-full shadow-lg transition-all hover:scale-105 hover:shadow-xl active:scale-95 lg:right-6 lg:bottom-6" />
+    ) : null);
+
+  if (!resolvedTriggerRender) {
+    return null;
+  }
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger
-        render={
-          <button className="bg-primary text-primary-foreground fixed right-6 bottom-6 z-50 flex h-12 w-12 items-center justify-center rounded-full shadow-lg transition-all hover:scale-105 hover:shadow-xl active:scale-95 lg:right-6 lg:bottom-6" />
-        }
-      >
-        <Plus className="h-5 w-5" />
+      <DialogTrigger render={resolvedTriggerRender}>
+        {triggerContent ?? <Plus className="h-5 w-5" />}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[480px]">
         <DialogHeader>
