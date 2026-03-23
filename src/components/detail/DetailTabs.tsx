@@ -581,11 +581,11 @@ export function DetailTabs({
         )}
       </div>
 
-      {/* Show typing indicator for main reply if waiting */}
-      {Array.from(waitingForReply).some((id) => {
-        const c = comments.find((co) => co.id === id);
-        return c && !c.parentId;
-      }) && <TypingIndicator depth={0} />}
+      {/* Fallback typing indicator only when the pending top-level comment
+          hasn't appeared in the loaded comments list yet. */}
+      {Array.from(waitingForReply).some(
+        (id) => !comments.some((co) => co.id === id && !co.parentId),
+      ) && <TypingIndicator depth={0} />}
 
       {/* Integrated reply input */}
       {showReplyInput && (
