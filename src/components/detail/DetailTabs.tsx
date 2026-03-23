@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { SchrollarLogo } from "@/components/shared/SchrollarLogo";
 
 import { useCommentStream } from "@/hooks/useCommentStream";
 import type { Comment } from "@/lib/types";
@@ -444,6 +445,8 @@ export function DetailTabs({
             >
               {c.isGenerated ? (
                 <Bot className="h-3 w-3" />
+              ) : c.author === "You" ? (
+                <SchrollarLogo showText={false} size="sm" />
               ) : (
                 c.author.charAt(0).toUpperCase()
               )}
