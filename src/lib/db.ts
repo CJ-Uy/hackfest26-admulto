@@ -56,30 +56,43 @@ async function tursoFetch(
   params: unknown[],
   method: "run" | "all" | "values" | "get",
 ): Promise<{ rows: unknown[][] }> {
-  const response = await fetch(`${httpUrl}/v2/pipeline`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(authToken && { Authorization: `Bearer ${authToken}` }),
-    },
-    body: JSON.stringify({
-      requests: [
-        {
-          type: "execute",
-          stmt: {
-            sql,
-            args: params.map(toHranaValue),
-            named_args: [],
-            want_rows: method !== "run",
+  let response: Response;
+  try {
+    response = await fetch(`${httpUrl}/v2/pipeline`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(authToken && { Authorization: `Bearer ${authToken}` }),
+      },
+      body: JSON.stringify({
+        requests: [
+          {
+            type: "execute",
+            stmt: {
+              sql,
+              args: params.map(toHranaValue),
+              named_args: [],
+              want_rows: method !== "run",
+            },
           },
-        },
-        { type: "close" },
-      ],
-    }),
-  });
+          { type: "close" },
+        ],
+      }),
+    });
+  } catch (fetchErr) {
+    console.error(
+      `[tursoFetch] Network error for ${method} query: ${sql}`,
+      fetchErr,
+    );
+    throw fetchErr;
+  }
 
   if (!response.ok) {
     const text = await response.text();
+    console.error(
+      `[tursoFetch] HTTP ${response.status} for ${method} query: ${sql}`,
+      text,
+    );
     throw new Error(`Turso HTTP ${response.status}: ${text}`);
   }
 
@@ -98,7 +111,18 @@ async function tursoFetch(
   };
 
   const result = data.results[0];
+  if (!result) {
+    console.error(
+      `[tursoFetch] Empty results for ${method} query: ${sql}`,
+      JSON.stringify(data),
+    );
+    throw new Error(`Turso returned empty results for query: ${sql}`);
+  }
   if (result.type === "error") {
+    console.error(
+      `[tursoFetch] SQL error for ${method} query: ${sql}`,
+      result.error?.message,
+    );
     throw new Error(`Turso SQL error: ${result.error?.message}`);
   }
 
