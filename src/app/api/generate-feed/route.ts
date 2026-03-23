@@ -70,15 +70,20 @@ function computeCredibilityScore(paper: {
   return Math.min(score, 99);
 }
 
+/** Best-effort progress update — never throws so rate-limit errors don't kill the feed generation. */
 async function updateProgress(
   scrollId: string,
   step: string,
   extra: Record<string, number> = {},
 ) {
-  await db
-    .update(scrolls)
-    .set({ progress: JSON.stringify({ step, ...extra }) })
-    .where(eq(scrolls.id, scrollId));
+  try {
+    await db
+      .update(scrolls)
+      .set({ progress: JSON.stringify({ step, ...extra }) })
+      .where(eq(scrolls.id, scrollId));
+  } catch (err) {
+    console.warn(`[updateProgress] Failed (non-fatal): ${step}`, err);
+  }
 }
 
 export async function POST(req: Request) {
@@ -230,12 +235,16 @@ export async function POST(req: Request) {
           .join(" ");
         const queryEmbedding = queryText ? await safeEmbed(queryText) : null;
 
-        // Store query embedding on scroll
+        // Store query embedding on scroll (best-effort, non-critical)
         if (queryEmbedding) {
-          await db
-            .update(scrolls)
-            .set({ queryEmbedding: JSON.stringify(queryEmbedding) })
-            .where(eq(scrolls.id, scrollId));
+          try {
+            await db
+              .update(scrolls)
+              .set({ queryEmbedding: JSON.stringify(queryEmbedding) })
+              .where(eq(scrolls.id, scrollId));
+          } catch {
+            console.warn("[generate-feed] Failed to store query embedding (non-fatal)");
+          }
         }
 
         // Embed papers that don't already have embeddings (from searchPapers dedup)
@@ -740,17 +749,25 @@ export async function POST(req: Request) {
           `Background feed generation failed for ${scrollId}:`,
           err,
         );
-        await db
-          .update(scrolls)
-          .set({
-            status: "error",
-            progress: JSON.stringify({
-              step: "error",
-              message:
-                err instanceof Error ? err.message : "Feed generation failed",
-            }),
-          })
-          .where(eq(scrolls.id, scrollId));
+        try {
+          await db
+            .update(scrolls)
+            .set({
+              status: "error",
+              progress: JSON.stringify({
+                step: "error",
+                message:
+                  err instanceof Error
+                    ? err.message
+                    : "Feed generation failed",
+              }),
+            })
+            .where(eq(scrolls.id, scrollId));
+        } catch {
+          console.error(
+            `[generate-feed] Failed to set error status for ${scrollId}`,
+          );
+        }
       }
     });
 

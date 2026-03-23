@@ -23,15 +23,20 @@ import {
 
 const CONCURRENCY = 2;
 
+/** Best-effort progress update — never throws so rate-limit errors don't kill generation. */
 async function updateProgress(
   scrollId: string,
   step: string,
   extra: Record<string, number> = {},
 ) {
-  await db
-    .update(scrolls)
-    .set({ progress: JSON.stringify({ step, ...extra }) })
-    .where(eq(scrolls.id, scrollId));
+  try {
+    await db
+      .update(scrolls)
+      .set({ progress: JSON.stringify({ step, ...extra }) })
+      .where(eq(scrolls.id, scrollId));
+  } catch (err) {
+    console.warn(`[updateProgress] Failed (non-fatal): ${step}`, err);
+  }
 }
 
 export async function POST(req: Request) {
@@ -282,13 +287,17 @@ export async function POST(req: Request) {
       );
     } catch (err) {
       console.error(`[generate-more] Failed for ${scrollId}:`, err);
-      await db
-        .update(scrolls)
-        .set({
-          status: "complete",
-          progress: null,
-        })
-        .where(eq(scrolls.id, scrollId));
+      try {
+        await db
+          .update(scrolls)
+          .set({
+            status: "complete",
+            progress: null,
+          })
+          .where(eq(scrolls.id, scrollId));
+      } catch {
+        console.error(`[generate-more] Failed to reset status for ${scrollId}`);
+      }
     }
   });
 
