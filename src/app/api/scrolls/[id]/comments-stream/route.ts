@@ -1,8 +1,6 @@
 import { db } from "@/lib/db";
 import { comments, papers } from "@/lib/schema";
-import { eq, and, gt, isNull, desc } from "drizzle-orm";
-
-export const runtime = "edge";
+import { eq, and, gt, desc } from "drizzle-orm";
 
 export async function GET(
   _req: Request,
