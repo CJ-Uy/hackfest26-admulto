@@ -311,15 +311,44 @@ export function TopicForm({ initialTopic }: TopicFormProps) {
       });
 
       if (!res.ok) {
-        const err = (await res.json()) as { error?: string };
-        throw new Error(err.error || `API returned ${res.status}`);
+        const text = await res.text();
+        let errMsg = `API returned ${res.status}`;
+        try {
+          const parsed = JSON.parse(text) as { error?: string };
+          if (parsed.error) errMsg = parsed.error;
+        } catch {
+          // not JSON
+        }
+        throw new Error(errMsg);
       }
 
-      const data = (await res.json()) as {
-        scroll: { id: string };
-      };
+      // The response is a stream — the first line is JSON with the scroll ID.
+      // Read just the first line and let the rest stream in the background.
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error("No response body");
 
-      setScrollId(data.scroll.id);
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let scrollData: { scroll: { id: string } } | null = null;
+
+      while (!scrollData) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const newlineIdx = buffer.indexOf("\n");
+        if (newlineIdx !== -1) {
+          const firstLine = buffer.slice(0, newlineIdx).trim();
+          if (firstLine) {
+            scrollData = JSON.parse(firstLine) as { scroll: { id: string } };
+          }
+        }
+      }
+
+      // Release the reader — the server continues processing on its own
+      reader.releaseLock();
+
+      if (!scrollData) throw new Error("No scroll ID received");
+      setScrollId(scrollData.scroll.id);
     } catch (err) {
       console.error("Feed generation failed:", err);
       toast.error("Could not generate feed. Please try again.");

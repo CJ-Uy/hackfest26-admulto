@@ -1,4 +1,3 @@
-import { after } from "next/server";
 import {
   generateSynthesis,
   generateApaCitation,
@@ -153,9 +152,27 @@ export async function POST(req: Request) {
 
     const scrollId = scroll.id;
 
-    // Run heavy processing in background after returning response
-    after(async () => {
-      try {
+    // Use a streaming response so the CF Worker stays alive for the full
+    // duration of processing. The first chunk contains the scroll ID so the
+    // client can start polling the stream endpoint immediately.
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+      async start(controller) {
+        // Send the scroll ID immediately so the client can redirect
+        controller.enqueue(
+          encoder.encode(JSON.stringify({ scroll: { id: scrollId } }) + "\n"),
+        );
+
+        // Keep-alive: send a newline every 15s to prevent CF from killing the connection
+        const keepAlive = setInterval(() => {
+          try {
+            controller.enqueue(encoder.encode("\n"));
+          } catch {
+            // stream already closed
+          }
+        }, 15_000);
+
+        try {
         // ── Step 0: Extract PDFs if provided ──
         let pdfPapers: RawPaper[] = [];
         let pdfContextText = "";
@@ -828,11 +845,19 @@ export async function POST(req: Request) {
             `[generate-feed] Failed to set error status for ${scrollId}`,
           );
         }
+      } finally {
+        clearInterval(keepAlive);
+        controller.close();
       }
+      },
     });
 
-    // Return immediately with the scroll ID
-    return Response.json({ scroll: { id: scroll.id } });
+    return new Response(stream, {
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Transfer-Encoding": "chunked",
+      },
+    });
   } catch (err) {
     console.error("Feed generation failed:", err);
     return Response.json(
