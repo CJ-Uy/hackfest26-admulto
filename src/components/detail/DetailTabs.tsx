@@ -36,6 +36,7 @@ interface DetailTabsProps {
   scrollId: string;
   scrollPapers?: ScrollPaperRef[];
   showReplyInput?: boolean;
+  disableAiComments?: boolean;
 }
 
 const relationshipConfig: Record<
@@ -210,6 +211,7 @@ export function DetailTabs({
   scrollId,
   scrollPapers = [],
   showReplyInput = false,
+  disableAiComments = false,
 }: DetailTabsProps) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
@@ -545,7 +547,7 @@ export function DetailTabs({
               <Bot className="text-muted-foreground h-4 w-4" />
               What other researchers say ({generated.length})
             </h3>
-            {paperId && (
+            {paperId && !disableAiComments && (
               <button
                 onClick={handleGenerateComments}
                 disabled={generatingComments}

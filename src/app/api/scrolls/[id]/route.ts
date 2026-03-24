@@ -120,6 +120,7 @@ export async function GET(
       date: scroll.date,
       paperCount: scroll.paperCount,
       mode: scroll.mode,
+      aiProvider: scroll.aiProvider || "ollama",
       status: scroll.status,
       pdfKeys: scroll.pdfKeys
         ? (JSON.parse(scroll.pdfKeys) as string[])

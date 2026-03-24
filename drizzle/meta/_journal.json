@@ -57,6 +57,13 @@
       "when": 1774170766029,
       "tag": "0007_lively_psylocke",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1774314770271,
+      "tag": "0008_solid_omega_sentinel",
+      "breakpoints": true
     }
   ]
 }

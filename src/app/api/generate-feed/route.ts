@@ -144,6 +144,7 @@ export async function POST(req: Request) {
         date: new Date().toISOString().split("T")[0],
         paperCount: 0,
         status: "generating",
+        aiProvider: body.provider || "ollama",
         progress: JSON.stringify({
           step: hasPdfs ? "extracting" : "searching",
         }),

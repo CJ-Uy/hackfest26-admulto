@@ -15,12 +15,14 @@ interface PostDetailProps {
     authors: string[];
     doi: string;
   }[];
+  disableAiComments?: boolean;
 }
 
 export function PostDetail({
   paper,
   scrollId,
   scrollPapers = [],
+  disableAiComments = false,
 }: PostDetailProps) {
   const router = useRouter();
 
@@ -109,6 +111,7 @@ export function PostDetail({
           paperId={paper.id}
           scrollId={scrollId}
           scrollPapers={scrollPapers}
+          disableAiComments={disableAiComments}
           showReplyInput
         />
       </div>

@@ -153,6 +153,7 @@ export default function PostPage() {
             paper={paper}
             scrollId={scrollId}
             scrollPapers={scrollPapers}
+            disableAiComments={scroll?.aiProvider === "cloudflare"}
           />
         </main>
 

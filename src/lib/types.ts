@@ -79,6 +79,7 @@ export interface ScrollSession {
   date: string;
   paperCount: number;
   mode: string;
+  aiProvider?: "ollama" | "cloudflare" | null;
   status?: "generating" | "complete" | "error";
   pdfKeys?: string[];
 }

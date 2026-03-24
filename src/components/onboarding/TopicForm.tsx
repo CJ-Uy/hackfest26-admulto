@@ -718,12 +718,21 @@ export function TopicForm({ initialTopic }: TopicFormProps) {
               <>
                 <div className="bg-muted/50 flex items-start gap-2 rounded-md p-3">
                   <Info className="text-muted-foreground mt-0.5 h-3.5 w-3.5 shrink-0" />
-                  <p className="text-muted-foreground text-xs leading-relaxed">
-                    Cloudflare AI uses <strong>Llama 3.1 8B</strong> and{" "}
-                    <strong>Phi-2</strong> on the free tier. Each feed
-                    generation uses ~3,500–4,000 neurons. Free tier allows
-                    10,000 neurons/day (~2–3 feeds).
-                  </p>
+                  <div className="text-muted-foreground space-y-1.5 text-xs leading-relaxed">
+                    <p>
+                      Cloudflare AI uses <strong>Llama 3.1 8B</strong> and{" "}
+                      <strong>Phi-2</strong> on the free tier. Each feed
+                      generation uses ~3,500–4,000 neurons. Free tier allows
+                      10,000 neurons/day (~2–3 feeds).
+                    </p>
+                    <p className="font-medium text-amber-600">
+                      Due to daily neuron limits, Cloudflare AI will only
+                      generate the feed — AI-generated comments and replies will
+                      be disabled. For the full experience with comments,
+                      contact <strong>Charles Joshua Uy</strong> to turn on an
+                      Ollama dev instance for demo.
+                    </p>
+                  </div>
                 </div>
 
                 {neuronBudget && (
