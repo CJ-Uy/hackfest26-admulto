@@ -11,7 +11,7 @@ import { getPdf } from "@/lib/r2";
 import { extractPdfContent, pdfToRawPaper } from "@/lib/pdf-extract";
 import { db } from "@/lib/db";
 import { scrolls, papers, polls } from "@/lib/schema";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, asc } from "drizzle-orm";
 import type { ExportTheme } from "@/lib/types";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -29,6 +29,7 @@ interface Config {
   pdfContextText?: string;
 }
 
+/** rawResults is now tiny — just phase + config + index. Papers live in the DB. */
 interface RawResultsSearch {
   phase: "search";
   config: Config;
@@ -36,8 +37,8 @@ interface RawResultsSearch {
 
 interface RawResultsProcess {
   phase: "process";
-  papers: RawPaper[];
-  nextIndex: number;
+  total: number;
+  processed: number;
   config: Config;
 }
 
@@ -74,15 +75,20 @@ function applyProviderConfig(config: Config) {
   }
 }
 
+// Placeholder used to identify papers that still need synthesis
+const PENDING_SYNTHESIS = "__PENDING__";
+
 // ─── Main endpoint ───────────────────────────────────────────────────────────
 
 /**
  * Multi-step feed generation driver.
  * The client calls this repeatedly. Each call does one unit of work:
  *
- * Phase "search": Search APIs + save raw results (~5-8ms CPU, no embeddings)
- * Phase "process": Process ONE paper (synthesis + citation + DB insert) (~3-5ms CPU)
- * Finalize: Insert polls, mark complete (~1ms CPU)
+ * Phase "search": Search APIs + insert papers with placeholder synthesis
+ * Phase "process": Read ONE unprocessed paper, generate synthesis, update it
+ * Finalize: Insert polls, mark complete
+ *
+ * rawResults is now <1KB (just config + counters). Papers live in the papers table.
  */
 export async function POST(req: Request) {
   const { scrollId } = (await req.json()) as { scrollId: string };
@@ -143,7 +149,6 @@ async function handleSearchPhase(
     let pdfContextText = "";
 
     if (hasPdfs && config.pdfKeys) {
-
       for (const key of config.pdfKeys) {
         try {
           const buffer = await getPdf(key);
@@ -181,7 +186,6 @@ async function handleSearchPhase(
         searchQuery += " " + config.subfields.slice(0, 2).join(" ");
       }
 
-      // skipEmbeddings: true to save CPU time on CF Workers (avoids Ollama calls + O(n²) cosine sim)
       const [searchResults, webResults] = await Promise.all([
         searchPapers(searchQuery, 20, { skipEmbeddings: true }).catch((err) => {
           console.error(`[process-next] searchPapers failed:`, err);
@@ -200,7 +204,6 @@ async function handleSearchPhase(
 
       academicPapers = searchResults;
 
-      // Convert web results to RawPaper format
       webPapersList = webResults
         .filter((r) => r.snippet && r.snippet.length >= 20)
         .map((r) => ({
@@ -248,29 +251,60 @@ async function handleSearchPhase(
       ...dedupedWeb.slice(0, targetWeb),
     ];
 
-    // Strip embeddings and truncate abstracts to fit Turso query param limits
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const papersForStorage = allPapers.map(({ embedding, ...rest }) => ({
-      ...rest,
-      abstract: (rest.abstract || "").slice(0, 500),
-    }));
+    const total = allPapers.length;
 
-    // Transition to process phase
+    // ── Insert papers into DB with placeholder synthesis ──
+    // This means rawResults doesn't need to store paper data at all!
+    if (total > 0) {
+      await db.insert(papers).values(
+        allPapers.map((p) => {
+          const isWeb = p.source === "web";
+          return {
+            scrollId,
+            externalId: p.id,
+            title: p.title,
+            authors: JSON.stringify(p.authors || []),
+            journal: p.venue || (isWeb ? "Web Source" : "Academic Publication"),
+            year: p.year || new Date().getFullYear(),
+            doi: p.doi || "",
+            peerReviewed: !!p.venue && p.source !== "pdf_upload" && !isWeb,
+            synthesis: PENDING_SYNTHESIS,
+            credibilityScore: isWeb
+              ? 40
+              : computeCredibilityScore({
+                  citationCount: p.citationCount || 0,
+                  venue: p.venue || "",
+                  year: p.year || 0,
+                }),
+            citationCount: p.citationCount || 0,
+            commentCount: 0,
+            apaCitation: "",
+            isUserUpload: p.source === "pdf_upload",
+            // Store abstract temporarily in groundingData for synthesis generation
+            groundingData: JSON.stringify({
+              abstract: (p.abstract || "").slice(0, 2000),
+            }),
+          };
+        }),
+      );
+    }
+
+    // Transition to process phase — rawResults is now tiny (~200 bytes)
     const processData: RawResultsProcess = {
       phase: "process",
-      papers: papersForStorage,
-      nextIndex: 0,
+      total,
+      processed: 0,
       config: {
         ...config,
         pdfContextText: pdfContextText || undefined,
       },
     };
 
-    const total = papersForStorage.length;
     await db
       .update(scrolls)
       .set({
         rawResults: JSON.stringify(processData),
+        paperCount: total,
         progress: JSON.stringify({
           step: "processing",
           papersProcessed: 0,
@@ -281,7 +315,7 @@ async function handleSearchPhase(
       .where(eq(scrolls.id, scrollId));
 
     console.log(
-      `[process-next] Search phase complete. ${total} papers ready for processing.`,
+      `[process-next] Search phase complete. ${total} papers inserted, ready for processing.`,
     );
 
     return Response.json({
@@ -325,21 +359,33 @@ async function handleProcessPhase(
   scroll: { title: string; rawResults: string | null },
   rawData: RawResultsProcess,
 ) {
-  const { papers: rawPapers, config } = rawData;
-  const nextIndex = rawData.nextIndex || 0;
-  const total = rawPapers.length;
+  const { config, total } = rawData;
 
   applyProviderConfig(config);
 
+  // Find the next paper with placeholder synthesis
+  const pendingPapers = await db
+    .select()
+    .from(papers)
+    .where(eq(papers.scrollId, scrollId))
+    .orderBy(asc(papers.id))
+    .limit(100);
+
+  const nextPaper = pendingPapers.find(
+    (p) => p.synthesis === PENDING_SYNTHESIS,
+  );
+
   // All papers processed → finalize
-  if (nextIndex >= total) {
+  if (!nextPaper) {
     return await finalizeScroll(scrollId, scroll, rawData);
   }
 
-  // Process next paper
-  const raw = rawPapers[nextIndex];
+  const processed = pendingPapers.filter(
+    (p) => p.synthesis !== PENDING_SYNTHESIS,
+  ).length;
+
   console.log(
-    `[process-next] Processing paper ${nextIndex + 1}/${total}: "${raw.title?.slice(0, 60)}"`,
+    `[process-next] Processing paper ${processed + 1}/${total}: "${nextPaper.title?.slice(0, 60)}"`,
   );
 
   try {
@@ -348,68 +394,61 @@ async function handleProcessPhase(
         ? `[User's reference material for context: ${config.pdfContextText.slice(0, 1500)}]\n\n`
         : "";
 
-    const abstractForSynthesis = (raw.abstract || "").slice(0, 2000);
+    // Recover abstract from groundingData where we stored it during search
+    let abstract = "";
+    if (nextPaper.groundingData) {
+      try {
+        const gd = JSON.parse(nextPaper.groundingData) as { abstract?: string };
+        abstract = gd.abstract || "";
+      } catch {
+        // ignore
+      }
+    }
 
     const [synthesis, apaCitation] = await Promise.all([
       generateSynthesis(
-        raw.title,
-        contextPrefix + abstractForSynthesis,
-        raw.authors || [],
+        nextPaper.title,
+        contextPrefix + abstract,
+        JSON.parse(nextPaper.authors || "[]") as string[],
       ),
       generateApaCitation(
-        raw.title,
-        raw.authors || [],
-        raw.year || 0,
-        raw.venue || "",
-        raw.doi || "",
+        nextPaper.title,
+        JSON.parse(nextPaper.authors || "[]") as string[],
+        nextPaper.year || 0,
+        nextPaper.journal || "",
+        nextPaper.doi || "",
       ),
     ]);
 
-    const isWeb = raw.source === "web";
-    const credibilityScore = isWeb
-      ? 40
-      : computeCredibilityScore({
-          citationCount: raw.citationCount || 0,
-          venue: raw.venue || "",
-          year: raw.year || 0,
-        });
+    // Update paper with real synthesis, clear the temp groundingData
+    await db
+      .update(papers)
+      .set({
+        synthesis,
+        apaCitation,
+        groundingData: null,
+      })
+      .where(eq(papers.id, nextPaper.id));
 
-    await db.insert(papers).values({
-      scrollId,
-      externalId: raw.id,
-      title: raw.title,
-      authors: JSON.stringify(raw.authors || []),
-      journal: raw.venue || (isWeb ? "Web Source" : "Academic Publication"),
-      year: raw.year || new Date().getFullYear(),
-      doi: raw.doi || "",
-      peerReviewed: !!raw.venue && raw.source !== "pdf_upload" && !isWeb,
-      synthesis,
-      credibilityScore,
-      citationCount: raw.citationCount || 0,
-      commentCount: 0,
-      apaCitation,
-      isUserUpload: raw.source === "pdf_upload",
-    });
-
-    const newIndex = nextIndex + 1;
-    rawData.nextIndex = newIndex;
+    const newProcessed = processed + 1;
 
     const progress = {
-      step: newIndex >= total ? "exporting" : "processing",
-      papersProcessed: newIndex,
+      step: newProcessed >= total ? "exporting" : "processing",
+      papersProcessed: newProcessed,
       total,
     };
 
+    // Update scroll progress — rawResults stays tiny
+    rawData.processed = newProcessed;
     await db
       .update(scrolls)
       .set({
         rawResults: JSON.stringify(rawData),
-        paperCount: newIndex,
         progress: JSON.stringify(progress),
       })
       .where(eq(scrolls.id, scrollId));
 
-    console.log(`[process-next] Paper ${newIndex}/${total} saved OK`);
+    console.log(`[process-next] Paper ${newProcessed}/${total} processed OK`);
 
     return Response.json({
       status: "generating",
@@ -418,21 +457,34 @@ async function handleProcessPhase(
     });
   } catch (err) {
     console.error(
-      `[process-next] Failed to process paper "${raw.title}":`,
+      `[process-next] Failed to process paper "${nextPaper.title}":`,
       err,
     );
 
-    // Skip this paper and advance so we don't get stuck
-    rawData.nextIndex = nextIndex + 1;
+    // Mark this paper as skipped so we don't get stuck
+    try {
+      await db
+        .update(papers)
+        .set({
+          synthesis: `[Summary unavailable for "${nextPaper.title}"]`,
+          apaCitation: nextPaper.title,
+          groundingData: null,
+        })
+        .where(eq(papers.id, nextPaper.id));
+    } catch {
+      // if even this fails, we'll skip on next iteration
+    }
 
+    const newProcessed = processed + 1;
     const progress = {
       step: "processing",
-      papersProcessed: nextIndex + 1,
+      papersProcessed: newProcessed,
       total,
       debug: `skipped: ${err instanceof Error ? err.message : "error"}`,
     };
 
     try {
+      rawData.processed = newProcessed;
       await db
         .update(scrolls)
         .set({
@@ -441,7 +493,7 @@ async function handleProcessPhase(
         })
         .where(eq(scrolls.id, scrollId));
     } catch {
-      // DB update failed — client will retry
+      // client will retry
     }
 
     return Response.json({
@@ -600,5 +652,3 @@ async function generateAndSaveExportOutline(scrollId: string, topic: string) {
       .where(eq(scrolls.id, scrollId));
   }
 }
-
-
