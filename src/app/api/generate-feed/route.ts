@@ -412,8 +412,11 @@ export async function POST(req: Request) {
           }
         };
 
-        // Process with progress tracking per batch
+        // Process with progress tracking per batch — save incrementally so
+        // partial results survive if the CF Worker kills the after() callback.
         const processedPapers: Paper[] = [];
+        const insertedPapers: typeof papers.$inferSelect[] = [];
+
         for (
           let i = 0;
           i < academicPapers.length && processedPapers.length < 12;
@@ -423,12 +426,59 @@ export async function POST(req: Request) {
           const batchResults = await Promise.allSettled(
             batch.map(processPaper),
           );
+          const batchPapers: Paper[] = [];
           for (const r of batchResults) {
-            if (processedPapers.length >= 12) break;
+            if (processedPapers.length + batchPapers.length >= 12) break;
             if (r.status === "fulfilled" && r.value !== null) {
-              processedPapers.push(r.value);
+              batchPapers.push(r.value);
             }
           }
+
+          // Persist this batch immediately so partial results survive worker death
+          if (batchPapers.length > 0) {
+            try {
+              const inserted = await db
+                .insert(papers)
+                .values(
+                  batchPapers.map((p) => ({
+                    scrollId,
+                    externalId: p.id,
+                    title: p.title,
+                    authors: JSON.stringify(p.authors),
+                    journal: p.journal,
+                    year: p.year,
+                    doi: p.doi,
+                    peerReviewed: p.peerReviewed,
+                    synthesis: p.synthesis,
+                    credibilityScore: p.credibilityScore,
+                    citationCount: p.citationCount,
+                    commentCount: 0,
+                    apaCitation: p.apaCitation,
+                    isUserUpload:
+                      (p as Paper & { isUserUpload?: boolean }).isUserUpload ||
+                      false,
+                    embedding: p.embedding ? JSON.stringify(p.embedding) : null,
+                    groundingData: p.groundingData
+                      ? JSON.stringify(p.groundingData)
+                      : null,
+                  })),
+                )
+                .returning();
+              insertedPapers.push(...inserted);
+              processedPapers.push(...batchPapers);
+
+              // Update paperCount so the scroll shows partial results if worker dies
+              await db
+                .update(scrolls)
+                .set({ paperCount: processedPapers.length })
+                .where(eq(scrolls.id, scrollId));
+            } catch (dbErr) {
+              console.error(`[generate-feed] Failed to persist batch:`, dbErr);
+              // Still track locally even if DB insert failed
+              processedPapers.push(...batchPapers);
+            }
+          }
+
           papersProcessed = Math.min(i + CONCURRENCY, academicPapers.length);
           // Only update progress every 4 papers to reduce DB calls (Turso rate limit)
           if (
@@ -508,7 +558,42 @@ export async function POST(req: Request) {
             processWebResult,
             remaining,
           );
-          processedPapers.push(...webPapers);
+
+          // Persist web papers incrementally too
+          if (webPapers.length > 0) {
+            try {
+              const inserted = await db
+                .insert(papers)
+                .values(
+                  webPapers.map((p) => ({
+                    scrollId,
+                    externalId: p.id,
+                    title: p.title,
+                    authors: JSON.stringify(p.authors),
+                    journal: p.journal,
+                    year: p.year,
+                    doi: p.doi,
+                    peerReviewed: p.peerReviewed,
+                    synthesis: p.synthesis,
+                    credibilityScore: p.credibilityScore,
+                    citationCount: p.citationCount,
+                    commentCount: 0,
+                    apaCitation: p.apaCitation,
+                    isUserUpload: false,
+                    embedding: p.embedding ? JSON.stringify(p.embedding) : null,
+                    groundingData: p.groundingData
+                      ? JSON.stringify(p.groundingData)
+                      : null,
+                  })),
+                )
+                .returning();
+              insertedPapers.push(...inserted);
+              processedPapers.push(...webPapers);
+            } catch (dbErr) {
+              console.error(`[generate-feed] Failed to persist web papers:`, dbErr);
+              processedPapers.push(...webPapers);
+            }
+          }
         }
 
         // 4. Generate export outline
@@ -528,37 +613,7 @@ export async function POST(req: Request) {
           },
         ];
 
-        // 5. Persist papers FIRST so the scroll is usable even if comments/outline time out
-        const insertedPapers =
-          processedPapers.length > 0
-            ? await db
-                .insert(papers)
-                .values(
-                  processedPapers.map((p) => ({
-                    scrollId,
-                    externalId: p.id,
-                    title: p.title,
-                    authors: JSON.stringify(p.authors),
-                    journal: p.journal,
-                    year: p.year,
-                    doi: p.doi,
-                    peerReviewed: p.peerReviewed,
-                    synthesis: p.synthesis,
-                    credibilityScore: p.credibilityScore,
-                    citationCount: p.citationCount,
-                    commentCount: 0,
-                    apaCitation: p.apaCitation,
-                    isUserUpload:
-                      (p as Paper & { isUserUpload?: boolean }).isUserUpload ||
-                      false,
-                    embedding: p.embedding ? JSON.stringify(p.embedding) : null,
-                    groundingData: p.groundingData
-                      ? JSON.stringify(p.groundingData)
-                      : null,
-                  })),
-                )
-                .returning()
-            : [];
+        // Papers already persisted incrementally above — insertedPapers is populated.
 
         // Insert polls
         await db.insert(polls).values([
