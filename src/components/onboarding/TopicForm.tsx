@@ -120,47 +120,82 @@ export function TopicForm({ initialTopic }: TopicFormProps) {
 
   const stopPolling = useCallback(() => {
     if (pollingRef.current) {
-      clearInterval(pollingRef.current);
+      clearTimeout(pollingRef.current);
       pollingRef.current = null;
     }
   }, []);
 
-  // Poll for status updates
+  // Drive paper-by-paper processing via process-next endpoint.
+  // Each call processes ONE paper and returns progress.
+  // Sequential: next call only fires after the previous completes.
   useEffect(() => {
     if (!scrollId) return;
+    let cancelled = false;
 
-    async function pollStatus() {
-      try {
-        const res = await fetch(`/api/scrolls/${scrollId}/status`);
-        if (!res.ok) return;
-        const data = (await res.json()) as {
-          status: string;
-          progress: ProgressInfo | null;
-        };
+    async function driveProcessing() {
+      while (!cancelled) {
+        try {
+          const res = await fetch("/api/generate-feed/process-next", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ scrollId }),
+          });
 
-        if (data.status === "complete") {
-          stopPolling();
-          router.push(`/schroll/${scrollId}`);
-        } else if (data.status === "error") {
-          stopPolling();
-          setLoading(false);
-          setScrollId(null);
-          toast.error(
-            data.progress?.message ||
-              "Feed generation failed. Please try again.",
-          );
-        } else {
+          if (!res.ok) {
+            // Server error — wait and retry
+            await new Promise((r) => {
+              pollingRef.current = setTimeout(r, 3000);
+            });
+            continue;
+          }
+
+          const data = (await res.json()) as {
+            status: string;
+            progress: ProgressInfo | null;
+            done?: boolean;
+          };
+
+          if (cancelled) break;
+
+          if (data.status === "complete" || data.done) {
+            router.push(`/schroll/${scrollId}`);
+            return;
+          }
+
+          if (data.status === "error") {
+            setLoading(false);
+            setScrollId(null);
+            toast.error(
+              data.progress?.message ||
+                "Feed generation failed. Please try again.",
+            );
+            return;
+          }
+
           setProgress(data.progress);
+        } catch {
+          // Transient network error — wait and retry
+          if (cancelled) break;
+          await new Promise((r) => {
+            pollingRef.current = setTimeout(r, 3000);
+          });
+          continue;
         }
-      } catch {
-        // Ignore transient fetch errors during polling
+
+        // Small gap between requests to avoid hammering the server
+        if (!cancelled) {
+          await new Promise((r) => {
+            pollingRef.current = setTimeout(r, 500);
+          });
+        }
       }
     }
 
-    pollStatus();
-    pollingRef.current = setInterval(pollStatus, 2500);
-
-    return stopPolling;
+    driveProcessing();
+    return () => {
+      cancelled = true;
+      stopPolling();
+    };
   }, [scrollId, router, stopPolling]);
 
   // Advanced settings
@@ -312,44 +347,13 @@ export function TopicForm({ initialTopic }: TopicFormProps) {
       });
 
       if (!res.ok) {
-        const text = await res.text();
-        let errMsg = `API returned ${res.status}`;
-        try {
-          const parsed = JSON.parse(text) as { error?: string };
-          if (parsed.error) errMsg = parsed.error;
-        } catch {
-          /* not JSON */
-        }
-        throw new Error(errMsg);
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(data.error || `API returned ${res.status}`);
       }
 
-      // Response is a stream — first line is JSON with scroll ID.
-      // Read just the first line, then release the reader (server keeps processing).
-      const reader = res.body?.getReader();
-      if (!reader) throw new Error("No response body");
-
-      const decoder = new TextDecoder();
-      let buffer = "";
-      let scrollData: { scroll: { id: string } } | null = null;
-
-      while (!scrollData) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const newlineIdx = buffer.indexOf("\n");
-        if (newlineIdx !== -1) {
-          const firstLine = buffer.slice(0, newlineIdx).trim();
-          if (firstLine) {
-            scrollData = JSON.parse(firstLine) as { scroll: { id: string } };
-          }
-        }
-      }
-
-      // Release the reader — server continues processing via the stream
-      reader.releaseLock();
-
-      if (!scrollData) throw new Error("No scroll ID received");
-      setScrollId(scrollData.scroll.id);
+      const data = (await res.json()) as { scroll: { id: string } };
+      if (!data.scroll?.id) throw new Error("No scroll ID received");
+      setScrollId(data.scroll.id);
     } catch (err) {
       console.error("Feed generation failed:", err);
       toast.error("Could not generate feed. Please try again.");

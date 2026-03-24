@@ -26,6 +26,7 @@ export const scrolls = sqliteTable("scroll", {
   queryEmbedding: text("query_embedding"), // JSON-stringified embedding of the search query
   aiProvider: text("ai_provider"), // "ollama" | "cloudflare" — controls comment generation
   pdfKeys: text("pdf_keys"), // JSON-stringified array of R2 keys for uploaded PDFs
+  rawResults: text("raw_results"), // JSON: intermediate search results for multi-step processing
   createdAt: text("created_at")
     .notNull()
     .default(sql`(datetime('now'))`),
