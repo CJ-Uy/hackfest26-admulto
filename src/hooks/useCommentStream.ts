@@ -42,8 +42,10 @@ export function useCommentStream({
           `/api/scrolls/${scrollId}/comments-stream?since=${encodeURIComponent(sinceRef.current)}`,
         );
         if (res.ok) {
-          const data = await res.json();
-          if (data.comments?.length > 0) {
+          const data = (await res.json()) as {
+            comments?: Array<Comment & { createdAt: string }>;
+          };
+          if (data.comments && data.comments.length > 0) {
             sinceRef.current = data.comments[0].createdAt;
             for (const comment of data.comments) {
               onCommentRef.current?.(comment as Comment);

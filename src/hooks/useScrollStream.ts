@@ -61,7 +61,10 @@ export function useScrollStream({
         const res = await fetch(`/api/scrolls/${scrollId}/stream`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-        const data = await res.json();
+        const data = (await res.json()) as {
+          status?: string;
+          progress?: ScrollProgress;
+        };
         failCountRef.current = 0;
 
         if (data.status === "complete") {
