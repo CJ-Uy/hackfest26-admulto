@@ -2,114 +2,36 @@ import { db } from "@/lib/db";
 import { scrolls } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 
+/**
+ * Simple polling endpoint — client calls this repeatedly instead of
+ * holding a long-lived SSE connection (which hits CF Workers CPU limits).
+ */
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
 
-  const encoder = new TextEncoder();
+  try {
+    const scroll = await db.query.scrolls.findFirst({
+      where: eq(scrolls.id, id),
+    });
 
-  const stream = new ReadableStream({
-    async start(controller) {
-      function send(event: string, data: unknown) {
-        controller.enqueue(
-          encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`),
-        );
-      }
+    if (!scroll) {
+      return Response.json({ error: "Schroll not found" }, { status: 404 });
+    }
 
-      let lastProgress = "";
-      let lastStatus = "";
+    const progress = scroll.progress ? JSON.parse(scroll.progress) : null;
 
-      const poll = async () => {
-        try {
-          const scroll = await db.query.scrolls.findFirst({
-            where: eq(scrolls.id, id),
-          });
-
-          if (!scroll) {
-            send("error", { message: "Schroll not found" });
-            controller.close();
-            return true;
-          }
-
-          const currentProgress = scroll.progress || "";
-          const currentStatus = scroll.status || "";
-
-          // Only send when something changed
-          if (
-            currentProgress !== lastProgress ||
-            currentStatus !== lastStatus
-          ) {
-            lastProgress = currentProgress;
-            lastStatus = currentStatus;
-
-            if (currentStatus === "complete") {
-              send("complete", { status: "complete" });
-              controller.close();
-              return true;
-            }
-
-            if (currentStatus === "error") {
-              const progress = currentProgress
-                ? JSON.parse(currentProgress)
-                : { message: "Unknown error" };
-              send("error", progress);
-              controller.close();
-              return true;
-            }
-
-            // Send progress update
-            const progress = currentProgress
-              ? JSON.parse(currentProgress)
-              : null;
-            send("progress", {
-              status: currentStatus,
-              progress,
-            });
-          }
-
-          return false;
-        } catch (err) {
-          console.error("SSE poll error:", err);
-          send("error", {
-            message: err instanceof Error ? err.message : "Stream error",
-          });
-          controller.close();
-          return true;
-        }
-      };
-
-      // Poll DB every 3 seconds and push changes
-      const interval = setInterval(async () => {
-        const done = await poll();
-        if (done) clearInterval(interval);
-      }, 3000);
-
-      // Initial check immediately
-      await poll();
-
-      // Safety timeout: close after 5 minutes
-      setTimeout(
-        () => {
-          clearInterval(interval);
-          try {
-            send("error", { message: "Stream timeout" });
-            controller.close();
-          } catch {
-            // already closed
-          }
-        },
-        5 * 60 * 1000,
-      );
-    },
-  });
-
-  return new Response(stream, {
-    headers: {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      Connection: "keep-alive",
-    },
-  });
+    return Response.json({
+      status: scroll.status,
+      progress,
+    });
+  } catch (err) {
+    console.error("Stream poll error:", err);
+    return Response.json(
+      { error: err instanceof Error ? err.message : "Poll error" },
+      { status: 500 },
+    );
+  }
 }

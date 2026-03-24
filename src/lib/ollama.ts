@@ -84,7 +84,7 @@ async function ollamaChat(
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           model,
-          stream: false,
+          stream: true,
           options: {
             num_predict: 256, // cap token output for speed
             temperature: 0.7,
@@ -113,8 +113,50 @@ async function ollamaChat(
         throw new Error(`Ollama request failed: ${res.status}`);
       }
 
-      const data = (await res.json()) as AnyRecord;
-      return (data.message?.content as string) ?? "";
+      // Read streaming NDJSON response and accumulate content
+      const reader = res.body?.getReader();
+      if (!reader) return "";
+
+      const decoder = new TextDecoder();
+      let content = "";
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        // Keep last potentially incomplete line in buffer
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed) continue;
+          try {
+            const chunk = JSON.parse(trimmed) as AnyRecord;
+            if (chunk.message?.content) {
+              content += chunk.message.content;
+            }
+          } catch {
+            // Skip malformed lines
+          }
+        }
+      }
+
+      // Process any remaining buffer
+      if (buffer.trim()) {
+        try {
+          const chunk = JSON.parse(buffer.trim()) as AnyRecord;
+          if (chunk.message?.content) {
+            content += chunk.message.content;
+          }
+        } catch {
+          // Skip
+        }
+      }
+
+      return content;
     } catch (err) {
       if (attempt >= retries) throw err;
       attempt++;

@@ -18,6 +18,7 @@ interface UseScrollStreamOptions {
   onError?: (error: { message: string }) => void;
 }
 
+const POLL_INTERVAL = 3000;
 const MAX_RETRIES = 4;
 
 export function useScrollStream({
@@ -27,28 +28,22 @@ export function useScrollStream({
   onComplete,
   onError,
 }: UseScrollStreamOptions) {
-  const eventSourceRef = useRef<EventSource | null>(null);
   const onProgressRef = useRef(onProgress);
   const onCompleteRef = useRef(onComplete);
   const onErrorRef = useRef(onError);
-  const retryCountRef = useRef(0);
-  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const failCountRef = useRef(0);
 
-  // Keep callback refs up to date without triggering reconnects
   onProgressRef.current = onProgress;
   onCompleteRef.current = onComplete;
   onErrorRef.current = onError;
 
   const disconnect = useCallback(() => {
-    if (retryTimerRef.current) {
-      clearTimeout(retryTimerRef.current);
-      retryTimerRef.current = null;
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
     }
-    retryCountRef.current = 0;
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
-      eventSourceRef.current = null;
-    }
+    failCountRef.current = 0;
   }, []);
 
   useEffect(() => {
@@ -57,68 +52,55 @@ export function useScrollStream({
       return;
     }
 
-    function connect() {
-      const es = new EventSource(`/api/scrolls/${scrollId}/stream`);
-      eventSourceRef.current = es;
+    let stopped = false;
 
-      es.addEventListener("progress", (e) => {
-        try {
-          const data = JSON.parse(e.data);
+    async function poll() {
+      if (stopped) return;
+
+      try {
+        const res = await fetch(`/api/scrolls/${scrollId}/stream`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        const data = await res.json();
+        failCountRef.current = 0;
+
+        if (data.status === "complete") {
+          onCompleteRef.current?.();
+          return; // stop polling
+        }
+
+        if (data.status === "error") {
+          onErrorRef.current?.(
+            data.progress || { message: "Feed generation failed" },
+          );
+          return; // stop polling
+        }
+
+        if (data.progress) {
           onProgressRef.current?.(data.progress);
-        } catch {
-          // ignore parse errors
         }
-      });
-
-      es.addEventListener("complete", () => {
-        retryCountRef.current = 0;
-        onCompleteRef.current?.();
-        es.close();
-        eventSourceRef.current = null;
-      });
-
-      es.addEventListener("error", (e) => {
-        // Server-sent error events (MessageEvent) are terminal
-        if (e instanceof MessageEvent) {
-          try {
-            const data = JSON.parse(e.data);
-            onErrorRef.current?.(data);
-          } catch {
-            // ignore
-          }
-          es.close();
-          eventSourceRef.current = null;
-          retryCountRef.current = 0;
-          return;
-        }
-
-        // Connection-level failure — attempt reconnect with backoff
-        es.close();
-        eventSourceRef.current = null;
-
-        if (retryCountRef.current < MAX_RETRIES) {
-          const delay = Math.min(1000 * 2 ** retryCountRef.current, 16000);
-          retryCountRef.current += 1;
-          retryTimerRef.current = setTimeout(connect, delay);
-        } else {
+      } catch {
+        failCountRef.current += 1;
+        if (failCountRef.current >= MAX_RETRIES) {
           onErrorRef.current?.({
             message: "Connection lost. Please refresh the page.",
           });
-          retryCountRef.current = 0;
+          return; // stop polling
         }
-      });
+      }
+
+      if (!stopped) {
+        timerRef.current = setTimeout(poll, POLL_INTERVAL);
+      }
     }
 
-    connect();
+    poll();
 
     return () => {
-      if (retryTimerRef.current) {
-        clearTimeout(retryTimerRef.current);
-        retryTimerRef.current = null;
-      }
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close();
-        eventSourceRef.current = null;
+      stopped = true;
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
       }
     };
   }, [scrollId, enabled, disconnect]);
