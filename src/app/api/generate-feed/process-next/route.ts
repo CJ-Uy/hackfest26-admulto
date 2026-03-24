@@ -126,7 +126,7 @@ export async function POST(req: Request) {
 
 async function handleSearchPhase(
   scrollId: string,
-  scroll: { title: string },
+  _scroll: { title: string },
   rawData: RawResultsSearch,
 ) {
   const { config } = rawData;
@@ -251,9 +251,12 @@ async function handleSearchPhase(
       ...dedupedWeb.slice(0, targetWeb),
     ];
 
-    // Strip embeddings from storage
+    // Strip embeddings and truncate abstracts to fit Turso query param limits
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const papersForStorage = allPapers.map(({ embedding, ...rest }) => rest);
+    const papersForStorage = allPapers.map(({ embedding, ...rest }) => ({
+      ...rest,
+      abstract: (rest.abstract || "").slice(0, 500),
+    }));
 
     // Transition to process phase
     const processData: RawResultsProcess = {
