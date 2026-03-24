@@ -60,9 +60,9 @@ export async function POST(
         doi: p.doi,
       }));
 
-    // Shuffle and pick 1-2 commenters for variety
+    // Shuffle and pick 3 commenters for variety
     const shuffled = others.sort(() => Math.random() - 0.5);
-    const commentCount = Math.random() > 0.5 ? 2 : 1;
+    const commentCount = 3;
     const commenters = shuffled.slice(0, commentCount);
 
     // Check existing comment count to avoid flooding

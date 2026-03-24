@@ -5,9 +5,11 @@ import {
   generateExportOutline,
   generateSocialComments,
   setModels,
+  configureProvider,
   OLLAMA_CONCURRENCY,
   OLLAMA_COMMENT_CONCURRENCY,
 } from "@/lib/ollama";
+import type { AiProviderType } from "@/lib/ai-provider";
 import { verifyCard } from "@/lib/grounding";
 import { webSearch } from "@/lib/search";
 import { searchPapers, type RawPaper } from "@/lib/paper-search";
@@ -98,12 +100,17 @@ export async function POST(req: Request) {
     smartModel?: string;
     pdfKeys?: string[];
     sourceMode?: "include" | "context_only" | "only_sources";
+    provider?: AiProviderType;
+    ollamaUrl?: string;
   };
 
   const { topic, description, subfields, pdfKeys, sourceMode } = body;
 
-  // Apply user-selected model overrides for this request
+  // Apply user-selected model and provider overrides for this request
   setModels(body.fastModel, body.smartModel);
+  if (body.provider) {
+    configureProvider(body.provider, body.ollamaUrl);
+  }
 
   const hasPdfs = pdfKeys && pdfKeys.length > 0;
   const effectiveSourceMode = hasPdfs ? sourceMode || "include" : undefined;
@@ -723,9 +730,7 @@ export async function POST(req: Request) {
                 };
                 exportOutline = parsed.themes || fallbackOutline();
               } catch {
-                console.warn(
-                  "Export outline JSON malformed, using fallback",
-                );
+                console.warn("Export outline JSON malformed, using fallback");
               }
             }
             await db
@@ -733,17 +738,17 @@ export async function POST(req: Request) {
               .set({ exportData: JSON.stringify(exportOutline) })
               .where(eq(scrolls.id, scrollId));
           } catch (err) {
-            console.warn("[best-effort] Export outline generation failed:", err);
+            console.warn(
+              "[best-effort] Export outline generation failed:",
+              err,
+            );
             await db
               .update(scrolls)
               .set({ exportData: JSON.stringify(fallbackOutline()) })
               .where(eq(scrolls.id, scrollId));
           }
         } catch (err) {
-          console.warn(
-            "[best-effort] Post-completion enrichment failed:",
-            err,
-          );
+          console.warn("[best-effort] Post-completion enrichment failed:", err);
         }
       } catch (err) {
         console.error(

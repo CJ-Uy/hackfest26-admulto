@@ -168,19 +168,64 @@ export function TopicForm({ initialTopic }: TopicFormProps) {
   const [fastModel, setFastModel] = useState("");
   const [smartModel, setSmartModel] = useState("");
   const [modelsLoaded, setModelsLoaded] = useState(false);
+  const [provider, setProvider] = useState<"ollama" | "cloudflare">("ollama");
+  const [ollamaUrl, setOllamaUrl] = useState("");
+  const [ollamaStatus, setOllamaStatus] = useState<
+    "checking" | "online" | "offline" | null
+  >(null);
+  const [neuronBudget, setNeuronBudget] = useState<{
+    used: number;
+    limit: number;
+    remaining: number;
+    resetsAt: string;
+  } | null>(null);
 
+  // Fetch CF AI neuron budget when cloudflare provider is selected
   useEffect(() => {
-    if (advancedOpen && !modelsLoaded) {
-      fetch("/api/ollama-models")
-        .then((r) => r.json())
-        .then((data: unknown) => {
-          const typedData = data as { models: OllamaModel[] };
-          setModels(typedData.models);
-          setModelsLoaded(true);
-        })
-        .catch(() => setModelsLoaded(true));
+    if (!advancedOpen || provider !== "cloudflare") {
+      setNeuronBudget(null);
+      return;
     }
-  }, [advancedOpen, modelsLoaded]);
+    fetch("/api/ai-budget")
+      .then((r) => r.json())
+      .then((data: unknown) =>
+        setNeuronBudget(
+          data as {
+            used: number;
+            limit: number;
+            remaining: number;
+            resetsAt: string;
+          },
+        ),
+      )
+      .catch(() => setNeuronBudget(null));
+  }, [advancedOpen, provider]);
+
+  // Check Ollama connectivity when advanced opens or URL changes
+  useEffect(() => {
+    if (!advancedOpen || provider !== "ollama") return;
+
+    const url = ollamaUrl || undefined;
+    setOllamaStatus("checking");
+    setModelsLoaded(false);
+
+    const fetchUrl = url
+      ? `/api/ollama-models?url=${encodeURIComponent(url)}`
+      : "/api/ollama-models";
+
+    fetch(fetchUrl)
+      .then((r) => r.json())
+      .then((data: unknown) => {
+        const typedData = data as { models: OllamaModel[] };
+        setModels(typedData.models);
+        setModelsLoaded(true);
+        setOllamaStatus(typedData.models.length > 0 ? "online" : "offline");
+      })
+      .catch(() => {
+        setModelsLoaded(true);
+        setOllamaStatus("offline");
+      });
+  }, [advancedOpen, provider, ollamaUrl]);
 
   function addSubfield() {
     const val = subfieldInput.trim();
@@ -260,6 +305,8 @@ export function TopicForm({ initialTopic }: TopicFormProps) {
           smartModel: smartModel || undefined,
           pdfKeys,
           sourceMode: pdfEnabled ? sourceMode : undefined,
+          provider: provider || undefined,
+          ollamaUrl: provider === "ollama" && ollamaUrl ? ollamaUrl : undefined,
         }),
       });
 
@@ -497,92 +544,241 @@ export function TopicForm({ initialTopic }: TopicFormProps) {
 
         {advancedOpen && (
           <div className="border-border space-y-4 border-t px-4 py-4">
-            {/* Info banner */}
-            <div className="bg-muted/50 flex items-start gap-2 rounded-md p-3">
-              <Info className="text-muted-foreground mt-0.5 h-3.5 w-3.5 shrink-0" />
-              <p className="text-muted-foreground text-xs leading-relaxed">
-                Choose which Ollama models to use. <strong>Fast model</strong>{" "}
-                handles paper summaries (many calls, speed matters).{" "}
-                <strong>Smart model</strong> handles comments and outlines
-                (fewer calls, quality matters).
-              </p>
+            {/* AI Provider Selection */}
+            <div>
+              <label className="mb-1.5 flex items-center gap-1.5 text-sm font-medium">
+                <Brain className="h-3.5 w-3.5 text-blue-500" />
+                AI Provider
+              </label>
+              <div className="space-y-2">
+                {(
+                  [
+                    {
+                      value: "ollama" as const,
+                      label: "Ollama (Self-hosted)",
+                      desc: "Use your own Ollama instance — faster, no token limits",
+                    },
+                    {
+                      value: "cloudflare" as const,
+                      label: "Cloudflare AI (Free tier)",
+                      desc: "Uses Cloudflare Workers AI — 10,000 neurons/day free",
+                    },
+                  ] as const
+                ).map((opt) => (
+                  <label
+                    key={opt.value}
+                    className={`flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-2.5 transition-colors ${
+                      provider === opt.value
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/40"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="provider"
+                      value={opt.value}
+                      checked={provider === opt.value}
+                      onChange={() => setProvider(opt.value)}
+                      className="accent-primary mt-0.5"
+                    />
+                    <div>
+                      <p className="text-sm font-medium">{opt.label}</p>
+                      <p className="text-muted-foreground text-xs">
+                        {opt.desc}
+                      </p>
+                    </div>
+                  </label>
+                ))}
+              </div>
             </div>
 
-            {models.length === 0 && !modelsLoaded && (
-              <div className="flex items-center justify-center gap-2 py-4">
-                <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
-                <span className="text-muted-foreground text-sm">
-                  Loading models from Ollama...
-                </span>
-              </div>
-            )}
-
-            {models.length === 0 && modelsLoaded && (
-              <p className="text-muted-foreground py-2 text-center text-sm">
-                Could not connect to Ollama. Make sure it&apos;s running on{" "}
-                <code className="bg-muted rounded px-1 text-xs">
-                  localhost:11434
-                </code>
-              </p>
-            )}
-
-            {models.length > 0 && (
+            {/* Ollama URL + Model Selection */}
+            {provider === "ollama" && (
               <>
-                {/* Fast Model */}
                 <div>
                   <label className="mb-1.5 flex items-center gap-1.5 text-sm font-medium">
-                    <Zap className="h-3.5 w-3.5 text-amber-500" />
-                    Fast Model
-                    <span className="text-muted-foreground text-xs font-normal">
-                      (summaries & citations)
-                    </span>
+                    Ollama URL
+                    {ollamaStatus === "checking" && (
+                      <Loader2 className="h-3 w-3 animate-spin text-blue-500" />
+                    )}
+                    {ollamaStatus === "online" && (
+                      <span className="text-xs font-normal text-green-600">
+                        Connected
+                      </span>
+                    )}
+                    {ollamaStatus === "offline" && (
+                      <span className="text-xs font-normal text-red-500">
+                        Unreachable
+                      </span>
+                    )}
                   </label>
-                  <select
-                    value={fastModel}
-                    onChange={(e) => setFastModel(e.target.value)}
+                  <Input
+                    value={ollamaUrl}
+                    onChange={(e) => setOllamaUrl(e.target.value)}
+                    placeholder="Default: ollama.cjuy.dev (leave empty)"
                     disabled={loading}
-                    className="border-border bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm"
-                  >
-                    <option value="">Default (phi4-mini:3.8b)</option>
-                    {models.map((m) => (
-                      <option key={`fast-${m.name}`} value={m.name}>
-                        {m.name} ({formatSize(m.size)}
-                        {m.parameterSize ? ` · ${m.parameterSize}` : ""})
-                      </option>
-                    ))}
-                  </select>
+                  />
                   <p className="text-muted-foreground mt-1 text-xs">
-                    Smaller = faster. Called 12+ times per feed.
+                    Leave empty to use the default server. Enter your own Ollama
+                    URL if self-hosting.
                   </p>
                 </div>
 
-                {/* Smart Model */}
-                <div>
-                  <label className="mb-1.5 flex items-center gap-1.5 text-sm font-medium">
-                    <Brain className="h-3.5 w-3.5 text-purple-500" />
-                    Smart Model
-                    <span className="text-muted-foreground text-xs font-normal">
-                      (comments & outlines)
-                    </span>
-                  </label>
-                  <select
-                    value={smartModel}
-                    onChange={(e) => setSmartModel(e.target.value)}
-                    disabled={loading}
-                    className="border-border bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm"
-                  >
-                    <option value="">Default (llama3:8b)</option>
-                    {models.map((m) => (
-                      <option key={`smart-${m.name}`} value={m.name}>
-                        {m.name} ({formatSize(m.size)}
-                        {m.parameterSize ? ` · ${m.parameterSize}` : ""})
-                      </option>
-                    ))}
-                  </select>
-                  <p className="text-muted-foreground mt-1 text-xs">
-                    Bigger = better quality. Called 12 times per feed.
+                {/* Info banner */}
+                <div className="bg-muted/50 flex items-start gap-2 rounded-md p-3">
+                  <Info className="text-muted-foreground mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  <p className="text-muted-foreground text-xs leading-relaxed">
+                    Choose which Ollama models to use.{" "}
+                    <strong>Fast model</strong> handles paper summaries (many
+                    calls, speed matters). <strong>Smart model</strong> handles
+                    comments and outlines (fewer calls, quality matters).
                   </p>
                 </div>
+
+                {models.length === 0 && !modelsLoaded && (
+                  <div className="flex items-center justify-center gap-2 py-4">
+                    <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
+                    <span className="text-muted-foreground text-sm">
+                      Loading models from Ollama...
+                    </span>
+                  </div>
+                )}
+
+                {models.length === 0 && modelsLoaded && (
+                  <p className="text-muted-foreground py-2 text-center text-sm">
+                    Could not connect to Ollama. Try a different URL or switch
+                    to Cloudflare AI.
+                  </p>
+                )}
+
+                {models.length > 0 && (
+                  <>
+                    {/* Fast Model */}
+                    <div>
+                      <label className="mb-1.5 flex items-center gap-1.5 text-sm font-medium">
+                        <Zap className="h-3.5 w-3.5 text-amber-500" />
+                        Fast Model
+                        <span className="text-muted-foreground text-xs font-normal">
+                          (summaries & citations)
+                        </span>
+                      </label>
+                      <select
+                        value={fastModel}
+                        onChange={(e) => setFastModel(e.target.value)}
+                        disabled={loading}
+                        className="border-border bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm"
+                      >
+                        <option value="">Default (phi4-mini:3.8b)</option>
+                        {models.map((m) => (
+                          <option key={`fast-${m.name}`} value={m.name}>
+                            {m.name} ({formatSize(m.size)}
+                            {m.parameterSize ? ` · ${m.parameterSize}` : ""})
+                          </option>
+                        ))}
+                      </select>
+                      <p className="text-muted-foreground mt-1 text-xs">
+                        Smaller = faster. Called 12+ times per feed.
+                      </p>
+                    </div>
+
+                    {/* Smart Model */}
+                    <div>
+                      <label className="mb-1.5 flex items-center gap-1.5 text-sm font-medium">
+                        <Brain className="h-3.5 w-3.5 text-purple-500" />
+                        Smart Model
+                        <span className="text-muted-foreground text-xs font-normal">
+                          (comments & outlines)
+                        </span>
+                      </label>
+                      <select
+                        value={smartModel}
+                        onChange={(e) => setSmartModel(e.target.value)}
+                        disabled={loading}
+                        className="border-border bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm"
+                      >
+                        <option value="">Default (llama3:8b)</option>
+                        {models.map((m) => (
+                          <option key={`smart-${m.name}`} value={m.name}>
+                            {m.name} ({formatSize(m.size)}
+                            {m.parameterSize ? ` · ${m.parameterSize}` : ""})
+                          </option>
+                        ))}
+                      </select>
+                      <p className="text-muted-foreground mt-1 text-xs">
+                        Bigger = better quality. Called 12 times per feed.
+                      </p>
+                    </div>
+                  </>
+                )}
+              </>
+            )}
+
+            {/* Cloudflare AI info + budget */}
+            {provider === "cloudflare" && (
+              <>
+                <div className="bg-muted/50 flex items-start gap-2 rounded-md p-3">
+                  <Info className="text-muted-foreground mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  <p className="text-muted-foreground text-xs leading-relaxed">
+                    Cloudflare AI uses <strong>Llama 3.1 8B</strong> and{" "}
+                    <strong>Phi-2</strong> on the free tier. Each feed
+                    generation uses ~3,500–4,000 neurons. Free tier allows
+                    10,000 neurons/day (~2–3 feeds).
+                  </p>
+                </div>
+
+                {neuronBudget && (
+                  <div className="border-border rounded-lg border p-3">
+                    <div className="mb-2 flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground font-medium">
+                        Daily Neuron Budget
+                      </span>
+                      <span
+                        className={`font-bold ${
+                          neuronBudget.remaining < 2000
+                            ? "text-red-500"
+                            : neuronBudget.remaining < 5000
+                              ? "text-amber-500"
+                              : "text-green-600"
+                        }`}
+                      >
+                        {neuronBudget.remaining.toLocaleString()} remaining
+                      </span>
+                    </div>
+                    <div className="bg-muted h-2 overflow-hidden rounded-full">
+                      <div
+                        className={`h-full rounded-full transition-all ${
+                          neuronBudget.remaining < 2000
+                            ? "bg-red-500"
+                            : neuronBudget.remaining < 5000
+                              ? "bg-amber-500"
+                              : "bg-green-600"
+                        }`}
+                        style={{
+                          width: `${Math.max(2, (neuronBudget.remaining / neuronBudget.limit) * 100)}%`,
+                        }}
+                      />
+                    </div>
+                    <div className="mt-1.5 flex items-center justify-between text-[11px]">
+                      <span className="text-muted-foreground">
+                        {neuronBudget.used.toLocaleString()} /{" "}
+                        {neuronBudget.limit.toLocaleString()} used
+                      </span>
+                      <span className="text-muted-foreground">
+                        Resets{" "}
+                        {new Date(neuronBudget.resetsAt).toLocaleTimeString(
+                          [],
+                          { hour: "2-digit", minute: "2-digit" },
+                        )}
+                      </span>
+                    </div>
+                    {neuronBudget.remaining < 2000 && (
+                      <p className="mt-2 text-xs font-medium text-red-500">
+                        Not enough neurons for a full feed. Try again after the
+                        reset or switch to Ollama.
+                      </p>
+                    )}
+                  </div>
+                )}
               </>
             )}
           </div>

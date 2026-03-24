@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, Suspense } from "react";
+import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { toast } from "sonner";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
@@ -116,6 +116,31 @@ function ScrollPageInner() {
     }
   }, [scrollId]);
 
+  // Seed comments for papers that have none (best-effort, one-at-a-time)
+  const seedingRef = useRef(false);
+  const seedComments = useCallback(
+    async (paperList: Paper[]) => {
+      if (seedingRef.current) return;
+      const needsComments = paperList.filter((p) => p.commentCount === 0);
+      if (needsComments.length === 0) return;
+      seedingRef.current = true;
+      for (const paper of needsComments) {
+        try {
+          await fetch(`/api/scrolls/${scrollId}/generate-comments`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ paperId: paper.id }),
+          });
+        } catch {
+          // best-effort
+        }
+      }
+      fetchCommentCounts();
+      seedingRef.current = false;
+    },
+    [scrollId, fetchCommentCounts],
+  );
+
   useEffect(() => {
     let cancelled = false;
 
@@ -139,6 +164,9 @@ function ScrollPageInner() {
         setUpvotedPapers(voted);
         setDownvotedPapers(downed);
         setBookmarkedPapers(saved);
+
+        // Seed comments for papers with none
+        seedComments(stored.papers);
       }
     }
 
@@ -148,7 +176,7 @@ function ScrollPageInner() {
     return () => {
       cancelled = true;
     };
-  }, [scrollId, fetchCommentCounts, fetchYourCommentCounts]);
+  }, [scrollId, fetchCommentCounts, fetchYourCommentCounts, seedComments]);
 
   // Helper to reload full scroll data from the API
   const reloadScroll = useCallback(async () => {

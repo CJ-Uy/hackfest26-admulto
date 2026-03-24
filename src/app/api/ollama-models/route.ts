@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 
-const OLLAMA_URL = process.env.OLLAMA_URL || "http://localhost:11434";
+const DEFAULT_OLLAMA_URL = process.env.OLLAMA_URL || "http://localhost:11434";
 
-export async function GET() {
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const ollamaUrl = searchParams.get("url") || DEFAULT_OLLAMA_URL;
+
   try {
-    const res = await fetch(`${OLLAMA_URL}/api/tags`, {
+    const res = await fetch(`${ollamaUrl}/api/tags`, {
       signal: AbortSignal.timeout(5000),
     });
 

@@ -1,7 +1,4 @@
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnyRecord = Record<string, any>;
-
-const OLLAMA_URL = process.env.OLLAMA_URL || "http://localhost:11434";
+import { aiChat, setProvider, type AiProviderType } from "./ai-provider";
 
 // Concurrency control for Ollama calls - keep low (1) for tunnelled/local setups
 export const OLLAMA_CONCURRENCY = 1;
@@ -22,6 +19,13 @@ export function setModels(fast?: string, smart?: string) {
 
 export function getSmartModel() {
   return SMART_MODEL;
+}
+
+export function configureProvider(
+  provider: AiProviderType,
+  ollamaUrl?: string,
+) {
+  setProvider(provider, ollamaUrl);
 }
 
 function extractJsonArrayCandidate(raw: string): unknown[] | null {
@@ -74,100 +78,9 @@ async function ollamaChat(
   systemPrompt: string,
   userPrompt: string,
   model: string = FAST_MODEL,
-  retries: number = 3,
 ): Promise<string> {
-  let attempt = 0;
-  while (attempt <= retries) {
-    try {
-      const res = await fetch(`${OLLAMA_URL}/api/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model,
-          stream: true,
-          options: {
-            num_predict: 256, // cap token output for speed
-            temperature: 0.7,
-          },
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userPrompt },
-          ],
-        }),
-      });
-
-      if (!res.ok) {
-        if (res.status === 429 && attempt < retries) {
-          attempt++;
-          const retryAfter = res.headers.get("Retry-After");
-          const delay = retryAfter
-            ? parseInt(retryAfter) * 1000
-            : Math.pow(2, attempt) * 1000 + Math.random() * 1000;
-
-          console.warn(
-            `[ollamaChat] Rate limited (429), retrying in ${delay}ms (attempt ${attempt}/${retries})`,
-          );
-          await new Promise((resolve) => setTimeout(resolve, delay));
-          continue;
-        }
-        throw new Error(`Ollama request failed: ${res.status}`);
-      }
-
-      // Read streaming NDJSON response and accumulate content
-      const reader = res.body?.getReader();
-      if (!reader) return "";
-
-      const decoder = new TextDecoder();
-      let content = "";
-      let buffer = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        // Keep last potentially incomplete line in buffer
-        buffer = lines.pop() || "";
-
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (!trimmed) continue;
-          try {
-            const chunk = JSON.parse(trimmed) as AnyRecord;
-            if (chunk.message?.content) {
-              content += chunk.message.content;
-            }
-          } catch {
-            // Skip malformed lines
-          }
-        }
-      }
-
-      // Process any remaining buffer
-      if (buffer.trim()) {
-        try {
-          const chunk = JSON.parse(buffer.trim()) as AnyRecord;
-          if (chunk.message?.content) {
-            content += chunk.message.content;
-          }
-        } catch {
-          // Skip
-        }
-      }
-
-      return content;
-    } catch (err) {
-      if (attempt >= retries) throw err;
-      attempt++;
-      const delay = Math.pow(2, attempt) * 1000 + Math.random() * 1000;
-      console.warn(
-        `[ollamaChat] Request failed (${(err as Error).message}), retrying in ${delay}ms (attempt ${attempt}/${retries})`,
-      );
-      await new Promise((resolve) => setTimeout(resolve, delay));
-    }
-  }
-  return "";
+  const tier = model === SMART_MODEL ? "smart" : "fast";
+  return aiChat(systemPrompt, userPrompt, model, tier);
 }
 
 export async function generateSynthesis(
