@@ -73,9 +73,9 @@ export function useScrollStream({
         }
 
         if (data.status === "error") {
-          onErrorRef.current?.(
-            { message: data.progress?.message || "Feed generation failed" },
-          );
+          onErrorRef.current?.({
+            message: data.progress?.message || "Feed generation failed",
+          });
           return; // stop polling
         }
 

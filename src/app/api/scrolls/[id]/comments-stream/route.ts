@@ -31,9 +31,7 @@ export async function GET(
       })
       .from(comments)
       .innerJoin(papers, eq(comments.paperId, papers.id))
-      .where(
-        and(eq(papers.scrollId, scrollId), gt(comments.createdAt, since)),
-      )
+      .where(and(eq(papers.scrollId, scrollId), gt(comments.createdAt, since)))
       .orderBy(desc(comments.createdAt));
 
     return Response.json({
