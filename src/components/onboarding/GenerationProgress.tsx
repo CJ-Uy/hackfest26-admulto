@@ -15,6 +15,7 @@ interface ProgressInfo {
   papersProcessed?: number;
   total?: number;
   message?: string;
+  debug?: string;
 }
 
 interface GenerationProgressProps {
@@ -24,6 +25,12 @@ interface GenerationProgressProps {
 }
 
 const STEPS = [
+  {
+    key: "queued",
+    label: "Starting up",
+    detail: "Initializing background processing",
+    icon: Search,
+  },
   {
     key: "extracting",
     label: "Extracting PDFs",
@@ -263,6 +270,15 @@ export function GenerationProgress({
           </div>
         </div>
       </div>
+
+      {/* Debug info — shows raw progress state */}
+      <div className="text-muted-foreground/50 rounded border border-dashed border-gray-300 px-3 py-2 font-mono text-[10px]">
+        DEBUG: step=&quot;{progress?.step || "null"}&quot;
+        {progress?.debug ? ` | ${progress.debug}` : ""}
+        {progress?.papersProcessed !== undefined
+          ? ` | papers=${progress.papersProcessed}/${progress.total}`
+          : ""}
+      </div>
     </div>
   );
 }
@@ -270,6 +286,10 @@ export function GenerationProgress({
 function getProgressPercent(progress: ProgressInfo | null): number {
   if (!progress) return 5;
   switch (progress.step) {
+    case "queued":
+      return 2;
+    case "after_started":
+      return 5;
     case "extracting":
       return 8;
     case "searching":

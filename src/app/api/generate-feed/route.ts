@@ -1,4 +1,3 @@
-import { after } from "next/server";
 import {
   generateSynthesis,
   generateApaCitation,
@@ -78,7 +77,7 @@ function computeCredibilityScore(paper: {
 async function updateProgress(
   scrollId: string,
   step: string,
-  extra: Record<string, number> = {},
+  extra: Record<string, number | string> = {},
 ) {
   try {
     console.log(
@@ -151,7 +150,8 @@ export async function POST(req: Request) {
         status: "generating",
         aiProvider: body.provider || "ollama",
         progress: JSON.stringify({
-          step: hasPdfs ? "extracting" : "searching",
+          step: "queued",
+          debug: "scroll created, waiting for after() to fire",
         }),
       })
       .returning();
@@ -161,11 +161,33 @@ export async function POST(req: Request) {
       `[generate-feed] ✅ Scroll created: ${scrollId}, topic: "${topic}"`,
     );
 
-    // Run heavy processing in background after returning response
-    after(async () => {
-      console.log(
-        `[generate-feed] 🚀 after() callback STARTED for scroll ${scrollId}`,
+    // Use a TransformStream to keep the CF Worker alive for the full duration.
+    // after()/waitUntil() has a 30s limit on CF Workers free tier which is not
+    // enough for feed generation. A streaming response keeps the connection open.
+    const { readable, writable } = new TransformStream();
+    const writer = writable.getWriter();
+    const encoder = new TextEncoder();
+
+    // Kick off processing in the background — writes keep the stream alive
+    const processingPromise = (async () => {
+      // Send scroll ID immediately so the client can start polling
+      await writer.write(
+        encoder.encode(JSON.stringify({ scroll: { id: scrollId } }) + "\n"),
       );
+
+      // Keep-alive: send a newline every 10s to prevent CF from closing the connection
+      const keepAlive = setInterval(async () => {
+        try {
+          await writer.write(encoder.encode("\n"));
+        } catch {
+          // stream already closed
+        }
+      }, 10_000);
+
+      console.log(
+        `[generate-feed] 🚀 Stream processing STARTED for scroll ${scrollId}`,
+      );
+      await updateProgress(scrollId, "stream_started");
       try {
         // ── Step 0: Extract PDFs if provided ──
         let pdfPapers: RawPaper[] = [];
@@ -232,6 +254,9 @@ export async function POST(req: Request) {
           console.log(`[generate-feed] 📡 Search query: "${searchQuery}"`);
 
           console.log(`[generate-feed] 📡 Calling searchPapers + webSearch...`);
+          await updateProgress(scrollId, "searching", {
+            debug: `query="${searchQuery}"`,
+          });
           [academicPapers, webResults] = await Promise.all([
             searchPapers(searchQuery, 20)
               .then((r) => {
@@ -260,6 +285,9 @@ export async function POST(req: Request) {
           console.log(
             `[generate-feed] ✅ Search complete: ${academicPapers.length} academic, ${webResults.length} web`,
           );
+          await updateProgress(scrollId, "searching", {
+            debug: `found ${academicPapers.length} academic + ${webResults.length} web`,
+          });
         }
 
         // Merge PDF papers based on sourceMode
@@ -904,14 +932,37 @@ export async function POST(req: Request) {
             `[generate-feed] Failed to set error status for ${scrollId}`,
           );
         }
+      } finally {
+        clearInterval(keepAlive);
+        try {
+          await writer.close();
+        } catch {
+          /* already closed */
+        }
+      }
+    })();
+
+    // Don't await processingPromise — let it run while the stream is open.
+    // The response is returned immediately with the readable side of the stream.
+    // CF Worker stays alive as long as the stream has data flowing.
+    processingPromise.catch((err) => {
+      console.error(`[generate-feed] Unhandled stream error:`, err);
+      try {
+        writer.close();
+      } catch {
+        /* ignore */
       }
     });
 
-    // Return immediately with the scroll ID
     console.log(
-      `[generate-feed] 📤 Returning scroll ID ${scroll.id} to client (after() registered)`,
+      `[generate-feed] 📤 Returning streaming response for scroll ${scroll.id}`,
     );
-    return Response.json({ scroll: { id: scroll.id } });
+    return new Response(readable, {
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Cache-Control": "no-cache",
+      },
+    });
   } catch (err) {
     console.error("Feed generation failed:", err);
     return Response.json(
