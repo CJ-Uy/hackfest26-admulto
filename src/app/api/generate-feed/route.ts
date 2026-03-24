@@ -520,127 +520,7 @@ export async function POST(req: Request) {
           },
         ];
 
-        // Run export outline generation in parallel with social comments
-        const outlinePromise =
-          processedPapers.length > 0
-            ? (async () => {
-                try {
-                  const outlineInput = processedPapers.map((p) => ({
-                    title: p.title,
-                    authors: p.authors.join(", "),
-                    year: p.year,
-                    synthesis: p.synthesis,
-                    apaCitation: p.apaCitation,
-                  }));
-                  const outlineJson = await generateExportOutline(outlineInput);
-                  const jsonMatch = outlineJson.match(/\{[\s\S]*\}/);
-                  if (jsonMatch) {
-                    try {
-                      const parsed = JSON.parse(jsonMatch[0]) as {
-                        themes: ExportTheme[];
-                      };
-                      return parsed.themes || [];
-                    } catch {
-                      console.warn(
-                        "Export outline JSON malformed, using fallback",
-                      );
-                      return fallbackOutline();
-                    }
-                  }
-                  return fallbackOutline();
-                } catch (err) {
-                  console.error("Failed to generate export outline:", err);
-                  return fallbackOutline();
-                }
-              })()
-            : Promise.resolve([] as ExportTheme[]);
-
-        // 5. Generate social comments — papers reacting to each other
-        // Use embedding similarity to pair papers with the most related commenters
-        type RawComment = {
-          author: string;
-          content: string;
-          relationship: string;
-        };
-
-        // Build similarity pairs for comment matching
-        const paperEmbeddings = processedPapers
-          .map((p) => p.embedding)
-          .filter((e): e is number[] => !!e);
-        const hasPaperEmbeddings =
-          paperEmbeddings.length === processedPapers.length;
-        const similarPairs = hasPaperEmbeddings
-          ? findSimilarPairs(paperEmbeddings, 4)
-          : null;
-
-        const commentPromise = (async (): Promise<
-          Map<number, RawComment[]>
-        > => {
-          const rawComments = new Map<number, RawComment[]>();
-          if (processedPapers.length < 2) return rawComments;
-
-          for (
-            let i = 0;
-            i < processedPapers.length;
-            i += OLLAMA_COMMENT_CONCURRENCY
-          ) {
-            const batch = processedPapers.slice(
-              i,
-              i + OLLAMA_COMMENT_CONCURRENCY,
-            );
-            const batchPromises = batch.map(async (paper, batchIdx) => {
-              const paperIdx = i + batchIdx;
-
-              // Pick commenters: use semantic similarity if available, else first 4
-              let others;
-              if (similarPairs && similarPairs.has(paperIdx)) {
-                const similar = similarPairs.get(paperIdx)!;
-                others = similar.map((s) => processedPapers[s.index]);
-              } else {
-                others = processedPapers
-                  .filter((_, idx) => idx !== paperIdx)
-                  .slice(0, 4);
-              }
-
-              try {
-                const generatedComments = await generateSocialComments(
-                  {
-                    title: paper.title,
-                    synthesis: paper.synthesis,
-                    authors: paper.authors,
-                  },
-                  others.map((o) => ({
-                    title: o.title,
-                    synthesis: o.synthesis,
-                    authors: o.authors,
-                    year: o.year,
-                    citationCount: o.citationCount,
-                    doi: o.doi,
-                  })),
-                  3,
-                );
-                rawComments.set(paperIdx, generatedComments);
-              } catch (err) {
-                console.error(
-                  `Failed to generate comments for paper ${paperIdx}:`,
-                  err,
-                );
-              }
-            });
-
-            await Promise.all(batchPromises);
-          }
-
-          return rawComments;
-        })();
-
-        // Wait for both outline and comments
-        const [exportOutline, paperComments] = await Promise.all([
-          outlinePromise,
-          commentPromise,
-        ]);
-
-        // 6. Persist papers, comments, polls and mark scroll as complete
+        // 5. Persist papers FIRST so the scroll is usable even if comments/outline time out
         const insertedPapers =
           processedPapers.length > 0
             ? await db
@@ -658,9 +538,7 @@ export async function POST(req: Request) {
                     synthesis: p.synthesis,
                     credibilityScore: p.credibilityScore,
                     citationCount: p.citationCount,
-                    commentCount: (
-                      paperComments.get(processedPapers.indexOf(p)) || []
-                    ).length,
+                    commentCount: 0,
                     apaCitation: p.apaCitation,
                     isUserUpload:
                       (p as Paper & { isUserUpload?: boolean }).isUserUpload ||
@@ -673,35 +551,6 @@ export async function POST(req: Request) {
                 )
                 .returning()
             : [];
-
-        // Insert generated comments for each paper
-        const allComments: {
-          paperId: string;
-          content: string;
-          author: string;
-          isGenerated: boolean;
-          relationship: string;
-        }[] = [];
-
-        processedPapers.forEach((_, idx) => {
-          const rawComments = paperComments.get(idx) || [];
-          const dbPaper = insertedPapers[idx];
-          if (dbPaper && rawComments.length > 0) {
-            for (const c of rawComments) {
-              allComments.push({
-                paperId: dbPaper.id,
-                content: c.content,
-                author: c.author,
-                isGenerated: true,
-                relationship: c.relationship,
-              });
-            }
-          }
-        });
-
-        if (allComments.length > 0) {
-          await db.insert(comments).values(allComments);
-        }
 
         // Insert polls
         await db.insert(polls).values([
@@ -739,12 +588,11 @@ export async function POST(req: Request) {
           },
         ]);
 
-        // Mark scroll as complete (store PDF keys for later access)
+        // Mark scroll as complete so the user can start browsing immediately
         await db
           .update(scrolls)
           .set({
             paperCount: processedPapers.length,
-            exportData: JSON.stringify(exportOutline),
             status: "complete",
             progress: null,
             ...(hasPdfs ? { pdfKeys: JSON.stringify(pdfKeys) } : {}),
@@ -754,6 +602,149 @@ export async function POST(req: Request) {
         console.log(
           `Feed generation complete for scroll ${scrollId}: ${processedPapers.length} papers`,
         );
+
+        // 6. Best-effort: generate comments and export outline AFTER marking complete.
+        // These are nice-to-have — if the worker times out here, the scroll still works.
+        type RawComment = {
+          author: string;
+          content: string;
+          relationship: string;
+        };
+
+        try {
+          // Build similarity pairs for comment matching
+          const paperEmbeddings = processedPapers
+            .map((p) => p.embedding)
+            .filter((e): e is number[] => !!e);
+          const hasPaperEmbeddings =
+            paperEmbeddings.length === processedPapers.length;
+          const similarPairs = hasPaperEmbeddings
+            ? findSimilarPairs(paperEmbeddings, 4)
+            : null;
+
+          // Generate comments sequentially to avoid Ollama overload
+          const rawComments = new Map<number, RawComment[]>();
+          if (processedPapers.length >= 2) {
+            for (let i = 0; i < processedPapers.length; i++) {
+              const paper = processedPapers[i];
+
+              let others;
+              if (similarPairs && similarPairs.has(i)) {
+                const similar = similarPairs.get(i)!;
+                others = similar.map((s) => processedPapers[s.index]);
+              } else {
+                others = processedPapers
+                  .filter((_, idx) => idx !== i)
+                  .slice(0, 4);
+              }
+
+              try {
+                const generatedComments = await generateSocialComments(
+                  {
+                    title: paper.title,
+                    synthesis: paper.synthesis,
+                    authors: paper.authors,
+                  },
+                  others.map((o) => ({
+                    title: o.title,
+                    synthesis: o.synthesis,
+                    authors: o.authors,
+                    year: o.year,
+                    citationCount: o.citationCount,
+                    doi: o.doi,
+                  })),
+                  3,
+                );
+                rawComments.set(i, generatedComments);
+              } catch (err) {
+                console.warn(
+                  `[best-effort] Failed to generate comments for paper ${i}:`,
+                  err,
+                );
+              }
+            }
+          }
+
+          // Persist comments
+          const allComments: {
+            paperId: string;
+            content: string;
+            author: string;
+            isGenerated: boolean;
+            relationship: string;
+          }[] = [];
+
+          processedPapers.forEach((_, idx) => {
+            const cmts = rawComments.get(idx) || [];
+            const dbPaper = insertedPapers[idx];
+            if (dbPaper && cmts.length > 0) {
+              for (const c of cmts) {
+                allComments.push({
+                  paperId: dbPaper.id,
+                  content: c.content,
+                  author: c.author,
+                  isGenerated: true,
+                  relationship: c.relationship,
+                });
+              }
+            }
+          });
+
+          if (allComments.length > 0) {
+            await db.insert(comments).values(allComments);
+            // Update comment counts
+            for (const [idx, cmts] of rawComments) {
+              const dbPaper = insertedPapers[idx];
+              if (dbPaper && cmts.length > 0) {
+                await db
+                  .update(papers)
+                  .set({ commentCount: cmts.length })
+                  .where(eq(papers.id, dbPaper.id));
+              }
+            }
+          }
+
+          // Generate export outline
+          try {
+            const outlineInput = processedPapers.map((p) => ({
+              title: p.title,
+              authors: p.authors.join(", "),
+              year: p.year,
+              synthesis: p.synthesis,
+              apaCitation: p.apaCitation,
+            }));
+            const outlineJson = await generateExportOutline(outlineInput);
+            const jsonMatch = outlineJson.match(/\{[\s\S]*\}/);
+            let exportOutline: ExportTheme[] = fallbackOutline();
+            if (jsonMatch) {
+              try {
+                const parsed = JSON.parse(jsonMatch[0]) as {
+                  themes: ExportTheme[];
+                };
+                exportOutline = parsed.themes || fallbackOutline();
+              } catch {
+                console.warn(
+                  "Export outline JSON malformed, using fallback",
+                );
+              }
+            }
+            await db
+              .update(scrolls)
+              .set({ exportData: JSON.stringify(exportOutline) })
+              .where(eq(scrolls.id, scrollId));
+          } catch (err) {
+            console.warn("[best-effort] Export outline generation failed:", err);
+            await db
+              .update(scrolls)
+              .set({ exportData: JSON.stringify(fallbackOutline()) })
+              .where(eq(scrolls.id, scrollId));
+          }
+        } catch (err) {
+          console.warn(
+            "[best-effort] Post-completion enrichment failed:",
+            err,
+          );
+        }
       } catch (err) {
         console.error(
           `Background feed generation failed for ${scrollId}:`,
