@@ -57,7 +57,7 @@ async function tursoFetch(
   params: unknown[],
   method: "run" | "all" | "values" | "get",
 ): Promise<{ rows: unknown[][] }> {
-  const MAX_RETRIES = 4;
+  const MAX_RETRIES = 7;
   let lastError: Error | undefined;
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {

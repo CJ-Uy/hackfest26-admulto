@@ -143,7 +143,6 @@ async function handleSearchPhase(
     let pdfContextText = "";
 
     if (hasPdfs && config.pdfKeys) {
-      await updateProgress(scrollId, "extracting");
 
       for (const key of config.pdfKeys) {
         try {
@@ -177,8 +176,6 @@ async function handleSearchPhase(
     let webPapersList: RawPaper[] = [];
 
     if (!isOnlySources) {
-      await updateProgress(scrollId, "searching");
-
       let searchQuery = config.topic || "";
       if (config.subfields?.length) {
         searchQuery += " " + config.subfields.slice(0, 2).join(" ");
@@ -604,19 +601,4 @@ async function generateAndSaveExportOutline(scrollId: string, topic: string) {
   }
 }
 
-// ─── Progress helper ─────────────────────────────────────────────────────────
 
-async function updateProgress(
-  scrollId: string,
-  step: string,
-  extra: Record<string, number | string> = {},
-) {
-  try {
-    await db
-      .update(scrolls)
-      .set({ progress: JSON.stringify({ step, ...extra }) })
-      .where(eq(scrolls.id, scrollId));
-  } catch (err) {
-    console.warn(`[updateProgress] Failed (non-fatal): ${step}`, err);
-  }
-}

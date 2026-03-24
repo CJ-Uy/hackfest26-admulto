@@ -182,10 +182,10 @@ export function TopicForm({ initialTopic }: TopicFormProps) {
           continue;
         }
 
-        // Small gap between requests to avoid hammering the server
+        // Gap between requests to stay within Turso free-tier rate limits
         if (!cancelled) {
           await new Promise((r) => {
-            pollingRef.current = setTimeout(r, 500);
+            pollingRef.current = setTimeout(r, 2000);
           });
         }
       }
