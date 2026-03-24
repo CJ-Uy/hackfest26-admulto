@@ -255,6 +255,7 @@ const SOURCE_PRIORITY: Record<string, number> = {
 export async function searchPapers(
   query: string,
   targetCount = 15,
+  options?: { skipEmbeddings?: boolean },
 ): Promise<RawPaper[]> {
   console.log(
     `[paper-search] Searching for: "${query}" (target: ${targetCount})`,
@@ -285,6 +286,15 @@ export async function searchPapers(
   }
 
   console.log(`[paper-search] After title dedup: ${allPapers.length} papers`);
+
+  // Skip embedding-based dedup if requested (saves CPU + subrequests for CF Workers)
+  if (options?.skipEmbeddings) {
+    const result = allPapers.slice(0, targetCount);
+    console.log(
+      `[paper-search] Final result (no embedding dedup): ${result.length} papers`,
+    );
+    return result;
+  }
 
   // Second pass: embedding-based semantic dedup (catches near-duplicates)
   const embeddingTexts = allPapers.map(

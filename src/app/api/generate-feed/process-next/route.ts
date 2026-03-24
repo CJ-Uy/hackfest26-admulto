@@ -2,30 +2,48 @@ import {
   generateSynthesis,
   generateApaCitation,
   generateExportOutline,
-  generateSocialComments,
   setModels,
   configureProvider,
 } from "@/lib/ollama";
+import { searchPapers, type RawPaper } from "@/lib/paper-search";
+import { webSearch } from "@/lib/search";
+import { getPdf } from "@/lib/r2";
+import { extractPdfContent, pdfToRawPaper } from "@/lib/pdf-extract";
 import { db } from "@/lib/db";
-import { scrolls, papers, comments, polls } from "@/lib/schema";
+import { scrolls, papers, polls } from "@/lib/schema";
 import { eq, sql } from "drizzle-orm";
-import type { RawPaper } from "@/lib/paper-search";
 import type { ExportTheme } from "@/lib/types";
 
-interface RawResultsData {
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+interface Config {
+  provider?: string;
+  ollamaUrl?: string;
+  fastModel?: string;
+  smartModel?: string;
+  topic?: string;
+  description?: string;
+  subfields?: string[];
+  sourceMode?: string;
+  pdfKeys?: string[];
+  pdfContextText?: string;
+}
+
+interface RawResultsSearch {
+  phase: "search";
+  config: Config;
+}
+
+interface RawResultsProcess {
+  phase: "process";
   papers: RawPaper[];
   nextIndex: number;
-  config: {
-    provider?: string;
-    ollamaUrl?: string;
-    fastModel?: string;
-    smartModel?: string;
-    topic?: string;
-    subfields?: string[];
-    sourceMode?: string;
-    pdfContextText?: string;
-  };
+  config: Config;
 }
+
+type RawResultsData = RawResultsSearch | RawResultsProcess;
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function computeCredibilityScore(paper: {
   citationCount: number;
@@ -46,15 +64,25 @@ function computeCredibilityScore(paper: {
   return Math.min(score, 99);
 }
 
+function applyProviderConfig(config: Config) {
+  setModels(config.fastModel, config.smartModel);
+  if (config.provider) {
+    configureProvider(
+      config.provider as "ollama" | "cloudflare",
+      config.ollamaUrl,
+    );
+  }
+}
+
+// ─── Main endpoint ───────────────────────────────────────────────────────────
+
 /**
- * Step 2 of multi-step feed generation.
- * Each call processes ONE paper (synthesis + citation + DB insert).
- * The client calls this repeatedly until all papers are processed.
+ * Multi-step feed generation driver.
+ * The client calls this repeatedly. Each call does one unit of work:
  *
- * When all papers are done, this endpoint finalizes the scroll
- * (inserts polls, marks complete).
- *
- * Each invocation uses ~5-10 subrequests, well under CF Workers' 1000 limit.
+ * Phase "search": Search APIs + save raw results (~5-8ms CPU, no embeddings)
+ * Phase "process": Process ONE paper (synthesis + citation + DB insert) (~3-5ms CPU)
+ * Finalize: Insert polls, mark complete (~1ms CPU)
  */
 export async function POST(req: Request) {
   const { scrollId } = (await req.json()) as { scrollId: string };
@@ -63,7 +91,6 @@ export async function POST(req: Request) {
     return Response.json({ error: "scrollId required" }, { status: 400 });
   }
 
-  // Read scroll
   const scroll = await db.query.scrolls.findFirst({
     where: eq(scrolls.id, scrollId),
   });
@@ -71,8 +98,6 @@ export async function POST(req: Request) {
   if (!scroll) {
     return Response.json({ error: "Scroll not found" }, { status: 404 });
   }
-
-  // Already done
   if (scroll.status === "complete") {
     return Response.json({ status: "complete", progress: null, done: true });
   }
@@ -80,8 +105,6 @@ export async function POST(req: Request) {
     const progress = scroll.progress ? JSON.parse(scroll.progress) : null;
     return Response.json({ status: "error", progress, done: true });
   }
-
-  // No raw results — nothing to process
   if (!scroll.rawResults) {
     return Response.json({
       status: scroll.status,
@@ -91,25 +114,229 @@ export async function POST(req: Request) {
   }
 
   const rawData = JSON.parse(scroll.rawResults) as RawResultsData;
+
+  if (rawData.phase === "search") {
+    return await handleSearchPhase(scrollId, scroll, rawData);
+  } else {
+    return await handleProcessPhase(scrollId, scroll, rawData);
+  }
+}
+
+// ─── Phase: Search ───────────────────────────────────────────────────────────
+
+async function handleSearchPhase(
+  scrollId: string,
+  scroll: { title: string },
+  rawData: RawResultsSearch,
+) {
+  const { config } = rawData;
+  const hasPdfs = config.pdfKeys && config.pdfKeys.length > 0;
+  const isOnlySources = config.sourceMode === "only_sources";
+
+  console.log(
+    `[process-next] Search phase for scroll ${scrollId}, topic: "${config.topic}"`,
+  );
+
+  try {
+    // ── Extract PDFs if provided ──
+    const pdfPapers: RawPaper[] = [];
+    let pdfContextText = "";
+
+    if (hasPdfs && config.pdfKeys) {
+      await updateProgress(scrollId, "extracting");
+
+      for (const key of config.pdfKeys) {
+        try {
+          const buffer = await getPdf(key);
+          if (!buffer) continue;
+          const extracted = await extractPdfContent(
+            buffer,
+            key.split("/").pop() || "document.pdf",
+          );
+          pdfPapers.push(pdfToRawPaper(extracted));
+          pdfContextText += `\n\n--- ${extracted.title} ---\n${extracted.text.slice(0, 2000)}`;
+        } catch (err) {
+          console.error(`Failed to extract PDF ${key}:`, err);
+        }
+      }
+
+      if (!config.topic && pdfPapers.length > 0) {
+        const derivedTitle = pdfPapers
+          .map((p) => p.title)
+          .slice(0, 3)
+          .join(", ");
+        await db
+          .update(scrolls)
+          .set({ title: derivedTitle })
+          .where(eq(scrolls.id, scrollId));
+      }
+    }
+
+    // ── Search for papers ──
+    let academicPapers: RawPaper[] = [];
+    let webPapersList: RawPaper[] = [];
+
+    if (!isOnlySources) {
+      await updateProgress(scrollId, "searching");
+
+      let searchQuery = config.topic || "";
+      if (config.subfields?.length) {
+        searchQuery += " " + config.subfields.slice(0, 2).join(" ");
+      }
+
+      // skipEmbeddings: true to save CPU time on CF Workers (avoids Ollama calls + O(n²) cosine sim)
+      const [searchResults, webResults] = await Promise.all([
+        searchPapers(searchQuery, 20, { skipEmbeddings: true }).catch((err) => {
+          console.error(`[process-next] searchPapers failed:`, err);
+          return [] as RawPaper[];
+        }),
+        webSearch(searchQuery, 15).catch((err) => {
+          console.error(`[process-next] webSearch failed:`, err);
+          return [] as {
+            title: string;
+            url: string;
+            snippet: string;
+            engine: string;
+          }[];
+        }),
+      ]);
+
+      academicPapers = searchResults;
+
+      // Convert web results to RawPaper format
+      webPapersList = webResults
+        .filter((r) => r.snippet && r.snippet.length >= 20)
+        .map((r) => ({
+          id: `web-${Math.random().toString(36).slice(2)}`,
+          title: r.title,
+          abstract: r.snippet,
+          authors: [] as string[],
+          venue: r.engine || "Web Source",
+          year: new Date().getFullYear(),
+          doi: r.url,
+          citationCount: 0,
+          source: "web" as const,
+        }));
+
+      console.log(
+        `[process-next] Search complete: ${academicPapers.length} academic, ${webPapersList.length} web`,
+      );
+    }
+
+    // Merge PDF papers based on sourceMode
+    if (config.sourceMode === "include") {
+      academicPapers = [...pdfPapers, ...academicPapers];
+    } else if (config.sourceMode === "only_sources") {
+      academicPapers = pdfPapers;
+    }
+
+    // Sort by citation count
+    academicPapers.sort(
+      (a, b) => (b.citationCount || 0) - (a.citationCount || 0),
+    );
+
+    // Build final list: up to 12 academic + fill with web
+    const targetAcademic = Math.min(academicPapers.length, 12);
+    const targetWeb = Math.min(webPapersList.length, 12 - targetAcademic);
+
+    const academicTitles = new Set(
+      academicPapers.slice(0, targetAcademic).map((p) => p.title.toLowerCase()),
+    );
+    const dedupedWeb = webPapersList.filter(
+      (w) => !academicTitles.has(w.title.toLowerCase()),
+    );
+
+    const allPapers = [
+      ...academicPapers.slice(0, targetAcademic),
+      ...dedupedWeb.slice(0, targetWeb),
+    ];
+
+    // Strip embeddings from storage
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const papersForStorage = allPapers.map(({ embedding, ...rest }) => rest);
+
+    // Transition to process phase
+    const processData: RawResultsProcess = {
+      phase: "process",
+      papers: papersForStorage,
+      nextIndex: 0,
+      config: {
+        ...config,
+        pdfContextText: pdfContextText || undefined,
+      },
+    };
+
+    const total = papersForStorage.length;
+    await db
+      .update(scrolls)
+      .set({
+        rawResults: JSON.stringify(processData),
+        progress: JSON.stringify({
+          step: "processing",
+          papersProcessed: 0,
+          total,
+        }),
+        ...(hasPdfs ? { pdfKeys: JSON.stringify(config.pdfKeys) } : {}),
+      })
+      .where(eq(scrolls.id, scrollId));
+
+    console.log(
+      `[process-next] Search phase complete. ${total} papers ready for processing.`,
+    );
+
+    return Response.json({
+      status: "generating",
+      progress: { step: "processing", papersProcessed: 0, total },
+      done: false,
+    });
+  } catch (err) {
+    console.error(`[process-next] Search phase failed:`, err);
+
+    try {
+      await db
+        .update(scrolls)
+        .set({
+          status: "error",
+          progress: JSON.stringify({
+            step: "error",
+            message: err instanceof Error ? err.message : "Search failed",
+          }),
+        })
+        .where(eq(scrolls.id, scrollId));
+    } catch {
+      // ignore
+    }
+
+    return Response.json({
+      status: "error",
+      progress: {
+        step: "error",
+        message: err instanceof Error ? err.message : "Search failed",
+      },
+      done: true,
+    });
+  }
+}
+
+// ─── Phase: Process ──────────────────────────────────────────────────────────
+
+async function handleProcessPhase(
+  scrollId: string,
+  scroll: { title: string; rawResults: string | null },
+  rawData: RawResultsProcess,
+) {
   const { papers: rawPapers, config } = rawData;
   const nextIndex = rawData.nextIndex || 0;
   const total = rawPapers.length;
 
-  // Configure AI provider for this request
-  setModels(config.fastModel, config.smartModel);
-  if (config.provider) {
-    configureProvider(
-      config.provider as "ollama" | "cloudflare",
-      config.ollamaUrl,
-    );
-  }
+  applyProviderConfig(config);
 
-  // ── All papers processed → finalize ──
+  // All papers processed → finalize
   if (nextIndex >= total) {
     return await finalizeScroll(scrollId, scroll, rawData);
   }
 
-  // ── Process next paper ──
+  // Process next paper
   const raw = rawPapers[nextIndex];
   console.log(
     `[process-next] Processing paper ${nextIndex + 1}/${total}: "${raw.title?.slice(0, 60)}"`,
@@ -164,7 +391,6 @@ export async function POST(req: Request) {
       isUserUpload: raw.source === "pdf_upload",
     });
 
-    // Advance index
     const newIndex = nextIndex + 1;
     rawData.nextIndex = newIndex;
 
@@ -185,7 +411,6 @@ export async function POST(req: Request) {
 
     console.log(`[process-next] Paper ${newIndex}/${total} saved OK`);
 
-    // If this was the last paper, finalize on the NEXT call
     return Response.json({
       status: "generating",
       progress,
@@ -197,14 +422,14 @@ export async function POST(req: Request) {
       err,
     );
 
-    // Skip this paper and advance index so we don't get stuck
+    // Skip this paper and advance so we don't get stuck
     rawData.nextIndex = nextIndex + 1;
 
     const progress = {
       step: "processing",
       papersProcessed: nextIndex + 1,
       total,
-      debug: `skipped paper ${nextIndex + 1}: ${err instanceof Error ? err.message : "unknown error"}`,
+      debug: `skipped: ${err instanceof Error ? err.message : "error"}`,
     };
 
     try {
@@ -216,7 +441,7 @@ export async function POST(req: Request) {
         })
         .where(eq(scrolls.id, scrollId));
     } catch {
-      // DB update failed too — client will retry
+      // DB update failed — client will retry
     }
 
     return Response.json({
@@ -227,11 +452,12 @@ export async function POST(req: Request) {
   }
 }
 
-/** Finalize scroll: insert polls, mark complete, clean up rawResults. */
+// ─── Finalize ────────────────────────────────────────────────────────────────
+
 async function finalizeScroll(
   scrollId: string,
   scroll: { title: string; rawResults: string | null },
-  rawData: RawResultsData,
+  rawData: RawResultsProcess,
 ) {
   console.log(`[process-next] Finalizing scroll ${scrollId}`);
 
@@ -239,7 +465,6 @@ async function finalizeScroll(
   const subfields = rawData.config.subfields;
 
   try {
-    // Count actual papers in DB
     const [{ count }] = await db
       .select({ count: sql<number>`count(*)` })
       .from(papers)
@@ -295,32 +520,32 @@ async function finalizeScroll(
       `[process-next] Scroll ${scrollId} finalized with ${count} papers`,
     );
 
-    // Best-effort: generate export outline (non-blocking, will fail gracefully)
+    // Best-effort export outline
     try {
       await generateAndSaveExportOutline(scrollId, effectiveTopic);
     } catch {
-      // Export outline is nice-to-have — scroll works without it
+      // nice-to-have
     }
 
     return Response.json({ status: "complete", progress: null, done: true });
   } catch (err) {
     console.error(`[process-next] Finalization failed:`, err);
 
-    // Still try to mark complete even if polls fail
     try {
       await db
         .update(scrolls)
         .set({ status: "complete", progress: null, rawResults: null })
         .where(eq(scrolls.id, scrollId));
     } catch {
-      // Last resort
+      // last resort
     }
 
     return Response.json({ status: "complete", progress: null, done: true });
   }
 }
 
-/** Best-effort export outline generation. */
+// ─── Export outline helper ───────────────────────────────────────────────────
+
 async function generateAndSaveExportOutline(scrollId: string, topic: string) {
   const scrollPapers = await db.query.papers.findMany({
     where: eq(papers.scrollId, scrollId),
@@ -373,5 +598,22 @@ async function generateAndSaveExportOutline(scrollId: string, topic: string) {
       .update(scrolls)
       .set({ exportData: JSON.stringify(fallbackOutline()) })
       .where(eq(scrolls.id, scrollId));
+  }
+}
+
+// ─── Progress helper ─────────────────────────────────────────────────────────
+
+async function updateProgress(
+  scrollId: string,
+  step: string,
+  extra: Record<string, number | string> = {},
+) {
+  try {
+    await db
+      .update(scrolls)
+      .set({ progress: JSON.stringify({ step, ...extra }) })
+      .where(eq(scrolls.id, scrollId));
+  } catch (err) {
+    console.warn(`[updateProgress] Failed (non-fatal): ${step}`, err);
   }
 }
