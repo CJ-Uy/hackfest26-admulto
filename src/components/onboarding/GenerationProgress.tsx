@@ -7,6 +7,7 @@ import {
   Sparkles,
   CheckCircle2,
   BookOpen,
+  AlertTriangle,
 } from "lucide-react";
 
 interface ProgressInfo {
@@ -137,6 +138,16 @@ export function GenerationProgress({
           Researching{" "}
           <span className="text-foreground font-medium">
             &ldquo;{topic}&rdquo;
+          </span>
+        </p>
+      </div>
+
+      <div className="rounded-xl border border-amber-300/70 bg-amber-50 px-3 py-2.5 text-left sm:px-4">
+        <p className="flex items-start gap-2 text-xs leading-relaxed text-amber-900 sm:text-sm">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>
+            Generation may be buggy in production due to Cloudflare Workers
+            free-tier CPU timeouts and request limits.
           </span>
         </p>
       </div>

@@ -20,6 +20,7 @@ import {
   SheetTrigger,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { SidebarBrandCard } from "@/components/shared/SidebarBrandCard";
 import type { ScrollSession, Paper, UserPost } from "@/lib/types";
 
 interface RightSidebarProps {
@@ -72,6 +73,8 @@ export function RightSidebar({
 
   const sidebarContent = (
     <div className="space-y-3">
+      <SidebarBrandCard />
+
       {/* Session stats */}
       <div className="border-border bg-background rounded-lg border p-3.5">
         <div className="bg-primary mb-3 rounded-md px-3 py-2.5">

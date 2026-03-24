@@ -12,6 +12,7 @@ import {
   Info,
   Clock,
   FileUp,
+  AlertTriangle,
 } from "lucide-react";
 import { GenerationProgress } from "./GenerationProgress";
 import { PdfUploader, type UploadedFile } from "./PdfUploader";
@@ -810,6 +811,16 @@ export function TopicForm({ initialTopic }: TopicFormProps) {
               {sourceMode === "only_sources" ? ", no external search" : ""})
             </span>
           )}
+        </p>
+      </div>
+
+      <div className="rounded-lg border border-amber-300/70 bg-amber-50 px-3 py-2.5 sm:px-4 sm:py-3">
+        <p className="flex items-start gap-2 text-xs leading-relaxed text-amber-900 sm:text-sm">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>
+            Heads up: generating a schroll may be buggy in production due to
+            Cloudflare Workers free-tier CPU timeouts and limits.
+          </span>
         </p>
       </div>
 

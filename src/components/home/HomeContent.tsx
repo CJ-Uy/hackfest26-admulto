@@ -16,6 +16,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sidebar, SidebarContent } from "@/components/shared/Sidebar";
 import { SchrollarLogo } from "@/components/shared/SchrollarLogo";
+import { SidebarBrandCard } from "@/components/shared/SidebarBrandCard";
 import {
   Sheet,
   SheetContent,
@@ -73,29 +74,22 @@ export function HomeContent({ scrolls: initialScrolls }: HomeContentProps) {
 
   const homeSidebarContent = (
     <div className="space-y-3">
-      {/* App info card */}
+      <SidebarBrandCard />
+
+      {/* Stats */}
       <div className="border-border bg-background rounded-lg border p-4">
-        <div className="bg-primary mb-3 rounded-md px-3 py-2.5">
-          <SchrollarLogo size="sm" className="text-primary-foreground" />
-        </div>
-        <p className="text-muted-foreground text-[14px] leading-relaxed">
-          Discover academic papers through an AI-powered social media feed.
-          Upvote, comment, and fine-tune your research experience.
-        </p>
-        <div className="border-border mt-3 border-t pt-3">
-          <div className="grid grid-cols-2 gap-2">
-            <div className="bg-subtle rounded-md p-2.5">
-              <p className="text-muted-foreground text-[13px]">Schrolls</p>
-              <p className="text-foreground text-[18px] font-bold">
-                {scrolls.length}
-              </p>
-            </div>
-            <div className="bg-subtle rounded-md p-2.5">
-              <p className="text-muted-foreground text-[13px]">Papers</p>
-              <p className="text-foreground text-[18px] font-bold">
-                {scrolls.reduce((sum, s) => sum + s.paperCount, 0)}
-              </p>
-            </div>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="bg-subtle rounded-md p-2.5">
+            <p className="text-muted-foreground text-[13px]">Schrolls</p>
+            <p className="text-foreground text-[18px] font-bold">
+              {scrolls.length}
+            </p>
+          </div>
+          <div className="bg-subtle rounded-md p-2.5">
+            <p className="text-muted-foreground text-[13px]">Papers</p>
+            <p className="text-foreground text-[18px] font-bold">
+              {scrolls.reduce((sum, s) => sum + s.paperCount, 0)}
+            </p>
           </div>
         </div>
       </div>
