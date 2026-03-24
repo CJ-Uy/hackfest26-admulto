@@ -81,12 +81,17 @@ async function updateProgress(
   extra: Record<string, number> = {},
 ) {
   try {
+    console.log(
+      `[updateProgress] Setting step="${step}" for scroll ${scrollId}`,
+      extra,
+    );
     await db
       .update(scrolls)
       .set({ progress: JSON.stringify({ step, ...extra }) })
       .where(eq(scrolls.id, scrollId));
+    console.log(`[updateProgress] ✅ step="${step}" saved OK`);
   } catch (err) {
-    console.warn(`[updateProgress] Failed (non-fatal): ${step}`, err);
+    console.warn(`[updateProgress] ❌ Failed (non-fatal): ${step}`, err);
   }
 }
 
@@ -152,701 +157,760 @@ export async function POST(req: Request) {
       .returning();
 
     const scrollId = scroll.id;
+    console.log(
+      `[generate-feed] ✅ Scroll created: ${scrollId}, topic: "${topic}"`,
+    );
 
     // Run heavy processing in background after returning response
     after(async () => {
+      console.log(
+        `[generate-feed] 🚀 after() callback STARTED for scroll ${scrollId}`,
+      );
       try {
-          // ── Step 0: Extract PDFs if provided ──
-          let pdfPapers: RawPaper[] = [];
-          let pdfContextText = "";
+        // ── Step 0: Extract PDFs if provided ──
+        let pdfPapers: RawPaper[] = [];
+        let pdfContextText = "";
 
-          if (hasPdfs) {
-            await updateProgress(scrollId, "extracting");
+        if (hasPdfs) {
+          await updateProgress(scrollId, "extracting");
 
-            for (const key of pdfKeys) {
-              try {
-                const buffer = await getPdf(key);
-                if (!buffer) {
-                  console.warn(`PDF not found in R2: ${key}`);
-                  continue;
-                }
-                const extracted = await extractPdfContent(
-                  buffer,
-                  key.split("/").pop() || "document.pdf",
-                );
-                pdfPapers.push(pdfToRawPaper(extracted));
-                // Accumulate context text for context_only mode
-                pdfContextText += `\n\n--- ${extracted.title} ---\n${extracted.text.slice(0, 2000)}`;
-              } catch (err) {
-                console.error(`Failed to extract PDF ${key}:`, err);
+          for (const key of pdfKeys) {
+            try {
+              const buffer = await getPdf(key);
+              if (!buffer) {
+                console.warn(`PDF not found in R2: ${key}`);
+                continue;
               }
-            }
-
-            console.log(
-              `[generate-feed] Extracted ${pdfPapers.length} papers from ${pdfKeys.length} PDFs`,
-            );
-
-            // If topic was not provided (only_sources mode), derive from PDF titles
-            if (!topic && pdfPapers.length > 0) {
-              const derivedTitle = pdfPapers
-                .map((p) => p.title)
-                .slice(0, 3)
-                .join(", ");
-              await db
-                .update(scrolls)
-                .set({ title: derivedTitle })
-                .where(eq(scrolls.id, scrollId));
+              const extracted = await extractPdfContent(
+                buffer,
+                key.split("/").pop() || "document.pdf",
+              );
+              pdfPapers.push(pdfToRawPaper(extracted));
+              // Accumulate context text for context_only mode
+              pdfContextText += `\n\n--- ${extracted.title} ---\n${extracted.text.slice(0, 2000)}`;
+            } catch (err) {
+              console.error(`Failed to extract PDF ${key}:`, err);
             }
           }
 
-          // ── Step 1: Search for papers (skip if only_sources) ──
-          let academicPapers: RawPaper[] = [];
-          let webResults: {
-            title: string;
-            url: string;
-            snippet: string;
-            engine: string;
-          }[] = [];
+          console.log(
+            `[generate-feed] Extracted ${pdfPapers.length} papers from ${pdfKeys.length} PDFs`,
+          );
 
-          if (!isOnlySources) {
-            await updateProgress(scrollId, "searching");
+          // If topic was not provided (only_sources mode), derive from PDF titles
+          if (!topic && pdfPapers.length > 0) {
+            const derivedTitle = pdfPapers
+              .map((p) => p.title)
+              .slice(0, 3)
+              .join(", ");
+            await db
+              .update(scrolls)
+              .set({ title: derivedTitle })
+              .where(eq(scrolls.id, scrollId));
+          }
+        }
 
-            let searchQuery = topic || "";
-            if (subfields?.length) {
-              searchQuery += " " + subfields.slice(0, 2).join(" ");
-            }
+        // ── Step 1: Search for papers (skip if only_sources) ──
+        let academicPapers: RawPaper[] = [];
+        let webResults: {
+          title: string;
+          url: string;
+          snippet: string;
+          engine: string;
+        }[] = [];
 
-            [academicPapers, webResults] = await Promise.all([
-              searchPapers(searchQuery, 20),
-              webSearch(searchQuery, 15).catch((err) => {
-                console.error("Web search failed:", err);
+        if (!isOnlySources) {
+          console.log(
+            `[generate-feed] 📡 Step 1: Starting search for scroll ${scrollId}`,
+          );
+          await updateProgress(scrollId, "searching");
+
+          let searchQuery = topic || "";
+          if (subfields?.length) {
+            searchQuery += " " + subfields.slice(0, 2).join(" ");
+          }
+          console.log(`[generate-feed] 📡 Search query: "${searchQuery}"`);
+
+          console.log(`[generate-feed] 📡 Calling searchPapers + webSearch...`);
+          [academicPapers, webResults] = await Promise.all([
+            searchPapers(searchQuery, 20)
+              .then((r) => {
+                console.log(
+                  `[generate-feed] 📡 searchPapers returned ${r.length} results`,
+                );
+                return r;
+              })
+              .catch((err) => {
+                console.error(`[generate-feed] ❌ searchPapers FAILED:`, err);
+                return [] as RawPaper[];
+              }),
+            webSearch(searchQuery, 15)
+              .then((r) => {
+                console.log(
+                  `[generate-feed] 📡 webSearch returned ${r.length} results`,
+                );
+                return r;
+              })
+              .catch((err) => {
+                console.error(`[generate-feed] ❌ webSearch FAILED:`, err);
                 return [] as typeof webResults;
               }),
+          ]);
+
+          console.log(
+            `[generate-feed] ✅ Search complete: ${academicPapers.length} academic, ${webResults.length} web`,
+          );
+        }
+
+        // Merge PDF papers based on sourceMode
+        if (effectiveSourceMode === "include") {
+          academicPapers = [...pdfPapers, ...academicPapers];
+        } else if (effectiveSourceMode === "only_sources") {
+          academicPapers = pdfPapers;
+        }
+        // context_only: pdfPapers not added to academicPapers — used as context only
+
+        // ── Embedding-based ranking (merged into "searching" progress step to reduce DB calls) ──
+
+        console.log(
+          `[generate-feed] 🔢 Step 1.5: Starting embedding/ranking for scroll ${scrollId}`,
+        );
+        // Embed the query for relevance ranking
+        const queryText = [topic, description, ...(subfields || [])]
+          .filter(Boolean)
+          .join(" ");
+        const queryEmbedding = queryText ? await safeEmbed(queryText) : null;
+        console.log(
+          `[generate-feed] 🔢 Query embedding: ${queryEmbedding ? "success" : "null/skipped"}`,
+        );
+
+        // Store query embedding on scroll (best-effort, non-critical)
+        if (queryEmbedding) {
+          try {
+            await db
+              .update(scrolls)
+              .set({ queryEmbedding: JSON.stringify(queryEmbedding) })
+              .where(eq(scrolls.id, scrollId));
+          } catch {
+            console.warn(
+              "[generate-feed] Failed to store query embedding (non-fatal)",
+            );
+          }
+        }
+
+        // Embed papers that don't already have embeddings (from searchPapers dedup)
+        const needsEmbedding = academicPapers.filter((p) => !p.embedding);
+        console.log(
+          `[generate-feed] 🔢 ${needsEmbedding.length} papers need embedding (of ${academicPapers.length} total)`,
+        );
+        if (needsEmbedding.length > 0) {
+          const texts = needsEmbedding.map(
+            (p) => `${p.title}. ${p.abstract.slice(0, 500)}`,
+          );
+          console.log(
+            `[generate-feed] 🔢 Calling safeEmbedBatch for ${texts.length} papers...`,
+          );
+          const newEmbeddings = await safeEmbedBatch(texts);
+          console.log(
+            `[generate-feed] 🔢 safeEmbedBatch returned: ${newEmbeddings ? newEmbeddings.length + " embeddings" : "null"}`,
+          );
+          if (newEmbeddings) {
+            needsEmbedding.forEach((p, i) => {
+              p.embedding = newEmbeddings[i];
+            });
+          }
+        }
+
+        // Rank by relevance: PDF similarity (if PDFs) or query similarity
+        if (
+          hasPdfs &&
+          pdfPapers.some((p) => p.embedding) &&
+          effectiveSourceMode !== "only_sources"
+        ) {
+          // For PDF modes: rank academic papers by similarity to uploaded PDFs
+          const pdfEmbeddings = pdfPapers
+            .map((p) => p.embedding)
+            .filter((e): e is number[] => !!e);
+
+          if (pdfEmbeddings.length > 0) {
+            // Score each academic paper by max similarity to any PDF
+            const nonPdfPapers = academicPapers.filter(
+              (p) => p.source !== "pdf_upload",
+            );
+            const pdfPapersInList = academicPapers.filter(
+              (p) => p.source === "pdf_upload",
+            );
+
+            const scored = nonPdfPapers
+              .map((paper) => {
+                if (!paper.embedding) return { paper, score: 0 };
+                const maxSim = Math.max(
+                  ...pdfEmbeddings.map((pe) => {
+                    let dot = 0,
+                      magA = 0,
+                      magB = 0;
+                    for (let i = 0; i < pe.length; i++) {
+                      dot += pe[i] * paper.embedding![i];
+                      magA += pe[i] * pe[i];
+                      magB += paper.embedding![i] * paper.embedding![i];
+                    }
+                    const denom = Math.sqrt(magA) * Math.sqrt(magB);
+                    return denom === 0 ? 0 : dot / denom;
+                  }),
+                );
+                return { paper, score: maxSim };
+              })
+              .sort((a, b) => b.score - a.score);
+
+            // PDF papers first, then ranked academic papers
+            academicPapers = [
+              ...pdfPapersInList,
+              ...scored.map((s) => s.paper),
+            ];
+            console.log(
+              `[generate-feed] Ranked papers by PDF similarity (top score: ${scored[0]?.score.toFixed(3)})`,
+            );
+          }
+        } else if (queryEmbedding) {
+          // Rank by query relevance
+          const papersWithEmb = academicPapers.filter((p) => p.embedding);
+          const papersWithoutEmb = academicPapers.filter((p) => !p.embedding);
+
+          if (papersWithEmb.length > 0) {
+            const ranked = rankBySimilarity(
+              queryEmbedding,
+              papersWithEmb.map((p) => p.embedding!),
+            );
+            academicPapers = [
+              ...ranked.map((r) => papersWithEmb[r.index]),
+              ...papersWithoutEmb,
+            ];
+            console.log(
+              `[generate-feed] Ranked ${papersWithEmb.length} papers by query similarity (top: ${ranked[0]?.score.toFixed(3)})`,
+            );
+          }
+        }
+
+        console.log(
+          `[generate-feed] 🔢 Ranking complete. ${academicPapers.length} papers ready for processing`,
+        );
+        const total = Math.min(academicPapers.length, 12);
+        console.log(
+          `[generate-feed] 🔬 Step 2: Processing ${total} papers (from ${academicPapers.length} candidates)`,
+        );
+        await updateProgress(scrollId, "processing", {
+          papersProcessed: 0,
+          total,
+        });
+
+        // 2. Process academic papers — synthesis + verification
+        let papersProcessed = 0;
+
+        const processPaper = async (raw: RawPaper): Promise<Paper | null> => {
+          try {
+            // For context_only mode, prepend PDF context to the synthesis prompt
+            const contextPrefix =
+              effectiveSourceMode === "context_only" && pdfContextText
+                ? `[User's reference material for context: ${pdfContextText.slice(0, 1500)}]\n\n`
+                : "";
+
+            const abstractForSynthesis = raw.abstract.slice(0, 2000);
+
+            const [synthesis, apaCitation] = await Promise.all([
+              generateSynthesis(
+                raw.title,
+                contextPrefix + abstractForSynthesis,
+                raw.authors,
+              ),
+              generateApaCitation(
+                raw.title,
+                raw.authors,
+                raw.year,
+                raw.venue,
+                raw.doi,
+              ),
             ]);
 
-            console.log(
-              `[generate-feed] ${academicPapers.length} academic papers, ${webResults.length} web results`,
-            );
-          }
-
-          // Merge PDF papers based on sourceMode
-          if (effectiveSourceMode === "include") {
-            academicPapers = [...pdfPapers, ...academicPapers];
-          } else if (effectiveSourceMode === "only_sources") {
-            academicPapers = pdfPapers;
-          }
-          // context_only: pdfPapers not added to academicPapers — used as context only
-
-          // ── Embedding-based ranking (merged into "searching" progress step to reduce DB calls) ──
-
-          // Embed the query for relevance ranking
-          const queryText = [topic, description, ...(subfields || [])]
-            .filter(Boolean)
-            .join(" ");
-          const queryEmbedding = queryText ? await safeEmbed(queryText) : null;
-
-          // Store query embedding on scroll (best-effort, non-critical)
-          if (queryEmbedding) {
+            // Verify synthesis — advisory only, don't reject papers
             try {
+              await verifyCard(raw.abstract.slice(0, 2000), synthesis);
+            } catch {
+              // verification service unavailable — continue
+            }
+
+            const credibilityScore = computeCredibilityScore({
+              citationCount: raw.citationCount,
+              venue: raw.venue,
+              year: raw.year,
+            });
+
+            return {
+              id: raw.id,
+              title: raw.title,
+              authors: raw.authors,
+              journal: raw.venue,
+              year: raw.year,
+              doi: raw.doi,
+              peerReviewed: !!raw.venue && raw.source !== "pdf_upload",
+              synthesis,
+              credibilityScore,
+              citationCount: raw.citationCount,
+              commentCount: 0,
+              apaCitation,
+              isUserUpload: raw.source === "pdf_upload",
+              embedding: raw.embedding,
+            };
+          } catch (err) {
+            console.error(`Failed to process paper "${raw.title}":`, err);
+            return null;
+          }
+        };
+
+        // Process with progress tracking per batch — save incrementally so
+        // partial results survive if the CF Worker kills the after() callback.
+        const processedPapers: Paper[] = [];
+        const insertedPapers: (typeof papers.$inferSelect)[] = [];
+
+        for (
+          let i = 0;
+          i < academicPapers.length && processedPapers.length < 12;
+          i += CONCURRENCY
+        ) {
+          const batch = academicPapers.slice(i, i + CONCURRENCY);
+          const batchResults = await Promise.allSettled(
+            batch.map(processPaper),
+          );
+          const batchPapers: Paper[] = [];
+          for (const r of batchResults) {
+            if (processedPapers.length + batchPapers.length >= 12) break;
+            if (r.status === "fulfilled" && r.value !== null) {
+              batchPapers.push(r.value);
+            }
+          }
+
+          console.log(
+            `[generate-feed] 🔬 Batch at i=${i}: ${batchPapers.length} papers processed (total so far: ${processedPapers.length})`,
+          );
+
+          // Persist this batch immediately so partial results survive worker death
+          if (batchPapers.length > 0) {
+            try {
+              console.log(
+                `[generate-feed] 💾 Persisting batch of ${batchPapers.length} papers to DB...`,
+              );
+              const inserted = await db
+                .insert(papers)
+                .values(
+                  batchPapers.map((p) => ({
+                    scrollId,
+                    externalId: p.id,
+                    title: p.title,
+                    authors: JSON.stringify(p.authors),
+                    journal: p.journal,
+                    year: p.year,
+                    doi: p.doi,
+                    peerReviewed: p.peerReviewed,
+                    synthesis: p.synthesis,
+                    credibilityScore: p.credibilityScore,
+                    citationCount: p.citationCount,
+                    commentCount: 0,
+                    apaCitation: p.apaCitation,
+                    isUserUpload:
+                      (p as Paper & { isUserUpload?: boolean }).isUserUpload ||
+                      false,
+                    embedding: p.embedding ? JSON.stringify(p.embedding) : null,
+                    groundingData: p.groundingData
+                      ? JSON.stringify(p.groundingData)
+                      : null,
+                  })),
+                )
+                .returning();
+              console.log(
+                `[generate-feed] 💾 Batch persisted OK (${inserted.length} rows)`,
+              );
+              insertedPapers.push(...inserted);
+              processedPapers.push(...batchPapers);
+
+              // Update paperCount so the scroll shows partial results if worker dies
               await db
                 .update(scrolls)
-                .set({ queryEmbedding: JSON.stringify(queryEmbedding) })
+                .set({ paperCount: processedPapers.length })
                 .where(eq(scrolls.id, scrollId));
-            } catch {
-              console.warn(
-                "[generate-feed] Failed to store query embedding (non-fatal)",
-              );
+            } catch (dbErr) {
+              console.error(`[generate-feed] Failed to persist batch:`, dbErr);
+              // Still track locally even if DB insert failed
+              processedPapers.push(...batchPapers);
             }
           }
 
-          // Embed papers that don't already have embeddings (from searchPapers dedup)
-          const needsEmbedding = academicPapers.filter((p) => !p.embedding);
-          if (needsEmbedding.length > 0) {
-            const texts = needsEmbedding.map(
-              (p) => `${p.title}. ${p.abstract.slice(0, 500)}`,
-            );
-            const newEmbeddings = await safeEmbedBatch(texts);
-            if (newEmbeddings) {
-              needsEmbedding.forEach((p, i) => {
-                p.embedding = newEmbeddings[i];
-              });
-            }
-          }
-
-          // Rank by relevance: PDF similarity (if PDFs) or query similarity
+          papersProcessed = Math.min(i + CONCURRENCY, academicPapers.length);
+          // Only update progress every 4 papers to reduce DB calls (Turso rate limit)
           if (
-            hasPdfs &&
-            pdfPapers.some((p) => p.embedding) &&
-            effectiveSourceMode !== "only_sources"
+            i === 0 ||
+            papersProcessed % 4 === 0 ||
+            papersProcessed >= total
           ) {
-            // For PDF modes: rank academic papers by similarity to uploaded PDFs
-            const pdfEmbeddings = pdfPapers
-              .map((p) => p.embedding)
-              .filter((e): e is number[] => !!e);
-
-            if (pdfEmbeddings.length > 0) {
-              // Score each academic paper by max similarity to any PDF
-              const nonPdfPapers = academicPapers.filter(
-                (p) => p.source !== "pdf_upload",
-              );
-              const pdfPapersInList = academicPapers.filter(
-                (p) => p.source === "pdf_upload",
-              );
-
-              const scored = nonPdfPapers
-                .map((paper) => {
-                  if (!paper.embedding) return { paper, score: 0 };
-                  const maxSim = Math.max(
-                    ...pdfEmbeddings.map((pe) => {
-                      let dot = 0,
-                        magA = 0,
-                        magB = 0;
-                      for (let i = 0; i < pe.length; i++) {
-                        dot += pe[i] * paper.embedding![i];
-                        magA += pe[i] * pe[i];
-                        magB += paper.embedding![i] * paper.embedding![i];
-                      }
-                      const denom = Math.sqrt(magA) * Math.sqrt(magB);
-                      return denom === 0 ? 0 : dot / denom;
-                    }),
-                  );
-                  return { paper, score: maxSim };
-                })
-                .sort((a, b) => b.score - a.score);
-
-              // PDF papers first, then ranked academic papers
-              academicPapers = [
-                ...pdfPapersInList,
-                ...scored.map((s) => s.paper),
-              ];
-              console.log(
-                `[generate-feed] Ranked papers by PDF similarity (top score: ${scored[0]?.score.toFixed(3)})`,
-              );
-            }
-          } else if (queryEmbedding) {
-            // Rank by query relevance
-            const papersWithEmb = academicPapers.filter((p) => p.embedding);
-            const papersWithoutEmb = academicPapers.filter((p) => !p.embedding);
-
-            if (papersWithEmb.length > 0) {
-              const ranked = rankBySimilarity(
-                queryEmbedding,
-                papersWithEmb.map((p) => p.embedding!),
-              );
-              academicPapers = [
-                ...ranked.map((r) => papersWithEmb[r.index]),
-                ...papersWithoutEmb,
-              ];
-              console.log(
-                `[generate-feed] Ranked ${papersWithEmb.length} papers by query similarity (top: ${ranked[0]?.score.toFixed(3)})`,
-              );
-            }
+            await updateProgress(scrollId, "processing", {
+              papersProcessed: Math.min(papersProcessed, total),
+              total,
+            });
           }
+        }
 
-          const total = Math.min(academicPapers.length, 12);
-          await updateProgress(scrollId, "processing", {
-            papersProcessed: 0,
-            total,
-          });
+        // 3. Supplement with web results (always fill up to 12 total) — skip if only_sources
+        if (
+          !isOnlySources &&
+          webResults.length > 0 &&
+          processedPapers.length < 12
+        ) {
+          console.log(
+            `${processedPapers.length} academic results, supplementing with ${webResults.length} web results`,
+          );
 
-          // 2. Process academic papers — synthesis + verification
-          let papersProcessed = 0;
+          const existingTitles = new Set(
+            processedPapers.map((p) => p.title.toLowerCase()),
+          );
 
-          const processPaper = async (raw: RawPaper): Promise<Paper | null> => {
+          const eligibleWebResults = webResults.filter(
+            (r) =>
+              r.snippet &&
+              r.snippet.length >= 20 &&
+              !existingTitles.has(r.title.toLowerCase()),
+          );
+
+          const processWebResult = async (
+            result: (typeof webResults)[number],
+          ): Promise<Paper | null> => {
             try {
-              // For context_only mode, prepend PDF context to the synthesis prompt
-              const contextPrefix =
-                effectiveSourceMode === "context_only" && pdfContextText
-                  ? `[User's reference material for context: ${pdfContextText.slice(0, 1500)}]\n\n`
-                  : "";
-
-              const abstractForSynthesis = raw.abstract.slice(0, 2000);
-
               const [synthesis, apaCitation] = await Promise.all([
-                generateSynthesis(
-                  raw.title,
-                  contextPrefix + abstractForSynthesis,
-                  raw.authors,
-                ),
+                generateSynthesis(result.title, result.snippet, []),
                 generateApaCitation(
-                  raw.title,
-                  raw.authors,
-                  raw.year,
-                  raw.venue,
-                  raw.doi,
+                  result.title,
+                  [],
+                  new Date().getFullYear(),
+                  result.engine || "Web",
+                  result.url,
                 ),
               ]);
 
-              // Verify synthesis — advisory only, don't reject papers
-              try {
-                await verifyCard(raw.abstract.slice(0, 2000), synthesis);
-              } catch {
-                // verification service unavailable — continue
-              }
-
-              const credibilityScore = computeCredibilityScore({
-                citationCount: raw.citationCount,
-                venue: raw.venue,
-                year: raw.year,
-              });
-
               return {
-                id: raw.id,
-                title: raw.title,
-                authors: raw.authors,
-                journal: raw.venue,
-                year: raw.year,
-                doi: raw.doi,
-                peerReviewed: !!raw.venue && raw.source !== "pdf_upload",
+                id: `web-${Math.random().toString(36).slice(2)}`,
+                title: result.title,
+                authors: [],
+                journal: result.engine || "Web Source",
+                year: new Date().getFullYear(),
+                doi: result.url,
+                peerReviewed: false,
                 synthesis,
-                credibilityScore,
-                citationCount: raw.citationCount,
+                credibilityScore: 40,
+                citationCount: 0,
                 commentCount: 0,
                 apaCitation,
-                isUserUpload: raw.source === "pdf_upload",
-                embedding: raw.embedding,
               };
             } catch (err) {
-              console.error(`Failed to process paper "${raw.title}":`, err);
+              console.error(
+                `Failed to process web result "${result.title}":`,
+                err,
+              );
               return null;
             }
           };
 
-          // Process with progress tracking per batch — save incrementally so
-          // partial results survive if the CF Worker kills the after() callback.
-          const processedPapers: Paper[] = [];
-          const insertedPapers: (typeof papers.$inferSelect)[] = [];
+          const remaining = 12 - processedPapers.length;
+          const webPapers = await processInBatches(
+            eligibleWebResults,
+            processWebResult,
+            remaining,
+          );
 
-          for (
-            let i = 0;
-            i < academicPapers.length && processedPapers.length < 12;
-            i += CONCURRENCY
-          ) {
-            const batch = academicPapers.slice(i, i + CONCURRENCY);
-            const batchResults = await Promise.allSettled(
-              batch.map(processPaper),
-            );
-            const batchPapers: Paper[] = [];
-            for (const r of batchResults) {
-              if (processedPapers.length + batchPapers.length >= 12) break;
-              if (r.status === "fulfilled" && r.value !== null) {
-                batchPapers.push(r.value);
-              }
-            }
-
-            // Persist this batch immediately so partial results survive worker death
-            if (batchPapers.length > 0) {
-              try {
-                const inserted = await db
-                  .insert(papers)
-                  .values(
-                    batchPapers.map((p) => ({
-                      scrollId,
-                      externalId: p.id,
-                      title: p.title,
-                      authors: JSON.stringify(p.authors),
-                      journal: p.journal,
-                      year: p.year,
-                      doi: p.doi,
-                      peerReviewed: p.peerReviewed,
-                      synthesis: p.synthesis,
-                      credibilityScore: p.credibilityScore,
-                      citationCount: p.citationCount,
-                      commentCount: 0,
-                      apaCitation: p.apaCitation,
-                      isUserUpload:
-                        (p as Paper & { isUserUpload?: boolean })
-                          .isUserUpload || false,
-                      embedding: p.embedding
-                        ? JSON.stringify(p.embedding)
-                        : null,
-                      groundingData: p.groundingData
-                        ? JSON.stringify(p.groundingData)
-                        : null,
-                    })),
-                  )
-                  .returning();
-                insertedPapers.push(...inserted);
-                processedPapers.push(...batchPapers);
-
-                // Update paperCount so the scroll shows partial results if worker dies
-                await db
-                  .update(scrolls)
-                  .set({ paperCount: processedPapers.length })
-                  .where(eq(scrolls.id, scrollId));
-              } catch (dbErr) {
-                console.error(
-                  `[generate-feed] Failed to persist batch:`,
-                  dbErr,
-                );
-                // Still track locally even if DB insert failed
-                processedPapers.push(...batchPapers);
-              }
-            }
-
-            papersProcessed = Math.min(i + CONCURRENCY, academicPapers.length);
-            // Only update progress every 4 papers to reduce DB calls (Turso rate limit)
-            if (
-              i === 0 ||
-              papersProcessed % 4 === 0 ||
-              papersProcessed >= total
-            ) {
-              await updateProgress(scrollId, "processing", {
-                papersProcessed: Math.min(papersProcessed, total),
-                total,
-              });
+          // Persist web papers incrementally too
+          if (webPapers.length > 0) {
+            try {
+              const inserted = await db
+                .insert(papers)
+                .values(
+                  webPapers.map((p) => ({
+                    scrollId,
+                    externalId: p.id,
+                    title: p.title,
+                    authors: JSON.stringify(p.authors),
+                    journal: p.journal,
+                    year: p.year,
+                    doi: p.doi,
+                    peerReviewed: p.peerReviewed,
+                    synthesis: p.synthesis,
+                    credibilityScore: p.credibilityScore,
+                    citationCount: p.citationCount,
+                    commentCount: 0,
+                    apaCitation: p.apaCitation,
+                    isUserUpload: false,
+                    embedding: p.embedding ? JSON.stringify(p.embedding) : null,
+                    groundingData: p.groundingData
+                      ? JSON.stringify(p.groundingData)
+                      : null,
+                  })),
+                )
+                .returning();
+              insertedPapers.push(...inserted);
+              processedPapers.push(...webPapers);
+            } catch (dbErr) {
+              console.error(
+                `[generate-feed] Failed to persist web papers:`,
+                dbErr,
+              );
+              processedPapers.push(...webPapers);
             }
           }
+        }
 
-          // 3. Supplement with web results (always fill up to 12 total) — skip if only_sources
-          if (
-            !isOnlySources &&
-            webResults.length > 0 &&
-            processedPapers.length < 12
-          ) {
-            console.log(
-              `${processedPapers.length} academic results, supplementing with ${webResults.length} web results`,
-            );
+        // 4. Generate export outline
+        const effectiveTopic = topic || scroll.title;
 
-            const existingTitles = new Set(
-              processedPapers.map((p) => p.title.toLowerCase()),
-            );
+        const fallbackOutline = (): ExportTheme[] => [
+          {
+            title: effectiveTopic,
+            summary: `Research papers on ${effectiveTopic}.`,
+            sources: processedPapers.map((p) => ({
+              title: p.title,
+              authors: p.authors.join(", "),
+              year: p.year,
+              keyFinding: p.synthesis.split(".")[0] + ".",
+              apaCitation: p.apaCitation,
+            })),
+          },
+        ];
 
-            const eligibleWebResults = webResults.filter(
-              (r) =>
-                r.snippet &&
-                r.snippet.length >= 20 &&
-                !existingTitles.has(r.title.toLowerCase()),
-            );
+        // Papers already persisted incrementally above — insertedPapers is populated.
+        console.log(
+          `[generate-feed] 📊 Step 4: Inserting polls for scroll ${scrollId}`,
+        );
 
-            const processWebResult = async (
-              result: (typeof webResults)[number],
-            ): Promise<Paper | null> => {
+        // Insert polls
+        await db.insert(polls).values([
+          {
+            scrollId,
+            type: "multiple-choice",
+            question: `Which aspect of "${effectiveTopic}" interests you most?`,
+            options: JSON.stringify(
+              subfields && subfields.length >= 2
+                ? subfields.slice(0, 4)
+                : [
+                    "Foundational theories",
+                    "Recent developments",
+                    "Practical applications",
+                    "Methodological approaches",
+                  ],
+            ),
+          },
+          {
+            scrollId,
+            type: "multiple-choice",
+            question: "What type of research sources do you prefer?",
+            options: JSON.stringify([
+              "Foundational/classic papers (pre-2000)",
+              "Modern empirical studies (2000\u20132015)",
+              "Recent cutting-edge research (2015+)",
+              "A mix of all eras",
+            ]),
+          },
+          {
+            scrollId,
+            type: "open-ended",
+            question:
+              "What specific research question are you trying to answer?",
+          },
+        ]);
+
+        console.log(
+          `[generate-feed] ✅ Polls inserted. Marking scroll complete...`,
+        );
+        // Mark scroll as complete so the user can start browsing immediately
+        await db
+          .update(scrolls)
+          .set({
+            paperCount: processedPapers.length,
+            status: "complete",
+            progress: null,
+            ...(hasPdfs ? { pdfKeys: JSON.stringify(pdfKeys) } : {}),
+          })
+          .where(eq(scrolls.id, scrollId));
+
+        console.log(
+          `Feed generation complete for scroll ${scrollId}: ${processedPapers.length} papers`,
+        );
+
+        console.log(
+          `[generate-feed] ✅ Scroll marked complete! Starting best-effort enrichment...`,
+        );
+        // 6. Best-effort: generate comments and export outline AFTER marking complete.
+        // These are nice-to-have — if the worker times out here, the scroll still works.
+        type RawComment = {
+          author: string;
+          content: string;
+          relationship: string;
+        };
+
+        try {
+          // Build similarity pairs for comment matching
+          const paperEmbeddings = processedPapers
+            .map((p) => p.embedding)
+            .filter((e): e is number[] => !!e);
+          const hasPaperEmbeddings =
+            paperEmbeddings.length === processedPapers.length;
+          const similarPairs = hasPaperEmbeddings
+            ? findSimilarPairs(paperEmbeddings, 4)
+            : null;
+
+          // Generate comments sequentially to avoid Ollama overload
+          const rawComments = new Map<number, RawComment[]>();
+          if (processedPapers.length >= 2) {
+            for (let i = 0; i < processedPapers.length; i++) {
+              const paper = processedPapers[i];
+
+              let others;
+              if (similarPairs && similarPairs.has(i)) {
+                const similar = similarPairs.get(i)!;
+                others = similar.map((s) => processedPapers[s.index]);
+              } else {
+                others = processedPapers
+                  .filter((_, idx) => idx !== i)
+                  .slice(0, 4);
+              }
+
               try {
-                const [synthesis, apaCitation] = await Promise.all([
-                  generateSynthesis(result.title, result.snippet, []),
-                  generateApaCitation(
-                    result.title,
-                    [],
-                    new Date().getFullYear(),
-                    result.engine || "Web",
-                    result.url,
-                  ),
-                ]);
-
-                return {
-                  id: `web-${Math.random().toString(36).slice(2)}`,
-                  title: result.title,
-                  authors: [],
-                  journal: result.engine || "Web Source",
-                  year: new Date().getFullYear(),
-                  doi: result.url,
-                  peerReviewed: false,
-                  synthesis,
-                  credibilityScore: 40,
-                  citationCount: 0,
-                  commentCount: 0,
-                  apaCitation,
-                };
+                const generatedComments = await generateSocialComments(
+                  {
+                    title: paper.title,
+                    synthesis: paper.synthesis,
+                    authors: paper.authors,
+                  },
+                  others.map((o) => ({
+                    title: o.title,
+                    synthesis: o.synthesis,
+                    authors: o.authors,
+                    year: o.year,
+                    citationCount: o.citationCount,
+                    doi: o.doi,
+                  })),
+                  3,
+                );
+                rawComments.set(i, generatedComments);
               } catch (err) {
-                console.error(
-                  `Failed to process web result "${result.title}":`,
+                console.warn(
+                  `[best-effort] Failed to generate comments for paper ${i}:`,
                   err,
                 );
-                return null;
-              }
-            };
-
-            const remaining = 12 - processedPapers.length;
-            const webPapers = await processInBatches(
-              eligibleWebResults,
-              processWebResult,
-              remaining,
-            );
-
-            // Persist web papers incrementally too
-            if (webPapers.length > 0) {
-              try {
-                const inserted = await db
-                  .insert(papers)
-                  .values(
-                    webPapers.map((p) => ({
-                      scrollId,
-                      externalId: p.id,
-                      title: p.title,
-                      authors: JSON.stringify(p.authors),
-                      journal: p.journal,
-                      year: p.year,
-                      doi: p.doi,
-                      peerReviewed: p.peerReviewed,
-                      synthesis: p.synthesis,
-                      credibilityScore: p.credibilityScore,
-                      citationCount: p.citationCount,
-                      commentCount: 0,
-                      apaCitation: p.apaCitation,
-                      isUserUpload: false,
-                      embedding: p.embedding
-                        ? JSON.stringify(p.embedding)
-                        : null,
-                      groundingData: p.groundingData
-                        ? JSON.stringify(p.groundingData)
-                        : null,
-                    })),
-                  )
-                  .returning();
-                insertedPapers.push(...inserted);
-                processedPapers.push(...webPapers);
-              } catch (dbErr) {
-                console.error(
-                  `[generate-feed] Failed to persist web papers:`,
-                  dbErr,
-                );
-                processedPapers.push(...webPapers);
               }
             }
           }
 
-          // 4. Generate export outline
-          const effectiveTopic = topic || scroll.title;
+          // Persist comments
+          const allComments: {
+            paperId: string;
+            content: string;
+            author: string;
+            isGenerated: boolean;
+            relationship: string;
+          }[] = [];
 
-          const fallbackOutline = (): ExportTheme[] => [
-            {
-              title: effectiveTopic,
-              summary: `Research papers on ${effectiveTopic}.`,
-              sources: processedPapers.map((p) => ({
-                title: p.title,
-                authors: p.authors.join(", "),
-                year: p.year,
-                keyFinding: p.synthesis.split(".")[0] + ".",
-                apaCitation: p.apaCitation,
-              })),
-            },
-          ];
+          processedPapers.forEach((_, idx) => {
+            const cmts = rawComments.get(idx) || [];
+            const dbPaper = insertedPapers[idx];
+            if (dbPaper && cmts.length > 0) {
+              for (const c of cmts) {
+                allComments.push({
+                  paperId: dbPaper.id,
+                  content: c.content,
+                  author: c.author,
+                  isGenerated: true,
+                  relationship: c.relationship,
+                });
+              }
+            }
+          });
 
-          // Papers already persisted incrementally above — insertedPapers is populated.
+          if (allComments.length > 0) {
+            await db.insert(comments).values(allComments);
+            // Update comment counts
+            for (const [idx, cmts] of rawComments) {
+              const dbPaper = insertedPapers[idx];
+              if (dbPaper && cmts.length > 0) {
+                await db
+                  .update(papers)
+                  .set({ commentCount: cmts.length })
+                  .where(eq(papers.id, dbPaper.id));
+              }
+            }
+          }
 
-          // Insert polls
-          await db.insert(polls).values([
-            {
-              scrollId,
-              type: "multiple-choice",
-              question: `Which aspect of "${effectiveTopic}" interests you most?`,
-              options: JSON.stringify(
-                subfields && subfields.length >= 2
-                  ? subfields.slice(0, 4)
-                  : [
-                      "Foundational theories",
-                      "Recent developments",
-                      "Practical applications",
-                      "Methodological approaches",
-                    ],
-              ),
-            },
-            {
-              scrollId,
-              type: "multiple-choice",
-              question: "What type of research sources do you prefer?",
-              options: JSON.stringify([
-                "Foundational/classic papers (pre-2000)",
-                "Modern empirical studies (2000\u20132015)",
-                "Recent cutting-edge research (2015+)",
-                "A mix of all eras",
-              ]),
-            },
-            {
-              scrollId,
-              type: "open-ended",
-              question:
-                "What specific research question are you trying to answer?",
-            },
-          ]);
-
-          // Mark scroll as complete so the user can start browsing immediately
+          // Generate export outline
+          try {
+            const outlineInput = processedPapers.map((p) => ({
+              title: p.title,
+              authors: p.authors.join(", "),
+              year: p.year,
+              synthesis: p.synthesis,
+              apaCitation: p.apaCitation,
+            }));
+            const outlineJson = await generateExportOutline(outlineInput);
+            const jsonMatch = outlineJson.match(/\{[\s\S]*\}/);
+            let exportOutline: ExportTheme[] = fallbackOutline();
+            if (jsonMatch) {
+              try {
+                const parsed = JSON.parse(jsonMatch[0]) as {
+                  themes: ExportTheme[];
+                };
+                exportOutline = parsed.themes || fallbackOutline();
+              } catch {
+                console.warn("Export outline JSON malformed, using fallback");
+              }
+            }
+            await db
+              .update(scrolls)
+              .set({ exportData: JSON.stringify(exportOutline) })
+              .where(eq(scrolls.id, scrollId));
+          } catch (err) {
+            console.warn(
+              "[best-effort] Export outline generation failed:",
+              err,
+            );
+            await db
+              .update(scrolls)
+              .set({ exportData: JSON.stringify(fallbackOutline()) })
+              .where(eq(scrolls.id, scrollId));
+          }
+        } catch (err) {
+          console.warn("[best-effort] Post-completion enrichment failed:", err);
+        }
+      } catch (err) {
+        console.error(
+          `[generate-feed] ❌❌❌ OUTER CATCH — Background feed generation CRASHED for ${scrollId}:`,
+          err,
+        );
+        try {
           await db
             .update(scrolls)
             .set({
-              paperCount: processedPapers.length,
-              status: "complete",
-              progress: null,
-              ...(hasPdfs ? { pdfKeys: JSON.stringify(pdfKeys) } : {}),
+              status: "error",
+              progress: JSON.stringify({
+                step: "error",
+                message:
+                  err instanceof Error ? err.message : "Feed generation failed",
+              }),
             })
             .where(eq(scrolls.id, scrollId));
-
-          console.log(
-            `Feed generation complete for scroll ${scrollId}: ${processedPapers.length} papers`,
-          );
-
-          // 6. Best-effort: generate comments and export outline AFTER marking complete.
-          // These are nice-to-have — if the worker times out here, the scroll still works.
-          type RawComment = {
-            author: string;
-            content: string;
-            relationship: string;
-          };
-
-          try {
-            // Build similarity pairs for comment matching
-            const paperEmbeddings = processedPapers
-              .map((p) => p.embedding)
-              .filter((e): e is number[] => !!e);
-            const hasPaperEmbeddings =
-              paperEmbeddings.length === processedPapers.length;
-            const similarPairs = hasPaperEmbeddings
-              ? findSimilarPairs(paperEmbeddings, 4)
-              : null;
-
-            // Generate comments sequentially to avoid Ollama overload
-            const rawComments = new Map<number, RawComment[]>();
-            if (processedPapers.length >= 2) {
-              for (let i = 0; i < processedPapers.length; i++) {
-                const paper = processedPapers[i];
-
-                let others;
-                if (similarPairs && similarPairs.has(i)) {
-                  const similar = similarPairs.get(i)!;
-                  others = similar.map((s) => processedPapers[s.index]);
-                } else {
-                  others = processedPapers
-                    .filter((_, idx) => idx !== i)
-                    .slice(0, 4);
-                }
-
-                try {
-                  const generatedComments = await generateSocialComments(
-                    {
-                      title: paper.title,
-                      synthesis: paper.synthesis,
-                      authors: paper.authors,
-                    },
-                    others.map((o) => ({
-                      title: o.title,
-                      synthesis: o.synthesis,
-                      authors: o.authors,
-                      year: o.year,
-                      citationCount: o.citationCount,
-                      doi: o.doi,
-                    })),
-                    3,
-                  );
-                  rawComments.set(i, generatedComments);
-                } catch (err) {
-                  console.warn(
-                    `[best-effort] Failed to generate comments for paper ${i}:`,
-                    err,
-                  );
-                }
-              }
-            }
-
-            // Persist comments
-            const allComments: {
-              paperId: string;
-              content: string;
-              author: string;
-              isGenerated: boolean;
-              relationship: string;
-            }[] = [];
-
-            processedPapers.forEach((_, idx) => {
-              const cmts = rawComments.get(idx) || [];
-              const dbPaper = insertedPapers[idx];
-              if (dbPaper && cmts.length > 0) {
-                for (const c of cmts) {
-                  allComments.push({
-                    paperId: dbPaper.id,
-                    content: c.content,
-                    author: c.author,
-                    isGenerated: true,
-                    relationship: c.relationship,
-                  });
-                }
-              }
-            });
-
-            if (allComments.length > 0) {
-              await db.insert(comments).values(allComments);
-              // Update comment counts
-              for (const [idx, cmts] of rawComments) {
-                const dbPaper = insertedPapers[idx];
-                if (dbPaper && cmts.length > 0) {
-                  await db
-                    .update(papers)
-                    .set({ commentCount: cmts.length })
-                    .where(eq(papers.id, dbPaper.id));
-                }
-              }
-            }
-
-            // Generate export outline
-            try {
-              const outlineInput = processedPapers.map((p) => ({
-                title: p.title,
-                authors: p.authors.join(", "),
-                year: p.year,
-                synthesis: p.synthesis,
-                apaCitation: p.apaCitation,
-              }));
-              const outlineJson = await generateExportOutline(outlineInput);
-              const jsonMatch = outlineJson.match(/\{[\s\S]*\}/);
-              let exportOutline: ExportTheme[] = fallbackOutline();
-              if (jsonMatch) {
-                try {
-                  const parsed = JSON.parse(jsonMatch[0]) as {
-                    themes: ExportTheme[];
-                  };
-                  exportOutline = parsed.themes || fallbackOutline();
-                } catch {
-                  console.warn("Export outline JSON malformed, using fallback");
-                }
-              }
-              await db
-                .update(scrolls)
-                .set({ exportData: JSON.stringify(exportOutline) })
-                .where(eq(scrolls.id, scrollId));
-            } catch (err) {
-              console.warn(
-                "[best-effort] Export outline generation failed:",
-                err,
-              );
-              await db
-                .update(scrolls)
-                .set({ exportData: JSON.stringify(fallbackOutline()) })
-                .where(eq(scrolls.id, scrollId));
-            }
-          } catch (err) {
-            console.warn(
-              "[best-effort] Post-completion enrichment failed:",
-              err,
-            );
-          }
-        } catch (err) {
+        } catch {
           console.error(
-            `Background feed generation failed for ${scrollId}:`,
-            err,
+            `[generate-feed] Failed to set error status for ${scrollId}`,
           );
-          try {
-            await db
-              .update(scrolls)
-              .set({
-                status: "error",
-                progress: JSON.stringify({
-                  step: "error",
-                  message:
-                    err instanceof Error
-                      ? err.message
-                      : "Feed generation failed",
-                }),
-              })
-              .where(eq(scrolls.id, scrollId));
-          } catch {
-            console.error(
-              `[generate-feed] Failed to set error status for ${scrollId}`,
-            );
-          }
         }
+      }
     });
 
     // Return immediately with the scroll ID
+    console.log(
+      `[generate-feed] 📤 Returning scroll ID ${scroll.id} to client (after() registered)`,
+    );
     return Response.json({ scroll: { id: scroll.id } });
   } catch (err) {
     console.error("Feed generation failed:", err);

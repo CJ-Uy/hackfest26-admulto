@@ -35,6 +35,7 @@ function reconstructAbstract(invertedIndex: Record<string, number[]>): string {
 }
 
 async function searchOpenAlex(query: string, limit = 15): Promise<RawPaper[]> {
+  console.log(`[paper-search] 📡 OpenAlex: starting search...`);
   try {
     const params = new URLSearchParams({
       search: query.slice(0, 200),
@@ -56,7 +57,7 @@ async function searchOpenAlex(query: string, limit = 15): Promise<RawPaper[]> {
     const data = (await res.json()) as AnyRecord;
     const results = (data.results as AnyRecord[]) || [];
 
-    return results
+    const mapped = results
       .map((r): RawPaper | null => {
         const abstract = reconstructAbstract(r.abstract_inverted_index);
         if (!abstract || abstract.length < 50) return null;
@@ -82,8 +83,10 @@ async function searchOpenAlex(query: string, limit = 15): Promise<RawPaper[]> {
         };
       })
       .filter((p): p is RawPaper => p !== null);
+    console.log(`[paper-search] ✅ OpenAlex: ${mapped.length} valid papers`);
+    return mapped;
   } catch (err) {
-    console.warn("OpenAlex search failed:", err);
+    console.warn("[paper-search] ❌ OpenAlex search failed:", err);
     return [];
   }
 }
@@ -91,6 +94,7 @@ async function searchOpenAlex(query: string, limit = 15): Promise<RawPaper[]> {
 // ─── CrossRef (secondary — free, no key needed) ────────────────────────────
 
 async function searchCrossRef(query: string, limit = 10): Promise<RawPaper[]> {
+  console.log(`[paper-search] 📡 CrossRef: starting search...`);
   try {
     const params = new URLSearchParams({
       query: query.slice(0, 200),
@@ -112,7 +116,7 @@ async function searchCrossRef(query: string, limit = 10): Promise<RawPaper[]> {
     const data = (await res.json()) as AnyRecord;
     const items = (data.message?.items as AnyRecord[]) || [];
 
-    return items
+    const mapped = items
       .map((item): RawPaper | null => {
         // Abstract comes as HTML — strip tags
         const rawAbstract = (item.abstract as string) || "";
@@ -151,8 +155,10 @@ async function searchCrossRef(query: string, limit = 10): Promise<RawPaper[]> {
         };
       })
       .filter((p): p is RawPaper => p !== null);
+    console.log(`[paper-search] ✅ CrossRef: ${mapped.length} valid papers`);
+    return mapped;
   } catch (err) {
-    console.warn("CrossRef search failed:", err);
+    console.warn("[paper-search] ❌ CrossRef search failed:", err);
     return [];
   }
 }
@@ -166,6 +172,7 @@ async function searchSemanticScholar(
   query: string,
   limit = 15,
 ): Promise<RawPaper[]> {
+  console.log(`[paper-search] 📡 S2: starting search...`);
   try {
     const params = new URLSearchParams({
       query: query.slice(0, 200),
@@ -196,7 +203,7 @@ async function searchSemanticScholar(
     const data = (await res.json()) as AnyRecord;
     const results = (data.data as AnyRecord[]) || [];
 
-    return results
+    const mapped = results
       .map((r): RawPaper | null => {
         const abstract = (r.abstract as string) || "";
         if (abstract.length < 50) return null;
@@ -224,8 +231,10 @@ async function searchSemanticScholar(
         };
       })
       .filter((p): p is RawPaper => p !== null);
+    console.log(`[paper-search] ✅ S2: ${mapped.length} valid papers`);
+    return mapped;
   } catch (err) {
-    console.warn("S2 search failed:", err);
+    console.warn("[paper-search] ❌ S2 search failed:", err);
     return [];
   }
 }

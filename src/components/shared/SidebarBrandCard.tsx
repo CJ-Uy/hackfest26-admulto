@@ -23,7 +23,7 @@ export function SidebarBrandCard({
         href={githubUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-md border border-primary/25 bg-primary/10 px-3 py-2.5 text-[13px] font-semibold text-primary transition-colors hover:bg-primary/15"
+        className="border-primary/25 bg-primary/10 text-primary hover:bg-primary/15 mt-3 inline-flex w-full items-center justify-center gap-2 rounded-md border px-3 py-2.5 text-[13px] font-semibold transition-colors"
       >
         <svg
           viewBox="0 0 16 16"

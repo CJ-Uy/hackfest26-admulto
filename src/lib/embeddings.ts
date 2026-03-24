@@ -10,6 +10,9 @@ const EMBED_MODEL = "nomic-embed-text";
  * Embed a single text string. Returns a 768-dimensional float array.
  */
 export async function embed(text: string): Promise<number[]> {
+  console.log(
+    `[embeddings] embed() called, text length: ${text.length}, url: ${OLLAMA_URL}`,
+  );
   const truncated = text.slice(0, 8000);
   const res = await fetch(`${OLLAMA_URL}/api/embed`, {
     method: "POST",
@@ -36,6 +39,9 @@ export async function embed(text: string): Promise<number[]> {
  * Processes in chunks of 10 to avoid memory issues.
  */
 export async function embedBatch(texts: string[]): Promise<number[][]> {
+  console.log(
+    `[embeddings] embedBatch() called for ${texts.length} texts, url: ${OLLAMA_URL}`,
+  );
   if (texts.length === 0) return [];
 
   const CHUNK_SIZE = 10;
