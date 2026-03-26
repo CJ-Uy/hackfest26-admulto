@@ -263,7 +263,11 @@ export async function POST(req: Request) {
         });
 
         if (allComments.length > 0) {
-          await db.insert(comments).values(allComments);
+          // D1 limits bound parameters to 100 per query; chunk at 12 rows (8 params each)
+          const CHUNK_SIZE = 12;
+          for (let i = 0; i < allComments.length; i += CHUNK_SIZE) {
+            await db.insert(comments).values(allComments.slice(i, i + CHUNK_SIZE));
+          }
         }
 
         // Update paper count

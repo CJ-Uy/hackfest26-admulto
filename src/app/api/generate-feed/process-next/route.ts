@@ -256,37 +256,41 @@ async function handleSearchPhase(
     // ── Insert papers into DB with placeholder synthesis ──
     // This means rawResults doesn't need to store paper data at all!
     if (total > 0) {
-      await db.insert(papers).values(
-        allPapers.map((p) => {
-          const isWeb = p.source === "web";
-          return {
-            scrollId,
-            externalId: p.id,
-            title: p.title,
-            authors: JSON.stringify(p.authors || []),
-            journal: p.venue || (isWeb ? "Web Source" : "Academic Publication"),
-            year: p.year || new Date().getFullYear(),
-            doi: p.doi || "",
-            peerReviewed: !!p.venue && p.source !== "pdf_upload" && !isWeb,
-            synthesis: PENDING_SYNTHESIS,
-            credibilityScore: isWeb
-              ? 40
-              : computeCredibilityScore({
-                  citationCount: p.citationCount || 0,
-                  venue: p.venue || "",
-                  year: p.year || 0,
-                }),
-            citationCount: p.citationCount || 0,
-            commentCount: 0,
-            apaCitation: "",
-            isUserUpload: p.source === "pdf_upload",
-            // Store abstract temporarily in groundingData for synthesis generation
-            groundingData: JSON.stringify({
-              abstract: (p.abstract || "").slice(0, 2000),
-            }),
-          };
-        }),
-      );
+      const paperRows = allPapers.map((p) => {
+        const isWeb = p.source === "web";
+        return {
+          scrollId,
+          externalId: p.id,
+          title: p.title,
+          authors: JSON.stringify(p.authors || []),
+          journal: p.venue || (isWeb ? "Web Source" : "Academic Publication"),
+          year: p.year || new Date().getFullYear(),
+          doi: p.doi || "",
+          peerReviewed: !!p.venue && p.source !== "pdf_upload" && !isWeb,
+          synthesis: PENDING_SYNTHESIS,
+          credibilityScore: isWeb
+            ? 40
+            : computeCredibilityScore({
+                citationCount: p.citationCount || 0,
+                venue: p.venue || "",
+                year: p.year || 0,
+              }),
+          citationCount: p.citationCount || 0,
+          commentCount: 0,
+          apaCitation: "",
+          isUserUpload: p.source === "pdf_upload",
+          // Store abstract temporarily in groundingData for synthesis generation
+          groundingData: JSON.stringify({
+            abstract: (p.abstract || "").slice(0, 2000),
+          }),
+        };
+      });
+      // D1 HTTP API limits bound parameters to 100 per query.
+      // Each paper row uses 16 params, so batch at 6 rows max.
+      const CHUNK_SIZE = 6;
+      for (let i = 0; i < paperRows.length; i += CHUNK_SIZE) {
+        await db.insert(papers).values(paperRows.slice(i, i + CHUNK_SIZE));
+      }
     }
 
     // Transition to process phase — rawResults is now tiny (~200 bytes)
