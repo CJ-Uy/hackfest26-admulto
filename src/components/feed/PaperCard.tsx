@@ -49,6 +49,17 @@ export function PaperCard({
       : paper.authors[0] || "Unknown";
   const initial = primaryAuthor.charAt(0).toUpperCase();
 
+  // Deterministic avatar color from author name
+  const avatarColors = [
+    "#FF4500", "#0079D3", "#46d160", "#FF8717", "#7193FF",
+    "#EA0027", "#00A6A5", "#CC3600", "#9B59B6", "#349E79",
+  ];
+  let hash = 0;
+  for (let i = 0; i < primaryAuthor.length; i++) {
+    hash = primaryAuthor.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const avatarColor = avatarColors[Math.abs(hash) % avatarColors.length];
+
   function navigateToDetail() {
     onClearNewComment?.();
     router.push(`/schroll/${scrollId}/post/${paper.id}`);
@@ -62,7 +73,10 @@ export function PaperCard({
     >
       {/* Author row */}
       <div className="mb-2 flex items-center gap-2.5">
-        <div className="bg-primary/10 text-primary flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[13px] font-bold">
+        <div
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[13px] font-bold text-white"
+          style={{ backgroundColor: avatarColor }}
+        >
           {initial}
         </div>
         <div className="flex min-w-0 flex-1 items-baseline gap-1.5">
