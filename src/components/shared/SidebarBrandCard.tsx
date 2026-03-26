@@ -10,7 +10,7 @@ export function SidebarBrandCard({
   githubUrl = "https://github.com/CJ-Uy/hackfest26-admulto",
 }: SidebarBrandCardProps) {
   return (
-    <div className="pt-5 pb-3">
+    <div className="pt-3 pb-3">
       <div className="bg-primary mb-3 rounded-lg px-4 py-3">
         <SchrollarLogo size="sm" className="text-primary-foreground" />
       </div>

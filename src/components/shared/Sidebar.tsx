@@ -101,7 +101,12 @@ export function SidebarContent({
 
       <Separator className={cn("my-3 w-auto", collapsed ? "mx-1.5" : "mx-3")} />
 
-      <div className={cn("flex-1 overflow-y-auto", collapsed ? "px-1.5" : "px-3")}>
+      <div
+        className={cn(
+          "flex-1 overflow-y-auto overflow-x-hidden",
+          collapsed ? "px-1.5" : "px-3",
+        )}
+      >
         {!collapsed && (
           <p className="text-muted-foreground mb-2 px-2 text-[12px] font-bold tracking-widest uppercase">
             Recent
@@ -165,26 +170,23 @@ export function SidebarContent({
       </div>
 
       <div className={cn("border-border border-t py-2", collapsed ? "px-1.5" : "px-3")}>
-        <ThemeToggle />
-        {onToggleCollapse && (
-          <button
-            onClick={onToggleCollapse}
-            className={cn(
-              "text-muted-foreground hover:text-foreground hover:bg-subtle mt-1 flex items-center rounded-md p-1.5 transition-colors",
-              collapsed ? "justify-center w-full" : "justify-start gap-2 w-full",
-            )}
-            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          >
-            {collapsed ? (
-              <ChevronsRight className="h-4 w-4" />
-            ) : (
-              <>
+        <div className="flex items-center justify-between gap-1">
+          <ThemeToggle />
+          {onToggleCollapse && (
+            <button
+              onClick={onToggleCollapse}
+              className="text-muted-foreground hover:text-foreground hover:bg-subtle flex h-8 w-8 items-center justify-center rounded-md transition-colors"
+              title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+              aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            >
+              {collapsed ? (
+                <ChevronsRight className="h-4 w-4" />
+              ) : (
                 <ChevronsLeft className="h-4 w-4" />
-                <span className="text-[13px]">Collapse</span>
-              </>
-            )}
-          </button>
-        )}
+              )}
+            </button>
+          )}
+        </div>
       </div>
 
       <Dialog
@@ -285,7 +287,7 @@ export function Sidebar({
       {/* Desktop sidebar */}
       <aside
         className={cn(
-          "no-scrollbar hidden shrink-0 overflow-y-auto border-r border-border transition-all duration-200 md:sticky md:top-12 md:flex md:h-[calc(100vh-48px)] md:flex-col",
+          "scrollbar-ultra-thin hidden shrink-0 overflow-y-auto overflow-x-hidden border-r border-border transition-all duration-200 md:sticky md:top-14 md:flex md:h-[calc(100vh-56px)] md:flex-col",
           mounted
             ? collapsed
               ? "w-14"
