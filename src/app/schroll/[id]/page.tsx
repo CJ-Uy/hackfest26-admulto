@@ -421,7 +421,8 @@ function ScrollPageInner() {
         <Navbar />
         <div className="flex">
           <Sidebar showMobileTrigger={false} />
-          <main className="w-full min-w-0 flex-1">
+          <div className="flex min-w-0 flex-1 justify-center">
+          <main className="w-full max-w-[860px] min-w-0 flex-1">
             <div className="px-4 pt-4 pb-3">
               <div className="mb-2 flex items-center gap-2">
                 <Skeleton className="h-5 w-20 rounded-full" />
@@ -447,6 +448,7 @@ function ScrollPageInner() {
           </main>
 
           <RightSidebarSkeleton />
+          </div>
         </div>
       </div>
     );
@@ -463,8 +465,9 @@ function ScrollPageInner() {
       <div className="flex">
         <Sidebar showMobileTrigger={false} />
 
+        <div className="flex min-w-0 flex-1 justify-center">
         {/* Main content column */}
-        <main className="w-full min-w-0 flex-1 border-x border-border">
+        <main className="w-full max-w-[860px] min-w-0 flex-1 border-x border-border">
           <ScrollHeader scroll={scroll} />
 
           {/* Mobile: keep search + tabs sticky together */}
@@ -598,6 +601,7 @@ function ScrollPageInner() {
           scrollId={scrollId}
           showMobileTrigger={false}
         />
+        </div>
       </div>
 
       <div className="hidden md:block">

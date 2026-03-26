@@ -151,8 +151,9 @@ export function HomeContent({ scrolls: initialScrolls }: HomeContentProps) {
       <div className="flex">
         <Sidebar showMobileTrigger={false} />
 
+        <div className="flex min-w-0 flex-1 justify-center">
         {/* Main content */}
-        <main className="w-full min-w-0 flex-1 border-x border-border pb-24 md:pb-0">
+        <main className="w-full max-w-[860px] min-w-0 flex-1 border-x border-border pb-24 md:pb-0">
           {hasScrolls ? (
             <>
               {/* Header with CTA */}
@@ -307,9 +308,10 @@ export function HomeContent({ scrolls: initialScrolls }: HomeContentProps) {
         </main>
 
         {/* Right sidebar - stats summary */}
-        <aside className="no-scrollbar hidden w-[240px] shrink-0 px-3 lg:sticky lg:top-12 lg:block lg:max-h-[calc(100vh-48px)] lg:overflow-y-auto">
+        <aside className="no-scrollbar hidden w-[312px] shrink-0 px-3 lg:sticky lg:top-12 lg:block lg:max-h-[calc(100vh-48px)] lg:overflow-y-auto">
           {homeSidebarContent}
         </aside>
+        </div>
       </div>
 
       <div className="border-border bg-background/95 fixed inset-x-0 bottom-0 z-50 border-t px-3 py-2 pb-[calc(env(safe-area-inset-bottom)+8px)] backdrop-blur md:hidden">

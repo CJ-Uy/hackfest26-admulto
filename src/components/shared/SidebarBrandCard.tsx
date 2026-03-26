@@ -11,11 +11,11 @@ export function SidebarBrandCard({
 }: SidebarBrandCardProps) {
   return (
     <div className="pb-3">
-      <div className="bg-primary mb-3 rounded-lg px-3 py-2.5">
+      <div className="bg-primary mb-3 rounded-lg px-4 py-3">
         <SchrollarLogo size="sm" className="text-primary-foreground" />
       </div>
 
-      <p className="text-muted-foreground text-[13px] leading-relaxed">
+      <p className="text-muted-foreground text-[14px] leading-relaxed">
         {description}
       </p>
 
@@ -23,7 +23,7 @@ export function SidebarBrandCard({
         href={githubUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="border-primary/25 bg-primary/10 text-primary hover:bg-primary/15 mt-3 inline-flex w-full items-center justify-center gap-2 rounded-md border px-3 py-2 text-[13px] font-semibold transition-colors"
+        className="border-primary/25 bg-primary/10 text-primary hover:bg-primary/15 mt-3 inline-flex w-full items-center justify-center gap-2 rounded-md border px-3 py-2.5 text-[14px] font-semibold transition-colors"
       >
         <svg
           viewBox="0 0 16 16"

@@ -43,9 +43,11 @@ export function useSidebarCollapsed() {
 export function SidebarContent({
   onNavigate,
   collapsed = false,
+  onToggleCollapse,
 }: {
   onNavigate?: () => void;
   collapsed?: boolean;
+  onToggleCollapse?: () => void;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -85,13 +87,13 @@ export function SidebarContent({
         <Link href="/onboarding" onClick={onNavigate}>
           <Button
             className={cn(
-              "h-9 gap-2 text-[14px]",
-              collapsed ? "w-9 justify-center p-0" : "w-full justify-start",
+              "h-10 gap-2.5 text-[15px]",
+              collapsed ? "w-10 justify-center p-0" : "w-full justify-start",
             )}
-            size="sm"
+            size="default"
             title={collapsed ? "New Schroll" : undefined}
           >
-            <Plus className="h-3.5 w-3.5 shrink-0" />
+            <Plus className="h-4 w-4 shrink-0" />
             {!collapsed && "New Schroll"}
           </Button>
         </Link>
@@ -101,13 +103,13 @@ export function SidebarContent({
 
       <div className={cn("flex-1 overflow-y-auto", collapsed ? "px-1.5" : "px-3")}>
         {!collapsed && (
-          <p className="text-muted-foreground mb-1.5 px-2 text-[11px] font-bold tracking-widest uppercase">
+          <p className="text-muted-foreground mb-2 px-2 text-[12px] font-bold tracking-widest uppercase">
             Recent
           </p>
         )}
         {sessions.length === 0 ? (
           !collapsed && (
-            <p className="text-muted-foreground px-2 text-[13px]">
+            <p className="text-muted-foreground px-2 text-[14px]">
               No schrolls yet.
             </p>
           )
@@ -117,8 +119,8 @@ export function SidebarContent({
               <div
                 key={session.id}
                 className={cn(
-                  "group hover:bg-subtle flex items-start gap-2 rounded-md transition-colors",
-                  collapsed ? "justify-center px-1 py-1.5" : "px-2 py-1.5",
+                  "group hover:bg-subtle flex items-start gap-2.5 rounded-md transition-colors",
+                  collapsed ? "justify-center px-1 py-2" : "px-2.5 py-2",
                   pathname === `/schroll/${session.id}` && "bg-subtle",
                 )}
               >
@@ -131,13 +133,13 @@ export function SidebarContent({
                   )}
                   title={collapsed ? `${session.title} (${session.paperCount} papers)` : undefined}
                 >
-                  <ScrollText className="text-muted-foreground mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  <ScrollText className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
                   {!collapsed && (
                     <div className="min-w-0">
-                      <p className="text-foreground truncate text-[13px] leading-tight font-medium">
+                      <p className="text-foreground truncate text-[14px] leading-snug font-medium">
                         {session.title}
                       </p>
-                      <p className="text-muted-foreground text-[12px]">
+                      <p className="text-muted-foreground text-[13px]">
                         {session.paperCount} papers
                       </p>
                     </div>
@@ -164,6 +166,25 @@ export function SidebarContent({
 
       <div className={cn("border-border border-t py-2", collapsed ? "px-1.5" : "px-3")}>
         <ThemeToggle />
+        {onToggleCollapse && (
+          <button
+            onClick={onToggleCollapse}
+            className={cn(
+              "text-muted-foreground hover:text-foreground hover:bg-subtle mt-1 flex items-center rounded-md p-1.5 transition-colors",
+              collapsed ? "justify-center w-full" : "justify-start gap-2 w-full",
+            )}
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {collapsed ? (
+              <ChevronsRight className="h-4 w-4" />
+            ) : (
+              <>
+                <ChevronsLeft className="h-4 w-4" />
+                <span className="text-[13px]">Collapse</span>
+              </>
+            )}
+          </button>
+        )}
       </div>
 
       <Dialog
@@ -268,24 +289,11 @@ export function Sidebar({
           mounted
             ? collapsed
               ? "w-14"
-              : "w-[240px]"
-            : "w-[240px]",
+              : "w-[312px]"
+            : "w-[312px]",
         )}
       >
-        <SidebarContent collapsed={mounted && collapsed} />
-
-        {/* Collapse toggle */}
-        <button
-          onClick={toggleCollapsed}
-          className="text-muted-foreground hover:text-foreground hover:bg-subtle mx-auto mb-2 flex items-center justify-center rounded-md p-1.5 transition-colors"
-          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        >
-          {collapsed ? (
-            <ChevronsRight className="h-4 w-4" />
-          ) : (
-            <ChevronsLeft className="h-4 w-4" />
-          )}
-        </button>
+        <SidebarContent collapsed={mounted && collapsed} onToggleCollapse={toggleCollapsed} />
       </aside>
     </SidebarCollapsedContext.Provider>
   );

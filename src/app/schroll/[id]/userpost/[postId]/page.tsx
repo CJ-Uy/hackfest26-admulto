@@ -83,10 +83,12 @@ export default function UserPostPage() {
         <Navbar />
         <div className="flex">
           <Sidebar showMobileTrigger={false} />
-          <main className="w-full min-w-0 flex-1 border-x border-border">
+          <div className="flex min-w-0 flex-1 justify-center">
+          <main className="w-full max-w-[860px] min-w-0 flex-1 border-x border-border">
             <UserPostDetailSkeleton />
           </main>
           <RightSidebarSkeleton />
+          </div>
         </div>
       </div>
     );
@@ -113,7 +115,8 @@ export default function UserPostPage() {
       <div className="flex">
         <Sidebar showMobileTrigger={false} />
 
-        <main className="w-full min-w-0 flex-1 border-x border-border pb-24 md:pb-0">
+        <div className="flex min-w-0 flex-1 justify-center">
+        <main className="w-full max-w-[860px] min-w-0 flex-1 border-x border-border pb-24 md:pb-0">
           <UserPostDetail
             post={post}
             scrollId={scrollId}
@@ -141,6 +144,7 @@ export default function UserPostPage() {
         ) : (
           <RightSidebarSkeleton />
         )}
+        </div>
       </div>
 
       {scroll && (

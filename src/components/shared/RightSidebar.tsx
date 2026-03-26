@@ -80,29 +80,29 @@ export function RightSidebar({
 
       {/* Session header */}
       <div className="pt-3 pb-3">
-        <div className="bg-primary rounded-lg px-3 py-2.5 mb-3">
-          <h3 className="text-primary-foreground text-[14px] font-bold">
+        <div className="bg-primary rounded-lg px-4 py-3 mb-3">
+          <h3 className="text-primary-foreground text-[15px] font-bold">
             {scroll.title}
           </h3>
         </div>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-2.5">
           <Stat
-            icon={<FileText className="h-3.5 w-3.5" />}
+            icon={<FileText className="h-4 w-4" />}
             label="Papers"
             value={scroll.paperCount}
           />
           <Stat
-            icon={<ArrowBigUp className="h-3.5 w-3.5" />}
+            icon={<ArrowBigUp className="h-4 w-4" />}
             label="Avg Score"
             value={avgScore}
           />
           <Stat
-            icon={<ArrowBigUp className="h-3.5 w-3.5" />}
+            icon={<ArrowBigUp className="h-4 w-4" />}
             label="Upvoted"
             value={upvotedPapers.size}
           />
           <Stat
-            icon={<MessageSquare className="h-3.5 w-3.5" />}
+            icon={<MessageSquare className="h-4 w-4" />}
             label="Citations"
             value={
               totalCitations >= 1000
@@ -111,8 +111,8 @@ export function RightSidebar({
             }
           />
         </div>
-        <div className="mt-2">
-          <span className="bg-primary/10 text-primary inline-flex items-center rounded-full px-2.5 py-0.5 text-[12px] font-semibold">
+        <div className="mt-2.5">
+          <span className="bg-primary/10 text-primary inline-flex items-center rounded-full px-3 py-0.5 text-[13px] font-semibold">
             {scroll.mode === "pdf_only"
               ? "PDF Only"
               : scroll.mode === "pdf_context"
@@ -130,7 +130,7 @@ export function RightSidebar({
 
       {/* Your Posts */}
       <SidebarSection
-        icon={<PenLine className="text-primary h-3.5 w-3.5" />}
+        icon={<PenLine className="text-primary h-4 w-4" />}
         title="Your Posts"
         emptyText="No posts yet. Use the compose box or + button."
       >
@@ -143,11 +143,11 @@ export function RightSidebar({
                 className="hover:bg-subtle block rounded-md p-2 transition-colors"
               >
                 {post.title && (
-                  <p className="text-foreground line-clamp-1 text-[13px] font-semibold">
+                  <p className="text-foreground line-clamp-1 text-[14px] font-semibold">
                     {post.title}
                   </p>
                 )}
-                <p className="text-muted-foreground line-clamp-2 text-[13px]">
+                <p className="text-muted-foreground line-clamp-2 text-[14px]">
                   {post.content}
                 </p>
               </Link>
@@ -162,7 +162,7 @@ export function RightSidebar({
       {scroll.pdfKeys && scroll.pdfKeys.length > 0 && (
         <>
           <SidebarSection
-            icon={<FileUp className="text-primary h-3.5 w-3.5" />}
+            icon={<FileUp className="text-primary h-4 w-4" />}
             title="Uploaded Files"
             emptyText=""
           >
@@ -178,7 +178,7 @@ export function RightSidebar({
                     className="hover:bg-subtle flex items-center gap-2 rounded-md p-2 transition-colors"
                   >
                     <FileText className="text-muted-foreground h-4 w-4 shrink-0" />
-                    <span className="text-foreground line-clamp-1 text-[13px]">
+                    <span className="text-foreground line-clamp-1 text-[14px]">
                       {filename}
                     </span>
                   </a>
@@ -192,7 +192,7 @@ export function RightSidebar({
 
       {/* Saved (Bookmarked) */}
       <SidebarSection
-        icon={<Bookmark className="text-primary h-3.5 w-3.5" />}
+        icon={<Bookmark className="text-primary h-4 w-4" />}
         title="Saved"
         emptyText="Bookmark papers to save them here."
       >
@@ -213,27 +213,27 @@ export function RightSidebar({
 
       {/* Upvoted / Downvoted (tabbed) */}
       <div className="py-3">
-        <div className="mb-2 flex items-center gap-3">
+        <div className="mb-2.5 flex items-center gap-3">
           <button
             onClick={() => setVoteTab("upvoted")}
-            className={`flex items-center gap-1 text-[11px] font-bold tracking-widest uppercase transition-colors ${
+            className={`flex items-center gap-1.5 text-[12px] font-bold tracking-widest uppercase transition-colors ${
               voteTab === "upvoted"
                 ? "text-[#ff4500]"
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            <ArrowBigUp className="h-3.5 w-3.5" />
+            <ArrowBigUp className="h-4 w-4" />
             Upvoted ({upvotedList.length})
           </button>
           <button
             onClick={() => setVoteTab("downvoted")}
-            className={`flex items-center gap-1 text-[11px] font-bold tracking-widest uppercase transition-colors ${
+            className={`flex items-center gap-1.5 text-[12px] font-bold tracking-widest uppercase transition-colors ${
               voteTab === "downvoted"
                 ? "text-[#7193ff]"
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            <ArrowBigDown className="h-3.5 w-3.5" />
+            <ArrowBigDown className="h-4 w-4" />
             Downvoted ({downvotedList.length})
           </button>
         </div>
@@ -241,14 +241,14 @@ export function RightSidebar({
           upvotedList.length > 0 ? (
             <PaperList papers={upvotedList} scrollId={scrollId} />
           ) : (
-            <p className="text-muted-foreground text-[13px]">
+            <p className="text-muted-foreground text-[14px]">
               Upvote papers to save them here.
             </p>
           )
         ) : downvotedList.length > 0 ? (
           <PaperList papers={downvotedList} scrollId={scrollId} />
         ) : (
-          <p className="text-muted-foreground text-[13px]">
+          <p className="text-muted-foreground text-[14px]">
             No downvoted papers.
           </p>
         )}
@@ -258,7 +258,7 @@ export function RightSidebar({
 
       {/* Comments activity */}
       <SidebarSection
-        icon={<MessageSquare className="text-primary h-3.5 w-3.5" />}
+        icon={<MessageSquare className="text-primary h-4 w-4" />}
         title="Your Comments"
         emptyText="Click on a paper to leave comments."
       >
@@ -274,10 +274,10 @@ export function RightSidebar({
                     href={`/schroll/${scrollId}/post/${paperId}`}
                     className="hover:bg-subtle block rounded-md p-2 transition-colors"
                   >
-                    <p className="text-foreground line-clamp-1 text-[13px] font-medium">
+                    <p className="text-foreground line-clamp-1 text-[14px] font-medium">
                       {paper.title}
                     </p>
-                    <p className="text-muted-foreground text-[12px]">
+                    <p className="text-muted-foreground text-[13px]">
                       {count} {count === 1 ? "comment" : "comments"}
                     </p>
                   </Link>
@@ -326,7 +326,7 @@ export function RightSidebar({
       )}
 
       {/* Desktop sidebar */}
-      <aside className="no-scrollbar hidden w-[240px] shrink-0 px-3 lg:sticky lg:top-12 lg:block lg:max-h-[calc(100vh-48px)] lg:overflow-y-auto">
+      <aside className="no-scrollbar hidden w-[312px] shrink-0 px-3 lg:sticky lg:top-12 lg:block lg:max-h-[calc(100vh-48px)] lg:overflow-y-auto">
         {sidebarContent}
       </aside>
     </>
@@ -343,12 +343,12 @@ function Stat({
   value: number | string;
 }) {
   return (
-    <div className="bg-subtle rounded-md p-2">
-      <div className="text-muted-foreground mb-0.5 flex items-center gap-1">
+    <div className="bg-subtle rounded-md p-2.5">
+      <div className="text-muted-foreground mb-0.5 flex items-center gap-1.5">
         {icon}
-        <span className="text-[12px]">{label}</span>
+        <span className="text-[13px]">{label}</span>
       </div>
-      <p className="text-foreground text-[16px] font-bold">{value}</p>
+      <p className="text-foreground text-[18px] font-bold">{value}</p>
     </div>
   );
 }
@@ -368,13 +368,13 @@ function SidebarSection({
     children !== undefined && children !== null && children !== false;
   return (
     <div className="py-3">
-      <h3 className="text-foreground mb-2 flex items-center gap-1.5 text-[11px] font-bold tracking-widest uppercase">
+      <h3 className="text-foreground mb-2.5 flex items-center gap-1.5 text-[12px] font-bold tracking-widest uppercase">
         {icon} {title}
       </h3>
       {hasChildren ? (
         children
       ) : (
-        <p className="text-muted-foreground text-[13px]">{emptyText}</p>
+        <p className="text-muted-foreground text-[14px]">{emptyText}</p>
       )}
     </div>
   );
@@ -395,10 +395,10 @@ function PaperList({
           href={`/schroll/${scrollId}/post/${paper.id}`}
           className="hover:bg-subtle block rounded-md p-2 transition-colors"
         >
-          <p className="text-foreground line-clamp-2 text-[13px] leading-snug font-bold">
+          <p className="text-foreground line-clamp-2 text-[14px] leading-snug font-bold">
             {paper.title}
           </p>
-          <p className="text-muted-foreground mt-0.5 text-[12px]">
+          <p className="text-muted-foreground mt-0.5 text-[13px]">
             {paper.authors[0] || "Unknown"} &middot; {paper.year}
           </p>
         </Link>
@@ -411,7 +411,7 @@ function ShowMore({ count, onClick }: { count: number; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="text-primary mt-1 flex items-center gap-1 text-[13px] font-semibold hover:underline"
+      className="text-primary mt-1 flex items-center gap-1 text-[14px] font-semibold hover:underline"
     >
       Show {count} more <ChevronDown className="h-3 w-3" />
     </button>

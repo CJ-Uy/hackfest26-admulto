@@ -52,7 +52,8 @@ function OnboardingContent() {
       <div className="flex">
         <Sidebar showMobileTrigger={false} />
 
-        <main className="w-full min-w-0 flex-1 border-x border-border pb-24 md:pb-0">
+        <div className="flex min-w-0 flex-1 justify-center">
+        <main className="w-full max-w-[860px] min-w-0 flex-1 border-x border-border pb-24 md:pb-0">
           <div className="border-border border-b px-4 pt-14 pb-4 md:pt-5">
             <div className="mb-2 flex items-center justify-between">
               <h1 className="font-heading text-foreground text-[24px] font-bold tracking-tight">
@@ -77,9 +78,10 @@ function OnboardingContent() {
           </div>
         </main>
 
-        <aside className="no-scrollbar hidden w-[240px] shrink-0 px-3 lg:sticky lg:top-12 lg:block lg:max-h-[calc(100vh-48px)] lg:overflow-y-auto">
+        <aside className="no-scrollbar hidden w-[312px] shrink-0 px-3 lg:sticky lg:top-12 lg:block lg:max-h-[calc(100vh-48px)] lg:overflow-y-auto">
           {onboardingSidebarContent}
         </aside>
+        </div>
       </div>
 
       {/* Mobile bottom nav */}

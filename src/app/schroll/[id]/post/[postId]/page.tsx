@@ -125,10 +125,12 @@ export default function PostPage() {
         <Navbar />
         <div className="flex">
           <Sidebar showMobileTrigger={false} />
-          <main className="w-full min-w-0 flex-1 border-x border-border">
+          <div className="flex min-w-0 flex-1 justify-center">
+          <main className="w-full max-w-[860px] min-w-0 flex-1 border-x border-border">
             <PostDetailSkeleton />
           </main>
           <RightSidebarSkeleton />
+          </div>
         </div>
       </div>
     );
@@ -155,7 +157,8 @@ export default function PostPage() {
       <div className="flex">
         <Sidebar showMobileTrigger={false} />
 
-        <main className="w-full min-w-0 flex-1 border-x border-border pb-24 md:pb-0">
+        <div className="flex min-w-0 flex-1 justify-center">
+        <main className="w-full max-w-[860px] min-w-0 flex-1 border-x border-border pb-24 md:pb-0">
           <PostDetail
             paper={paper}
             scrollId={scrollId}
@@ -179,6 +182,7 @@ export default function PostPage() {
         ) : (
           <RightSidebarSkeleton />
         )}
+        </div>
       </div>
 
       {scroll && (
