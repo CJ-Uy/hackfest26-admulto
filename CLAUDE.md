@@ -14,7 +14,7 @@ Schrollar (hackfest26-admulto) is a research paper discovery app that presents a
 - `npm run deploy` — build + deploy to Cloudflare Workers via OpenNext
 - `npm run preview` — build + local Cloudflare preview
 - `pnpm db:generate` — generate Drizzle migrations
-- `pnpm db:push` — push schema to Turso database
+- `pnpm db:push` — push schema to Cloudflare D1 database
 - `pnpm db:studio` — open Drizzle Studio
 
 ## Architecture
@@ -22,7 +22,7 @@ Schrollar (hackfest26-admulto) is a research paper discovery app that presents a
 ### Stack
 
 - **Next.js 16** (App Router, React 19) deployed to **Cloudflare Workers** via OpenNext
-- **Drizzle ORM** with **Turso** (libSQL) — schema in `src/lib/schema.ts`, client in `src/lib/db.ts`
+- **Drizzle ORM** with **Cloudflare D1** (SQLite) — schema in `src/lib/schema.ts`, client in `src/lib/db.ts`
 - **Tailwind CSS v4** + **shadcn/ui** (base-nova style, `components.json`)
 - **Ollama** (Qwen3 8B) for AI synthesis and citation generation (`src/lib/ollama.ts`)
 
@@ -43,9 +43,9 @@ Schrollar (hackfest26-admulto) is a research paper discovery app that presents a
 ### Database
 
 - Schema: `src/lib/schema.ts` — tables: scrolls, papers, comments, votes, polls, pollResponses
-- Drizzle config: `drizzle.config.ts`
-- Local dev falls back to file-based SQLite (`local.db`) when `TURSO_DATABASE_URL` is not set
-- Production uses Turso (libSQL) — configured via `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` env vars
+- Drizzle config: `drizzle.config.ts` — uses D1 HTTP driver
+- All environments connect to Cloudflare D1 via REST API (API token based, no binding required)
+- D1 database: `schrollar` (id: `20dc4c7a-22b9-4b46-82a9-b5770cf2b9c1`) in wrangler.jsonc
 
 ### Route Structure
 
@@ -60,8 +60,9 @@ Schrollar (hackfest26-admulto) is a research paper discovery app that presents a
 
 Set in `.env`:
 
-- `TURSO_DATABASE_URL` — Turso database URL (omit for local file-based SQLite)
-- `TURSO_AUTH_TOKEN` — Turso auth token
+- `CLOUDFLARE_ACCOUNT_ID` — Cloudflare account ID (visible in wrangler.jsonc)
+- `CLOUDFLARE_D1_DATABASE_ID` — D1 database ID (visible in wrangler.jsonc)
+- `CLOUDFLARE_D1_TOKEN` — Cloudflare API token with D1 edit permissions
 - `SEARXNG_URL` — SearXNG instance URL
 - `DEBERTA_URL` — DeBERTa NLI service URL
 - `OLLAMA_URL` — Ollama instance URL (defaults to http://localhost:11434)

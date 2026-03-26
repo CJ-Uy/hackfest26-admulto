@@ -1,1 +1,0 @@
-ALTER TABLE `scroll` ADD `ai_provider` text;

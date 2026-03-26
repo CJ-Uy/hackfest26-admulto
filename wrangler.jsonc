@@ -32,13 +32,20 @@
   ],
   "r2_buckets": [
     {
-      "binding": "PDF_BUCKET",
+      "binding": "OBJECT_STORAGE",
       "bucket_name": "schrollar-pdfs",
     },
   ],
   "ai": {
     "binding": "AI",
   },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "schrollar",
+      "database_id": "20dc4c7a-22b9-4b46-82a9-b5770cf2b9c1",
+    },
+  ],
   "observability": {
     "enabled": true,
   },

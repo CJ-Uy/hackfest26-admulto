@@ -1,1 +1,0 @@
-ALTER TABLE `paper` ADD `is_user_upload` integer DEFAULT false NOT NULL;
