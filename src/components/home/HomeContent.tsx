@@ -15,6 +15,7 @@ import {
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sidebar, SidebarContent } from "@/components/shared/Sidebar";
+import { Navbar } from "@/components/shared/Navbar";
 import { SchrollarLogo } from "@/components/shared/SchrollarLogo";
 import { SidebarBrandCard } from "@/components/shared/SidebarBrandCard";
 import {
@@ -51,6 +52,7 @@ interface HomeContentProps {
 export function HomeContent({ scrolls: initialScrolls }: HomeContentProps) {
   const router = useRouter();
   const [scrolls, setScrolls] = useState(initialScrolls);
+  const [searchQuery, setSearchQuery] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<ScrollItem | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -72,79 +74,96 @@ export function HomeContent({ scrolls: initialScrolls }: HomeContentProps) {
   const navTriggerClassName =
     "hover:bg-subtle text-foreground flex h-12 w-full items-center justify-center gap-1.5 rounded-lg px-2 text-[13px] font-semibold transition-colors";
 
-  const homeSidebarContent = (
-    <div className="space-y-3">
-      <SidebarBrandCard />
+  const filteredScrolls = searchQuery
+    ? scrolls.filter(
+        (s) =>
+          s.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          s.description.toLowerCase().includes(searchQuery.toLowerCase()),
+      )
+    : scrolls;
 
+  const homeSidebarContent = (
+    <div>
       {/* Stats */}
-      <div className="border-border bg-background rounded-lg border p-4">
+      <div className="pb-3">
         <div className="grid grid-cols-2 gap-2">
-          <div className="bg-subtle rounded-md p-2.5">
-            <p className="text-muted-foreground text-[13px]">Schrolls</p>
-            <p className="text-foreground text-[18px] font-bold">
+          <div className="bg-subtle rounded-md p-2">
+            <p className="text-muted-foreground text-[12px]">Schrolls</p>
+            <p className="text-foreground text-[16px] font-bold">
               {scrolls.length}
             </p>
           </div>
-          <div className="bg-subtle rounded-md p-2.5">
-            <p className="text-muted-foreground text-[13px]">Papers</p>
-            <p className="text-foreground text-[18px] font-bold">
+          <div className="bg-subtle rounded-md p-2">
+            <p className="text-muted-foreground text-[12px]">Papers</p>
+            <p className="text-foreground text-[16px] font-bold">
               {scrolls.reduce((sum, s) => sum + s.paperCount, 0)}
             </p>
           </div>
         </div>
       </div>
 
+      <hr className="border-border" />
+
       {/* Quick start */}
       {!hasScrolls && (
-        <div className="border-border bg-background rounded-lg border p-4">
-          <h4 className="text-foreground mb-2 text-[13px] font-bold tracking-wide uppercase">
-            Getting Started
-          </h4>
-          <ol className="text-muted-foreground space-y-2 text-[14px]">
-            <li className="flex gap-2">
-              <span className="bg-primary/10 text-primary flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold">
-                1
-              </span>
-              Choose a research topic
-            </li>
-            <li className="flex gap-2">
-              <span className="bg-primary/10 text-primary flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold">
-                2
-              </span>
-              AI finds and synthesizes papers
-            </li>
-            <li className="flex gap-2">
-              <span className="bg-primary/10 text-primary flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold">
-                3
-              </span>
-              Browse your personalized feed
-            </li>
-          </ol>
-        </div>
+        <>
+          <div className="py-3">
+            <h4 className="text-foreground mb-2 text-[11px] font-bold tracking-widest uppercase">
+              Getting Started
+            </h4>
+            <ol className="text-muted-foreground space-y-2 text-[13px]">
+              <li className="flex gap-2">
+                <span className="bg-primary/10 text-primary flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold">
+                  1
+                </span>
+                Choose a research topic
+              </li>
+              <li className="flex gap-2">
+                <span className="bg-primary/10 text-primary flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold">
+                  2
+                </span>
+                AI finds and synthesizes papers
+              </li>
+              <li className="flex gap-2">
+                <span className="bg-primary/10 text-primary flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold">
+                  3
+                </span>
+                Browse your personalized feed
+              </li>
+            </ol>
+          </div>
+          <hr className="border-border" />
+        </>
       )}
     </div>
   );
 
   return (
-    <div className="bg-page-bg flex min-h-screen overflow-x-hidden md:overflow-x-visible">
-      <Sidebar showMobileTrigger={false} />
+    <div className="bg-page-bg min-h-screen">
+      <Navbar
+        searchValue={searchQuery}
+        onSearchChange={setSearchQuery}
+        searchPlaceholder="Search your schrolls"
+      />
 
-      <div className="flex min-w-0 flex-1 justify-center gap-0 lg:gap-6 lg:px-6 lg:py-4">
+      <div className="flex justify-center gap-6 px-0 md:px-6">
+        <Sidebar showMobileTrigger={false} />
+
         {/* Main content */}
-        <main className="bg-background w-full max-w-[780px] min-w-0 flex-1 pb-24 md:pb-0 lg:rounded-t-lg">
+        <main className="w-full max-w-[600px] min-w-0 flex-1 border-x border-border pb-24 md:pb-0">
           {hasScrolls ? (
             <>
               {/* Header with CTA */}
-              <div className="border-border border-b px-4 pt-14 pb-4 md:pt-5">
-                <h1 className="font-heading text-foreground text-[22px] font-bold">
+              <div className="border-border border-b px-4 pt-4 pb-4">
+                <h1 className="font-heading text-foreground text-[20px] font-bold">
                   Your Research Feed
                 </h1>
-                <p className="text-muted-foreground mt-0.5 text-[14px]">
+                <p className="text-muted-foreground mt-0.5 text-[13px]">
                   {scrolls.length}{" "}
                   {scrolls.length === 1 ? "schroll" : "schrolls"} created
                 </p>
                 <Link href="/onboarding" className="mt-3 inline-block">
-                  <Button className="gap-2">
+                  <Button className="gap-2" size="sm">
                     <Plus className="h-4 w-4" />
                     New Schroll
                   </Button>
@@ -153,23 +172,23 @@ export function HomeContent({ scrolls: initialScrolls }: HomeContentProps) {
 
               {/* Scroll cards */}
               <div className="divide-border divide-y">
-                {scrolls.map((scroll, i) => (
+                {filteredScrolls.map((scroll, i) => (
                   <article
                     key={scroll.id}
-                    className="group animate-card-enter hover:bg-muted/50 cursor-pointer overflow-hidden px-4 py-4 transition-colors"
+                    className="group animate-card-enter hover:bg-subtle cursor-pointer px-4 py-3 transition-colors"
                     style={{ animationDelay: `${i * 40}ms` }}
                     onClick={() => router.push(`/schroll/${scroll.id}`)}
                   >
                     <div className="flex items-start gap-3">
                       {/* Icon */}
-                      <div className="bg-primary/10 text-primary mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
-                        <ScrollText className="h-5 w-5" />
+                      <div className="bg-primary/10 text-primary mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
+                        <ScrollText className="h-4 w-4" />
                       </div>
 
                       <div className="min-w-0 flex-1">
                         {/* Title row */}
                         <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="font-heading text-foreground truncate text-[16px] font-bold">
+                          <h3 className="font-heading text-foreground truncate text-[15px] font-bold">
                             {scroll.title}
                           </h3>
                           {scroll.status === "generating" && (
@@ -192,14 +211,14 @@ export function HomeContent({ scrolls: initialScrolls }: HomeContentProps) {
                         </div>
 
                         {/* Description */}
-                        <p className="text-muted-foreground mt-1 line-clamp-2 text-[14px] leading-relaxed">
+                        <p className="text-muted-foreground mt-1 line-clamp-2 text-[13px] leading-relaxed">
                           {scroll.description}
                         </p>
 
                         {/* Meta */}
-                        <div className="text-muted-foreground mt-2 flex items-center gap-3 text-[13px]">
+                        <div className="text-muted-foreground mt-1.5 flex items-center gap-3 text-[12px]">
                           <span className="flex items-center gap-1">
-                            <FileText className="h-3.5 w-3.5" />
+                            <FileText className="h-3 w-3" />
                             {scroll.paperCount} papers
                           </span>
                           <span>{scroll.date}</span>
@@ -221,12 +240,18 @@ export function HomeContent({ scrolls: initialScrolls }: HomeContentProps) {
                     </div>
                   </article>
                 ))}
+                {searchQuery && filteredScrolls.length === 0 && (
+                  <div className="px-4 py-8 text-center">
+                    <p className="text-muted-foreground text-[14px]">
+                      No schrolls matching &ldquo;{searchQuery}&rdquo;
+                    </p>
+                  </div>
+                )}
               </div>
             </>
           ) : (
             /* Empty state */
             <div className="flex flex-col items-center justify-center px-6 py-24">
-              {/* Background decorative */}
               <div className="pointer-events-none absolute inset-0 overflow-hidden">
                 <div className="bg-primary/5 absolute -top-40 -right-40 h-[400px] w-[400px] rounded-full blur-3xl" />
                 <div className="bg-primary/5 absolute -bottom-40 -left-40 h-[300px] w-[300px] rounded-full blur-3xl" />
@@ -280,7 +305,7 @@ export function HomeContent({ scrolls: initialScrolls }: HomeContentProps) {
         </main>
 
         {/* Right sidebar - stats summary */}
-        <aside className="no-scrollbar hidden w-[340px] shrink-0 lg:sticky lg:top-4 lg:block lg:max-h-[calc(100vh-32px)] lg:overflow-y-auto">
+        <aside className="no-scrollbar hidden w-[272px] shrink-0 px-3 lg:sticky lg:top-12 lg:block lg:max-h-[calc(100vh-48px)] lg:overflow-y-auto">
           {homeSidebarContent}
         </aside>
       </div>

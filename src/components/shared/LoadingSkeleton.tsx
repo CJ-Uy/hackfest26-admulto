@@ -32,7 +32,7 @@ export function FeedSkeleton() {
 
 export function PostDetailSkeleton() {
   return (
-    <div className="mx-auto max-w-[780px] px-4 pt-14 pb-4 md:pt-4">
+    <div className="mx-auto max-w-[780px] px-4 pt-4 pb-4">
       {/* Back button */}
       <Skeleton className="mb-3 h-5 w-28" />
 
@@ -76,7 +76,7 @@ export function PostDetailSkeleton() {
 
 export function UserPostDetailSkeleton() {
   return (
-    <div className="mx-auto max-w-[780px] px-4 pt-14 pb-4 md:pt-4">
+    <div className="mx-auto max-w-[780px] px-4 pt-4 pb-4">
       <Skeleton className="mb-3 h-5 w-28" />
 
       <div className="border-border border-b px-1 pb-3">
@@ -115,13 +115,10 @@ export function UserPostDetailSkeleton() {
 
 export function RightSidebarSkeleton() {
   return (
-    <aside className="no-scrollbar hidden w-[340px] shrink-0 lg:sticky lg:top-4 lg:block lg:max-h-[calc(100vh-32px)] lg:overflow-y-auto">
+    <aside className="no-scrollbar hidden w-[272px] shrink-0 px-3 lg:sticky lg:top-12 lg:block lg:max-h-[calc(100vh-48px)] lg:overflow-y-auto">
       <div className="space-y-3">
         {Array.from({ length: 5 }).map((_, i) => (
-          <div
-            key={i}
-            className="border-border bg-background rounded-lg border p-3.5"
-          >
+          <div key={i} className="py-3 border-b border-border">
             <Skeleton className="mb-3 h-4 w-28" />
             <div className="space-y-2">
               <Skeleton className="h-4 w-full" />

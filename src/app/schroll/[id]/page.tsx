@@ -5,9 +5,9 @@ import { toast } from "sonner";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { Sidebar } from "@/components/shared/Sidebar";
+import { Navbar } from "@/components/shared/Navbar";
 import { ScrollHeader } from "@/components/shared/ScrollHeader";
 import { TabNav } from "@/components/shared/TabNav";
-import { SearchBar } from "@/components/shared/SearchBar";
 import { FeedView } from "@/components/feed/FeedView";
 import { FineTuneView } from "@/components/fine-tune/FineTuneView";
 import { ExportView } from "@/components/export/ExportView";
@@ -417,11 +417,12 @@ function ScrollPageInner() {
 
   if (!scroll) {
     return (
-      <div className="bg-page-bg flex min-h-screen overflow-x-visible">
-        <Sidebar showMobileTrigger={false} />
-        <div className="flex min-w-0 flex-1 justify-center gap-0 lg:gap-6 lg:px-6 lg:py-4">
-          <main className="bg-background w-full max-w-[780px] min-w-0 flex-1 lg:rounded-t-lg">
-            <div className="px-4 pt-14 pb-3 md:pt-5">
+      <div className="bg-page-bg min-h-screen">
+        <Navbar />
+        <div className="flex justify-center gap-6 px-6">
+          <Sidebar showMobileTrigger={false} />
+          <main className="w-full max-w-[600px] min-w-0 flex-1">
+            <div className="px-4 pt-4 pb-3">
               <div className="mb-2 flex items-center gap-2">
                 <Skeleton className="h-5 w-20 rounded-full" />
                 <Skeleton className="h-4 w-40" />
@@ -430,32 +431,13 @@ function ScrollPageInner() {
               <Skeleton className="h-4 w-full" />
             </div>
 
-            <div className="bg-background border-border sticky top-0 z-30 border-b md:hidden">
-              <div className="px-4 py-2 pt-10">
-                <Skeleton className="h-10 w-full rounded-full" />
-              </div>
+            <div className="bg-background border-border sticky top-12 z-30 border-b">
               <div className="flex">
                 {Array.from({ length: 3 }).map((_, i) => (
                   <div key={i} className="flex flex-1 justify-center py-3">
                     <Skeleton className="h-5 w-16" />
                   </div>
                 ))}
-              </div>
-            </div>
-
-            <div className="bg-background border-border sticky top-4 z-30 hidden border-b md:block">
-              <div className="bg-background pointer-events-none absolute -top-4 right-0 left-0 h-4" />
-              <div className="relative">
-                <div className="px-4 py-2 pt-2">
-                  <Skeleton className="h-10 w-full rounded-full" />
-                </div>
-                <div className="flex">
-                  {Array.from({ length: 3 }).map((_, i) => (
-                    <div key={i} className="flex flex-1 justify-center py-3">
-                      <Skeleton className="h-5 w-16" />
-                    </div>
-                  ))}
-                </div>
               </div>
             </div>
 
@@ -471,21 +453,33 @@ function ScrollPageInner() {
   }
 
   return (
-    <div className="bg-page-bg flex min-h-screen overflow-x-visible">
-      <Sidebar showMobileTrigger={false} />
+    <div className="bg-page-bg min-h-screen">
+      <Navbar
+        searchValue={searchQuery}
+        onSearchChange={handleSearchChange}
+        searchPlaceholder="Search this feed"
+      />
 
-      <div className="flex min-w-0 flex-1 justify-center gap-0 lg:gap-6 lg:px-6 lg:py-4">
+      <div className="flex justify-center gap-6 px-0 md:px-6">
+        <Sidebar showMobileTrigger={false} />
+
         {/* Main content column */}
-        <main className="bg-background w-full max-w-[780px] min-w-0 flex-1 lg:rounded-t-lg">
+        <main className="w-full max-w-[600px] min-w-0 flex-1 border-x border-border">
           <ScrollHeader scroll={scroll} />
 
           {/* Mobile: keep search + tabs sticky together */}
           <div className="bg-background border-border sticky top-0 z-30 border-b md:hidden">
-            <SearchBar
-              value={searchQuery}
-              onChange={handleSearchChange}
-              mobileTopPaddingClass="pt-4"
-            />
+            <div className="px-4 py-2">
+              <div className="relative">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  placeholder="Search"
+                  className="bg-subtle border-border text-foreground placeholder:text-muted-foreground focus:border-primary focus:bg-background h-9 w-full rounded-full border pr-4 pl-9 text-[14px] focus:outline-none"
+                />
+              </div>
+            </div>
             <TabNav
               value={activeTab}
               onValueChange={setActiveTab}
@@ -493,17 +487,13 @@ function ScrollPageInner() {
             />
           </div>
 
-          {/* Desktop: preserve original sticky behavior */}
-          <div className="bg-background border-border sticky top-4 z-30 hidden border-b md:block">
-            <div className="bg-background pointer-events-none absolute -top-4 right-0 left-0 h-4" />
-            <div className="relative">
-              <SearchBar value={searchQuery} onChange={handleSearchChange} />
-              <TabNav
-                value={activeTab}
-                onValueChange={setActiveTab}
-                tabs={TABS}
-              />
-            </div>
+          {/* Desktop: tabs sticky below navbar */}
+          <div className="bg-background border-border sticky top-12 z-30 hidden border-b md:block">
+            <TabNav
+              value={activeTab}
+              onValueChange={setActiveTab}
+              tabs={TABS}
+            />
           </div>
 
           {/* Tab content */}

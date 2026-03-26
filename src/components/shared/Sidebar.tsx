@@ -3,14 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import {
-  PanelLeftClose,
-  PanelLeftOpen,
-  Plus,
-  ScrollText,
-  Menu,
-  Trash2,
-} from "lucide-react";
+import { Plus, ScrollText, Menu, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -31,7 +24,6 @@ import { fetchAllScrollSessions, deleteScroll } from "@/lib/scroll-store";
 import type { ScrollSession } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { SchrollarLogo } from "./SchrollarLogo";
 import { ThemeToggle } from "./ThemeToggle";
 
 export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
@@ -69,16 +61,10 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="px-4 py-3">
-        <Link href="/" onClick={onNavigate}>
-          <SchrollarLogo className="text-primary" />
-        </Link>
-      </div>
-
-      <div className="px-3">
+      <div className="px-3 pt-3">
         <Link href="/onboarding" onClick={onNavigate}>
           <Button
-            className="h-10 w-full justify-start gap-2 text-[15px]"
+            className="h-9 w-full justify-start gap-2 text-[14px]"
             size="sm"
           >
             <Plus className="h-3.5 w-3.5" />
@@ -90,11 +76,11 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       <Separator className="mx-3 my-3 w-auto" />
 
       <div className="flex-1 overflow-y-auto px-3">
-        <p className="text-muted-foreground mb-1.5 px-2 text-[13px] font-bold tracking-wide uppercase">
+        <p className="text-muted-foreground mb-1.5 px-2 text-[11px] font-bold tracking-widest uppercase">
           Recent
         </p>
         {sessions.length === 0 ? (
-          <p className="text-muted-foreground px-2 text-[14px]">
+          <p className="text-muted-foreground px-2 text-[13px]">
             No schrolls yet.
           </p>
         ) : (
@@ -114,10 +100,10 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                 >
                   <ScrollText className="text-muted-foreground mt-0.5 h-3.5 w-3.5 shrink-0" />
                   <div className="min-w-0">
-                    <p className="text-foreground truncate text-[14px] leading-tight font-medium">
+                    <p className="text-foreground truncate text-[13px] leading-tight font-medium">
                       {session.title}
                     </p>
-                    <p className="text-muted-foreground text-[13px]">
+                    <p className="text-muted-foreground text-[12px]">
                       {session.paperCount} papers
                     </p>
                   </div>
@@ -185,8 +171,6 @@ export function Sidebar({
 }: {
   showMobileTrigger?: boolean;
 }) {
-  const [collapsed, setCollapsed] = useState(false);
-
   return (
     <>
       {/* Mobile hamburger */}
@@ -209,44 +193,8 @@ export function Sidebar({
       )}
 
       {/* Desktop sidebar */}
-      <aside
-        className={cn(
-          "border-border bg-sidebar hidden h-screen shrink-0 border-r transition-all duration-300 md:sticky md:top-0 md:flex md:flex-col",
-          collapsed ? "md:w-16" : "md:w-64",
-        )}
-      >
-        {collapsed ? (
-          <div className="flex h-full flex-col items-center py-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="mb-3 h-8 w-8"
-              onClick={() => setCollapsed(false)}
-            >
-              <PanelLeftOpen className="h-3.5 w-3.5" />
-            </Button>
-            <Link href="/onboarding">
-              <Button variant="ghost" size="icon" className="h-8 w-8">
-                <Plus className="h-3.5 w-3.5" />
-              </Button>
-            </Link>
-          </div>
-        ) : (
-          <>
-            <SidebarContent />
-            <div className="border-border border-t p-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-muted-foreground w-full justify-start gap-2 text-[14px]"
-                onClick={() => setCollapsed(true)}
-              >
-                <PanelLeftClose className="h-3.5 w-3.5" />
-                Collapse
-              </Button>
-            </div>
-          </>
-        )}
+      <aside className="no-scrollbar hidden w-[272px] shrink-0 overflow-y-auto border-r border-border md:sticky md:top-12 md:flex md:h-[calc(100vh-48px)] md:flex-col">
+        <SidebarContent />
       </aside>
     </>
   );

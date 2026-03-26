@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { Sidebar } from "@/components/shared/Sidebar";
+import { Navbar } from "@/components/shared/Navbar";
 import { RightSidebar } from "@/components/shared/RightSidebar";
 import { MobileBottomNav } from "@/components/shared/MobileBottomNav";
 import { PostDetail } from "@/components/detail/PostDetail";
@@ -120,10 +121,11 @@ export default function PostPage() {
 
   if (!checked) {
     return (
-      <div className="bg-page-bg flex min-h-screen overflow-x-visible">
-        <Sidebar showMobileTrigger={false} />
-        <div className="flex min-w-0 flex-1 justify-center gap-0 lg:gap-6 lg:px-6 lg:py-4">
-          <main className="bg-background w-full max-w-[780px] min-w-0 flex-1 lg:rounded-t-lg">
+      <div className="bg-page-bg min-h-screen">
+        <Navbar />
+        <div className="flex justify-center gap-6 px-0 md:px-6">
+          <Sidebar showMobileTrigger={false} />
+          <main className="w-full max-w-[600px] min-w-0 flex-1 border-x border-border">
             <PostDetailSkeleton />
           </main>
           <RightSidebarSkeleton />
@@ -134,21 +136,26 @@ export default function PostPage() {
 
   if (!paper) {
     return (
-      <div className="bg-page-bg flex min-h-screen overflow-x-visible">
-        <Sidebar showMobileTrigger={false} />
-        <main className="flex flex-1 items-center justify-center">
-          <p className="text-muted-foreground">Paper not found.</p>
-        </main>
+      <div className="bg-page-bg min-h-screen">
+        <Navbar />
+        <div className="flex justify-center gap-6 px-0 md:px-6">
+          <Sidebar showMobileTrigger={false} />
+          <main className="flex flex-1 items-center justify-center">
+            <p className="text-muted-foreground">Paper not found.</p>
+          </main>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-page-bg flex min-h-screen overflow-x-visible">
-      <Sidebar showMobileTrigger={false} />
+    <div className="bg-page-bg min-h-screen">
+      <Navbar />
 
-      <div className="flex min-w-0 flex-1 justify-center gap-0 lg:gap-6 lg:px-6 lg:py-4">
-        <main className="bg-background w-full max-w-[780px] min-w-0 flex-1 pb-24 md:pb-0 lg:rounded-t-lg">
+      <div className="flex justify-center gap-6 px-0 md:px-6">
+        <Sidebar showMobileTrigger={false} />
+
+        <main className="w-full max-w-[600px] min-w-0 flex-1 border-x border-border pb-24 md:pb-0">
           <PostDetail
             paper={paper}
             scrollId={scrollId}

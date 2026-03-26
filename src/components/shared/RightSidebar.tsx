@@ -72,13 +72,11 @@ export function RightSidebar({
     safeYourCommentCounts.size > 0;
 
   const sidebarContent = (
-    <div className="space-y-3">
-      <SidebarBrandCard />
-
-      {/* Session stats */}
-      <div className="border-border bg-background rounded-lg border p-3.5">
-        <div className="bg-primary mb-3 rounded-md px-3 py-2.5">
-          <h3 className="text-primary-foreground text-[15px] font-bold">
+    <div>
+      {/* Session header */}
+      <div className="pb-3">
+        <div className="bg-primary rounded-lg px-3 py-2.5 mb-3">
+          <h3 className="text-primary-foreground text-[14px] font-bold">
             {scroll.title}
           </h3>
         </div>
@@ -108,8 +106,8 @@ export function RightSidebar({
             }
           />
         </div>
-        <div className="border-border mt-2 border-t pt-2">
-          <span className="bg-primary/10 text-primary inline-flex items-center rounded-full px-2.5 py-0.5 text-[13px] font-semibold">
+        <div className="mt-2">
+          <span className="bg-primary/10 text-primary inline-flex items-center rounded-full px-2.5 py-0.5 text-[12px] font-semibold">
             {scroll.mode === "pdf_only"
               ? "PDF Only"
               : scroll.mode === "pdf_context"
@@ -123,6 +121,8 @@ export function RightSidebar({
         </div>
       </div>
 
+      <hr className="border-border" />
+
       {/* Your Posts */}
       <SidebarSection
         icon={<PenLine className="text-primary h-3.5 w-3.5" />}
@@ -130,7 +130,7 @@ export function RightSidebar({
         emptyText="No posts yet. Use the compose box or + button."
       >
         {userPosts.length > 0 && (
-          <div className="divide-border/70 divide-y">
+          <div className="space-y-1">
             {userPosts.slice(0, 5).map((post) => (
               <Link
                 key={post.id}
@@ -138,11 +138,11 @@ export function RightSidebar({
                 className="hover:bg-subtle block rounded-md p-2 transition-colors"
               >
                 {post.title && (
-                  <p className="text-foreground line-clamp-1 text-[14px] font-semibold">
+                  <p className="text-foreground line-clamp-1 text-[13px] font-semibold">
                     {post.title}
                   </p>
                 )}
-                <p className="text-muted-foreground line-clamp-2 text-[14px]">
+                <p className="text-muted-foreground line-clamp-2 text-[13px]">
                   {post.content}
                 </p>
               </Link>
@@ -151,33 +151,38 @@ export function RightSidebar({
         )}
       </SidebarSection>
 
+      <hr className="border-border" />
+
       {/* Uploaded Files */}
       {scroll.pdfKeys && scroll.pdfKeys.length > 0 && (
-        <SidebarSection
-          icon={<FileUp className="text-primary h-3.5 w-3.5" />}
-          title="Uploaded Files"
-          emptyText=""
-        >
-          <div className="divide-border/70 divide-y">
-            {scroll.pdfKeys.map((key) => {
-              const filename = key.split("/").pop() || "document.pdf";
-              return (
-                <a
-                  key={key}
-                  href={`/api/pdfs/${encodeURIComponent(key)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:bg-subtle flex items-center gap-2 rounded-md p-2 transition-colors"
-                >
-                  <FileText className="text-muted-foreground h-4 w-4 shrink-0" />
-                  <span className="text-foreground line-clamp-1 text-[14px]">
-                    {filename}
-                  </span>
-                </a>
-              );
-            })}
-          </div>
-        </SidebarSection>
+        <>
+          <SidebarSection
+            icon={<FileUp className="text-primary h-3.5 w-3.5" />}
+            title="Uploaded Files"
+            emptyText=""
+          >
+            <div className="space-y-1">
+              {scroll.pdfKeys.map((key) => {
+                const filename = key.split("/").pop() || "document.pdf";
+                return (
+                  <a
+                    key={key}
+                    href={`/api/pdfs/${encodeURIComponent(key)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:bg-subtle flex items-center gap-2 rounded-md p-2 transition-colors"
+                  >
+                    <FileText className="text-muted-foreground h-4 w-4 shrink-0" />
+                    <span className="text-foreground line-clamp-1 text-[13px]">
+                      {filename}
+                    </span>
+                  </a>
+                );
+              })}
+            </div>
+          </SidebarSection>
+          <hr className="border-border" />
+        </>
       )}
 
       {/* Saved (Bookmarked) */}
@@ -199,12 +204,14 @@ export function RightSidebar({
         )}
       </SidebarSection>
 
+      <hr className="border-border" />
+
       {/* Upvoted / Downvoted (tabbed) */}
-      <div className="border-border bg-background rounded-lg border p-3.5">
-        <div className="mb-2.5 flex items-center gap-3">
+      <div className="py-3">
+        <div className="mb-2 flex items-center gap-3">
           <button
             onClick={() => setVoteTab("upvoted")}
-            className={`flex items-center gap-1 text-[13px] font-bold tracking-wide uppercase transition-colors ${
+            className={`flex items-center gap-1 text-[11px] font-bold tracking-widest uppercase transition-colors ${
               voteTab === "upvoted"
                 ? "text-[#ff4500]"
                 : "text-muted-foreground hover:text-foreground"
@@ -215,7 +222,7 @@ export function RightSidebar({
           </button>
           <button
             onClick={() => setVoteTab("downvoted")}
-            className={`flex items-center gap-1 text-[13px] font-bold tracking-wide uppercase transition-colors ${
+            className={`flex items-center gap-1 text-[11px] font-bold tracking-widest uppercase transition-colors ${
               voteTab === "downvoted"
                 ? "text-[#7193ff]"
                 : "text-muted-foreground hover:text-foreground"
@@ -229,18 +236,20 @@ export function RightSidebar({
           upvotedList.length > 0 ? (
             <PaperList papers={upvotedList} scrollId={scrollId} />
           ) : (
-            <p className="text-muted-foreground text-[14px]">
+            <p className="text-muted-foreground text-[13px]">
               Upvote papers to save them here.
             </p>
           )
         ) : downvotedList.length > 0 ? (
           <PaperList papers={downvotedList} scrollId={scrollId} />
         ) : (
-          <p className="text-muted-foreground text-[14px]">
+          <p className="text-muted-foreground text-[13px]">
             No downvoted papers.
           </p>
         )}
       </div>
+
+      <hr className="border-border" />
 
       {/* Comments activity */}
       <SidebarSection
@@ -260,10 +269,10 @@ export function RightSidebar({
                     href={`/schroll/${scrollId}/post/${paperId}`}
                     className="hover:bg-subtle block rounded-md p-2 transition-colors"
                   >
-                    <p className="text-foreground line-clamp-1 text-[14px] font-medium">
+                    <p className="text-foreground line-clamp-1 text-[13px] font-medium">
                       {paper.title}
                     </p>
-                    <p className="text-muted-foreground text-[13px]">
+                    <p className="text-muted-foreground text-[12px]">
                       {count} {count === 1 ? "comment" : "comments"}
                     </p>
                   </Link>
@@ -312,7 +321,7 @@ export function RightSidebar({
       )}
 
       {/* Desktop sidebar */}
-      <aside className="no-scrollbar hidden w-[340px] shrink-0 lg:sticky lg:top-4 lg:block lg:max-h-[calc(100vh-32px)] lg:overflow-y-auto">
+      <aside className="no-scrollbar hidden w-[272px] shrink-0 px-3 lg:sticky lg:top-12 lg:block lg:max-h-[calc(100vh-48px)] lg:overflow-y-auto">
         {sidebarContent}
       </aside>
     </>
@@ -329,12 +338,12 @@ function Stat({
   value: number | string;
 }) {
   return (
-    <div className="bg-subtle rounded-md p-2.5">
+    <div className="bg-subtle rounded-md p-2">
       <div className="text-muted-foreground mb-0.5 flex items-center gap-1">
         {icon}
-        <span className="text-[13px]">{label}</span>
+        <span className="text-[12px]">{label}</span>
       </div>
-      <p className="text-foreground text-[18px] font-bold">{value}</p>
+      <p className="text-foreground text-[16px] font-bold">{value}</p>
     </div>
   );
 }
@@ -353,14 +362,14 @@ function SidebarSection({
   const hasChildren =
     children !== undefined && children !== null && children !== false;
   return (
-    <div className="border-border bg-background rounded-lg border p-3.5">
-      <h3 className="text-foreground mb-2.5 flex items-center gap-1.5 text-[13px] font-bold tracking-wide uppercase">
+    <div className="py-3">
+      <h3 className="text-foreground mb-2 flex items-center gap-1.5 text-[11px] font-bold tracking-widest uppercase">
         {icon} {title}
       </h3>
       {hasChildren ? (
         children
       ) : (
-        <p className="text-muted-foreground text-[14px]">{emptyText}</p>
+        <p className="text-muted-foreground text-[13px]">{emptyText}</p>
       )}
     </div>
   );
@@ -374,17 +383,17 @@ function PaperList({
   scrollId: string;
 }) {
   return (
-    <div className="divide-border/70 divide-y">
+    <div className="space-y-1">
       {papers.map((paper) => (
         <Link
           key={paper.id}
           href={`/schroll/${scrollId}/post/${paper.id}`}
           className="hover:bg-subtle block rounded-md p-2 transition-colors"
         >
-          <p className="text-foreground line-clamp-2 text-[14px] leading-snug font-bold">
+          <p className="text-foreground line-clamp-2 text-[13px] leading-snug font-bold">
             {paper.title}
           </p>
-          <p className="text-muted-foreground mt-0.5 text-[13px]">
+          <p className="text-muted-foreground mt-0.5 text-[12px]">
             {paper.authors[0] || "Unknown"} &middot; {paper.year}
           </p>
         </Link>
@@ -397,7 +406,7 @@ function ShowMore({ count, onClick }: { count: number; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="text-primary mt-1 flex items-center gap-1 text-[14px] font-semibold hover:underline"
+      className="text-primary mt-1 flex items-center gap-1 text-[13px] font-semibold hover:underline"
     >
       Show {count} more <ChevronDown className="h-3 w-3" />
     </button>
