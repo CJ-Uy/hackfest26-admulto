@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { ArrowLeft, BadgeCheck, ExternalLink } from "lucide-react";
 import type { Paper } from "@/lib/types";
+import { getAvatarColor } from "@/lib/utils";
 import { CardActions } from "@/components/feed/CardActions";
 import { DetailTabs } from "./DetailTabs";
 
@@ -55,7 +56,7 @@ export function PostDetail({
       <div className="border-border border-b px-1 pb-3">
         {/* Author row */}
         <div className="mb-2 flex items-center gap-2.5">
-          <div className="bg-primary/10 text-primary flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[13px] font-bold">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[13px] font-bold text-white" style={{ backgroundColor: getAvatarColor(paper.authors[0] || "U") }}>
             {initial}
           </div>
           <div className="flex min-w-0 flex-1 items-baseline gap-1.5">

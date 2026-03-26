@@ -54,9 +54,9 @@ function OnboardingContent() {
 
         <div className="flex min-w-0 flex-1 justify-center">
         <main className="w-full max-w-[860px] min-w-0 flex-1 border-x border-border pb-24 md:pb-0">
-          <div className="border-border border-b px-4 pt-14 pb-4 md:pt-5">
+          <div className="border-border border-b px-5 pt-14 pb-5 md:pt-6">
             <div className="mb-2 flex items-center justify-between">
-              <h1 className="font-heading text-foreground text-[24px] font-bold tracking-tight">
+              <h1 className="font-heading text-foreground text-[26px] font-bold tracking-tight">
                 Create a Schroll
               </h1>
               <Link href="/">
@@ -66,13 +66,13 @@ function OnboardingContent() {
                 </Button>
               </Link>
             </div>
-            <p className="text-muted-foreground text-[14px]">
+            <p className="text-muted-foreground text-[15px]">
               Configure your research feed and start exploring.
             </p>
           </div>
 
-          <div className="px-4 pb-6">
-            <div className="animate-fade-in mx-auto w-full max-w-2xl">
+          <div className="px-5 pb-6">
+            <div className="animate-fade-in w-full">
               <TopicForm initialTopic={initialTopic} />
             </div>
           </div>

@@ -443,7 +443,7 @@ export function DetailTabs({
                 c.isGenerated
                   ? "bg-primary/10 text-primary"
                   : c.author === "You"
-                    ? ""
+                    ? "bg-primary text-primary-foreground"
                     : "text-white",
               )}
               style={
@@ -455,7 +455,7 @@ export function DetailTabs({
               {c.isGenerated ? (
                 <Bot className="h-3.5 w-3.5" />
               ) : c.author === "You" ? (
-                <SchrollarLogo showText={false} size="sm" />
+                <SchrollarLogo showText={false} size="sm" className="text-primary-foreground" />
               ) : (
                 c.author.charAt(0).toUpperCase()
               )}
@@ -503,7 +503,7 @@ export function DetailTabs({
             {sourcePaper && (
               <a
                 href={`/schroll/${scrollId}/post/${sourcePaper.id}`}
-                className="text-muted-foreground hover:text-primary flex items-center gap-1 rounded px-2 py-0.5 text-[12px] font-medium transition-colors hover:bg-[#f6f7f8]"
+                className="text-muted-foreground hover:text-primary hover:bg-subtle flex items-center gap-1 rounded px-2 py-0.5 text-[12px] font-medium transition-colors"
                 onClick={(e) => e.stopPropagation()}
                 title={sourcePaper.title || "View source"}
               >
@@ -513,7 +513,7 @@ export function DetailTabs({
             )}
             <button
               onClick={() => handleDeleteComment(c.id)}
-              className="text-muted-foreground flex items-center gap-1 rounded px-2 py-0.5 text-[12px] font-medium transition-colors hover:bg-red-50 hover:text-red-500"
+              className="text-muted-foreground flex items-center gap-1 rounded px-2 py-0.5 text-[12px] font-medium transition-colors hover:bg-red-500/10 hover:text-red-500"
             >
               <Trash2 className="h-3 w-3" />
             </button>
@@ -594,7 +594,10 @@ export function DetailTabs({
 
       {/* Integrated reply input */}
       {showReplyInput && (
-        <div className="border-border bg-subtle mt-4 flex items-center gap-2 rounded-md border px-3.5 py-2.5">
+        <div className="border-primary/20 bg-subtle mt-4 flex items-center gap-2 rounded-lg border px-3.5 py-3 focus-within:border-primary/40 focus-within:shadow-[0_0_0_3px_rgba(74,108,247,0.1)] transition-all">
+          <div className="bg-primary text-primary-foreground flex h-7 w-7 shrink-0 items-center justify-center rounded-full">
+            <SchrollarLogo showText={false} size="sm" className="text-primary-foreground" />
+          </div>
           <input
             value={mainReplyContent}
             onChange={(e) => setMainReplyContent(e.target.value)}
@@ -611,7 +614,7 @@ export function DetailTabs({
           <button
             onClick={handleMainReplySubmit}
             disabled={!mainReplyContent.trim() || mainReplyLoading}
-            className="text-primary hover:bg-primary/10 shrink-0 rounded-full p-2 transition-colors disabled:opacity-30"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 shrink-0 rounded-full p-2 transition-colors disabled:opacity-30"
           >
             {mainReplyLoading ? (
               <Loader2 className="h-4 w-4 animate-spin" />

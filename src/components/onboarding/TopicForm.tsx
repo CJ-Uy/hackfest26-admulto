@@ -12,7 +12,6 @@ import {
   Info,
   Clock,
   FileUp,
-  AlertTriangle,
 } from "lucide-react";
 import { GenerationProgress } from "./GenerationProgress";
 import { PdfUploader, type UploadedFile } from "./PdfUploader";
@@ -397,7 +396,7 @@ export function TopicForm({ initialTopic }: TopicFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mt-8 space-y-6">
+    <form onSubmit={handleSubmit} className="mt-6 space-y-5">
       {/* ── PDF Sources ──
       <div className="border-border space-y-4 rounded-xl border p-4">
         <div className="flex items-center justify-between">
@@ -474,12 +473,12 @@ export function TopicForm({ initialTopic }: TopicFormProps) {
 
       {/* ── Topic / Description ── */}
       <div>
-        <label htmlFor="topic" className="mb-1.5 block text-sm font-medium">
+        <label htmlFor="topic" className="text-foreground mb-2 block text-[15px] font-semibold">
           Main Topic{" "}
           {topicRequired ? (
             <span className="text-destructive">*</span>
           ) : (
-            <span className="text-muted-foreground text-xs">
+            <span className="text-muted-foreground text-[13px] font-normal">
               (optional — auto-derived from PDFs)
             </span>
           )}
@@ -491,31 +490,32 @@ export function TopicForm({ initialTopic }: TopicFormProps) {
           placeholder="e.g., Cognitive Psychology"
           required={topicRequired}
           disabled={loading}
+          className="h-11 text-[15px]"
         />
       </div>
 
       <div>
         <label
           htmlFor="description"
-          className="mb-1.5 block text-sm font-medium"
+          className="text-foreground mb-2 block text-[15px] font-semibold"
         >
           Description{" "}
-          <span className="text-muted-foreground text-xs">(optional)</span>
+          <span className="text-muted-foreground text-[13px] font-normal">(optional)</span>
         </label>
         <Textarea
           id="description"
           ref={descRef}
           placeholder="Add context about your research direction..."
           rows={3}
-          className="resize-none"
+          className="resize-none text-[15px]"
           disabled={loading}
         />
       </div>
 
       <div>
-        <label className="mb-1.5 block text-sm font-medium">
+        <label className="text-foreground mb-2 block text-[15px] font-semibold">
           Subfields / Interests{" "}
-          <span className="text-muted-foreground text-xs">(optional)</span>
+          <span className="text-muted-foreground text-[13px] font-normal">(optional)</span>
         </label>
         <div className="flex gap-2">
           <Input
@@ -524,6 +524,7 @@ export function TopicForm({ initialTopic }: TopicFormProps) {
             onKeyDown={handleSubfieldKeyDown}
             placeholder="Type a subfield and press Enter"
             disabled={loading}
+            className="h-11 text-[15px]"
           />
           <Button
             type="button"
@@ -531,14 +532,15 @@ export function TopicForm({ initialTopic }: TopicFormProps) {
             size="sm"
             onClick={addSubfield}
             disabled={loading || !subfieldInput.trim()}
+            className="h-11 px-4"
           >
             Add
           </Button>
         </div>
         {subfields.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-2">
+          <div className="mt-2.5 flex flex-wrap gap-2">
             {subfields.map((sf) => (
-              <Badge key={sf} variant="secondary" className="gap-1 pr-1.5">
+              <Badge key={sf} variant="secondary" className="gap-1 pr-1.5 text-[13px] py-1">
                 {sf}
                 <button
                   type="button"
@@ -552,7 +554,7 @@ export function TopicForm({ initialTopic }: TopicFormProps) {
           </div>
         )}
         {subfields.length === 0 && (
-          <p className="text-muted-foreground mt-1.5 text-xs">
+          <p className="text-muted-foreground mt-1.5 text-[13px]">
             Add subfields to narrow your research focus.
           </p>
         )}
@@ -829,17 +831,17 @@ export function TopicForm({ initialTopic }: TopicFormProps) {
       </div>
 
       {/* ── Estimated Time ── */}
-      <div className="bg-muted/50 flex items-center gap-2 rounded-lg px-4 py-3">
-        <Clock className="text-muted-foreground h-4 w-4 shrink-0" />
-        <p className="text-muted-foreground text-sm">
+      <div className="bg-primary/5 border border-primary/10 flex items-center gap-2.5 rounded-lg px-4 py-3.5">
+        <Clock className="text-primary h-4 w-4 shrink-0" />
+        <p className="text-foreground text-[14px]">
           Estimated time:{" "}
-          <span className="text-foreground font-medium">
+          <span className="text-primary font-semibold">
             {estimate.min === estimate.max
               ? `~${estimate.min} min`
               : `${estimate.min}–${estimate.max} min`}
           </span>
           {pdfEnabled && doneFiles.length > 0 && (
-            <span className="ml-2 text-xs">
+            <span className="text-muted-foreground ml-2 text-[13px]">
               ({doneFiles.length} PDF{doneFiles.length !== 1 ? "s" : ""}
               {sourceMode === "only_sources" ? ", no external search" : ""})
             </span>
@@ -847,23 +849,13 @@ export function TopicForm({ initialTopic }: TopicFormProps) {
         </p>
       </div>
 
-      <div className="rounded-lg border border-amber-300/70 bg-amber-50 px-3 py-2.5 sm:px-4 sm:py-3">
-        <p className="flex items-start gap-2 text-xs leading-relaxed text-amber-900 sm:text-sm">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-          <span>
-            Heads up: generating a schroll may be buggy in production due to
-            Cloudflare Workers free-tier CPU timeouts and limits.
-          </span>
-        </p>
-      </div>
-
       <Button
         type="submit"
         size="lg"
-        className="w-full gap-2"
+        className="w-full gap-2 h-12 text-[16px] font-semibold rounded-lg"
         disabled={loading}
       >
-        <Sparkles className="h-4 w-4" />
+        <Sparkles className="h-5 w-5" />
         Generate My Feed
       </Button>
     </form>
