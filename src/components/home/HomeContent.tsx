@@ -90,14 +90,14 @@ export function HomeContent({ scrolls: initialScrolls }: HomeContentProps) {
       <div className="pt-3 pb-3">
         <div className="grid grid-cols-2 gap-2">
           <div className="bg-subtle rounded-md p-2">
-            <p className="text-muted-foreground text-[12px]">Schrolls</p>
-            <p className="text-foreground text-[16px] font-bold">
+            <p className="text-muted-foreground text-[13px]">Schrolls</p>
+            <p className="text-foreground text-[19px] font-bold">
               {scrolls.length}
             </p>
           </div>
           <div className="bg-subtle rounded-md p-2">
-            <p className="text-muted-foreground text-[12px]">Papers</p>
-            <p className="text-foreground text-[16px] font-bold">
+            <p className="text-muted-foreground text-[13px]">Papers</p>
+            <p className="text-foreground text-[19px] font-bold">
               {scrolls.reduce((sum, s) => sum + s.paperCount, 0)}
             </p>
           </div>
@@ -110,10 +110,10 @@ export function HomeContent({ scrolls: initialScrolls }: HomeContentProps) {
       {!hasScrolls && (
         <>
           <div className="py-3">
-            <h4 className="text-foreground mb-2 text-[11px] font-bold tracking-widest uppercase">
+            <h4 className="text-foreground mb-2 text-[12px] font-bold tracking-widest uppercase">
               Getting Started
             </h4>
-            <ol className="text-muted-foreground space-y-2 text-[13px]">
+            <ol className="text-muted-foreground space-y-2 text-[14px]">
               <li className="flex gap-2">
                 <span className="bg-primary/10 text-primary flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold">
                   1
@@ -153,24 +153,50 @@ export function HomeContent({ scrolls: initialScrolls }: HomeContentProps) {
 
         <div className="flex min-w-0 flex-1 justify-center">
         {/* Main content */}
-        <main className="w-full max-w-[860px] min-w-0 flex-1 border-x border-border pb-24 md:pb-0">
+        <main className="w-full max-w-215 min-w-0 flex-1 border-x border-border pb-24 md:pb-0">
           {hasScrolls ? (
             <>
-              {/* Header with CTA */}
-              <div className="border-border border-b px-4 pt-4 pb-4">
-                <h1 className="font-heading text-foreground text-[20px] font-bold">
-                  Your Research Feed
-                </h1>
-                <p className="text-muted-foreground mt-0.5 text-[13px]">
-                  {scrolls.length}{" "}
-                  {scrolls.length === 1 ? "schroll" : "schrolls"} created
-                </p>
-                <Link href="/onboarding" className="mt-3 inline-block">
-                  <Button className="gap-2" size="sm">
-                    <Plus className="h-4 w-4" />
-                    New Schroll
-                  </Button>
-                </Link>
+              {/* Hero area */}
+              <section className="border-border border-b">
+                <div className="h-12 border-b border-border bg-[linear-gradient(120deg,var(--subtle),color-mix(in_oklab,var(--subtle)_82%,var(--primary)_18%))] md:h-14" />
+                <div className="px-5 pb-5">
+                  <div className="-mt-8 flex items-start gap-4 md:gap-5">
+                    <div className="bg-background border-border flex h-24 w-24 shrink-0 items-center justify-center rounded-full border-4 shadow-sm">
+                      <SchrollarLogo showText={false} size="lg" className="scale-125" />
+                    </div>
+
+                    <div className="min-h-24 min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <h1 className="font-heading text-foreground text-[34px] leading-none font-bold tracking-tight md:text-[40px]">
+                          r/Schrollar
+                        </h1>
+                        <Link href="/onboarding" className="inline-block">
+                          <Button className="h-12 gap-2 px-5 text-[17px] font-bold" size="lg">
+                            <Plus className="h-4.5 w-4.5" />
+                            New Schroll
+                          </Button>
+                        </Link>
+                      </div>
+
+                      <p className="text-muted-foreground mt-2 max-w-2xl text-[16px] leading-relaxed md:text-[17px]">
+                        A profile-style home for your active research streams,
+                        where each schroll turns papers into a readable, social
+                        feed.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              {/* Feed header */}
+              <div className="border-border border-b px-5 py-4">
+                <div className="flex flex-wrap items-center justify-between gap-2 text-[15px] font-semibold">
+                  <p className="text-muted-foreground">Your Research Feed</p>
+                  <p className="text-muted-foreground">
+                    {scrolls.length}{" "}
+                    {scrolls.length === 1 ? "schroll" : "schrolls"} created
+                  </p>
+                </div>
               </div>
 
               {/* Scroll cards */}
@@ -178,29 +204,29 @@ export function HomeContent({ scrolls: initialScrolls }: HomeContentProps) {
                 {filteredScrolls.map((scroll, i) => (
                   <article
                     key={scroll.id}
-                    className="group animate-card-enter hover:bg-subtle cursor-pointer px-4 py-3 transition-colors"
+                    className="group animate-card-enter hover:bg-subtle cursor-pointer px-5 py-4 transition-colors"
                     style={{ animationDelay: `${i * 40}ms` }}
                     onClick={() => router.push(`/schroll/${scroll.id}`)}
                   >
                     <div className="flex items-start gap-3">
                       {/* Icon */}
-                      <div className="bg-primary/10 text-primary mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
-                        <ScrollText className="h-4 w-4" />
+                      <div className="bg-primary/10 text-primary mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-lg">
+                        <ScrollText className="h-5 w-5" />
                       </div>
 
                       <div className="min-w-0 flex-1">
                         {/* Title row */}
                         <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="font-heading text-foreground truncate text-[15px] font-bold">
+                          <h3 className="font-heading text-foreground truncate text-[18px] font-bold leading-tight">
                             {scroll.title}
                           </h3>
                           {scroll.status === "generating" && (
-                            <div className="flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-600">
+                            <div className="flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[12px] font-semibold text-amber-600">
                               <Loader2 className="h-3 w-3 animate-spin" />
                               Generating
                             </div>
                           )}
-                          <span className="bg-primary/10 text-primary shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold">
+                          <span className="bg-primary/10 text-primary shrink-0 rounded-full px-2 py-0.5 text-[12px] font-semibold">
                             {scroll.mode === "pdf_only"
                               ? "PDF Only"
                               : scroll.mode === "pdf_context"
@@ -214,14 +240,14 @@ export function HomeContent({ scrolls: initialScrolls }: HomeContentProps) {
                         </div>
 
                         {/* Description */}
-                        <p className="text-muted-foreground mt-1 line-clamp-2 text-[13px] leading-relaxed">
+                        <p className="text-muted-foreground mt-1.5 line-clamp-2 text-[15px] leading-relaxed">
                           {scroll.description}
                         </p>
 
                         {/* Meta */}
-                        <div className="text-muted-foreground mt-1.5 flex items-center gap-3 text-[12px]">
+                        <div className="text-muted-foreground mt-2 flex items-center gap-4 text-[14px]">
                           <span className="flex items-center gap-1">
-                            <FileText className="h-3 w-3" />
+                            <FileText className="h-3.5 w-3.5" />
                             {scroll.paperCount} papers
                           </span>
                           <span>{scroll.date}</span>
@@ -245,7 +271,7 @@ export function HomeContent({ scrolls: initialScrolls }: HomeContentProps) {
                 ))}
                 {searchQuery && filteredScrolls.length === 0 && (
                   <div className="px-4 py-8 text-center">
-                    <p className="text-muted-foreground text-[14px]">
+                    <p className="text-muted-foreground text-[16px]">
                       No schrolls matching &ldquo;{searchQuery}&rdquo;
                     </p>
                   </div>
@@ -256,8 +282,8 @@ export function HomeContent({ scrolls: initialScrolls }: HomeContentProps) {
             /* Empty state */
             <div className="flex flex-col items-center justify-center px-6 py-24">
               <div className="pointer-events-none absolute inset-0 overflow-hidden">
-                <div className="bg-primary/5 absolute -top-40 -right-40 h-[400px] w-[400px] rounded-full blur-3xl" />
-                <div className="bg-primary/5 absolute -bottom-40 -left-40 h-[300px] w-[300px] rounded-full blur-3xl" />
+                <div className="bg-primary/5 absolute -top-40 -right-40 h-100 w-100 rounded-full blur-3xl" />
+                <div className="bg-primary/5 absolute -bottom-40 -left-40 h-75 w-75 rounded-full blur-3xl" />
               </div>
 
               <div className="animate-fade-in relative z-10 max-w-lg text-center">
@@ -265,11 +291,11 @@ export function HomeContent({ scrolls: initialScrolls }: HomeContentProps) {
                   <SchrollarLogo showText={false} size="lg" />
                 </div>
 
-                <h1 className="font-heading text-foreground text-[28px] font-bold tracking-tight md:text-[36px]">
+                <h1 className="font-heading text-foreground text-[32px] font-bold tracking-tight md:text-[40px]">
                   Welcome to Schrollar
                 </h1>
 
-                <p className="text-muted-foreground mx-auto mt-3 max-w-md text-[15px] leading-relaxed">
+                <p className="text-muted-foreground mx-auto mt-3 max-w-md text-[17px] leading-relaxed">
                   Turn your schroll into research. Create your first schroll to
                   discover papers in a social-media-style feed.
                 </p>
@@ -308,7 +334,7 @@ export function HomeContent({ scrolls: initialScrolls }: HomeContentProps) {
         </main>
 
         {/* Right sidebar - stats summary */}
-        <aside className="no-scrollbar hidden w-[312px] shrink-0 px-3 lg:sticky lg:top-12 lg:block lg:max-h-[calc(100vh-48px)] lg:overflow-y-auto">
+        <aside className="no-scrollbar hidden w-78 shrink-0 px-3 lg:sticky lg:top-12 lg:block lg:max-h-[calc(100vh-48px)] lg:overflow-y-auto">
           {homeSidebarContent}
         </aside>
         </div>
