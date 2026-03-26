@@ -1,216 +1,210 @@
-# Next.js + Drizzle ORM + Turso on Cloudflare Workers
+# Next.js + Drizzle ORM + Cloudflare D1 on Cloudflare Workers
 
-Guide for deploying a Next.js app with Drizzle ORM and Turso (libSQL) to Cloudflare Workers via OpenNext.
+Guide for deploying a Next.js app with Drizzle ORM and Cloudflare D1 to Cloudflare Workers via OpenNext.
 
-## The Problem
+---
 
-`@libsql/client` doesn't work on Cloudflare Workers when deployed via OpenNext because:
+## Turso → D1 Migration Notes
 
-1. **Next.js externalizes it** — `@libsql/client` is in Next.js's built-in `server-external-packages.jsonc`, so it's not bundled
-2. **Workers can't load externals** — Cloudflare Workers don't have `node_modules` at runtime
-3. **Bundling it blows up size** — using `transpilePackages` to force-bundle it pushes the worker over the 3MB free tier limit
+If you were previously on Turso (`@libsql/client` or `sqlite-proxy` + Turso HTTP API), switch to D1 because:
 
-## The Solution: `drizzle-orm/sqlite-proxy` + Turso HTTP API
+- `@libsql/client` doesn't work on Cloudflare Workers (externalized by Next.js, not available at runtime)
+- The `sqlite-proxy` + HTTP API workaround works but breaks Drizzle relational queries (`with:` clauses) due to manual row-to-object conversion
+- D1 native binding is faster (no HTTP roundtrip) and correctly supported by `drizzle-orm/d1`
 
-Skip `@libsql/client` entirely. Use `drizzle-orm/sqlite-proxy` with a custom `fetch`-based callback that talks directly to Turso's Hrana v2 HTTP API.
+---
+
+## The Solution: Native D1 Binding in Production, HTTP API Fallback in Dev
+
+### Why two modes?
+
+- **Production (Cloudflare Workers):** Use the native D1 binding via `getCloudflareContext()`. Direct, fast, reliable. Fixes relational queries.
+- **Local dev (`next dev`):** `initOpenNextCloudflareForDev` creates a local empty D1 via miniflare — it has no tables. Use the D1 HTTP API instead to hit your real remote D1.
 
 ### db.ts
 
 ```typescript
-import { drizzle } from "drizzle-orm/sqlite-proxy";
+import { drizzle as drizzleD1 } from "drizzle-orm/d1";
+import { drizzle as drizzleProxy } from "drizzle-orm/sqlite-proxy";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 import * as schema from "./schema";
 
-function toHttpUrl(url: string): string {
-  return url
-    .replace(/^libsql:\/\//, "https://")
-    .replace(/^ws:\/\//, "http://")
-    .replace(/^wss:\/\//, "https://");
-}
+type DbClient = ReturnType<typeof drizzleD1<typeof schema>>;
 
-function toHranaValue(param: unknown) {
-  if (param === null || param === undefined) return { type: "null" as const };
-  if (typeof param === "number" && Number.isInteger(param))
-    return { type: "integer" as const, value: String(param) };
-  if (typeof param === "number")
-    return { type: "float" as const, value: param };
-  if (typeof param === "string") return { type: "text" as const, value: param };
-  if (typeof param === "bigint")
-    return { type: "integer" as const, value: String(param) };
-  return { type: "text" as const, value: String(param) };
-}
-
-function fromHranaValue(val: { type: string; value?: unknown }): unknown {
-  switch (val.type) {
-    case "null":
-      return null;
-    case "integer":
-      return Number(val.value);
-    case "float":
-      return val.value;
-    case "text":
-      return val.value;
-    case "blob":
-      return val.value;
-    default:
-      return val.value ?? null;
-  }
-}
-
-async function tursoFetch(
-  httpUrl: string,
-  authToken: string | undefined,
+async function d1Fetch(
+  accountId: string,
+  databaseId: string,
+  token: string,
   sql: string,
   params: unknown[],
   method: "run" | "all" | "values" | "get",
 ): Promise<{ rows: unknown[][] }> {
-  const response = await fetch(`${httpUrl}/v2/pipeline`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(authToken && { Authorization: `Bearer ${authToken}` }),
+  const response = await fetch(
+    `https://api.cloudflare.com/client/v4/accounts/${accountId}/d1/database/${databaseId}/query`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ sql, params }),
     },
-    body: JSON.stringify({
-      requests: [
-        {
-          type: "execute",
-          stmt: {
-            sql,
-            args: params.map(toHranaValue),
-            named_args: [],
-            want_rows: method !== "run",
-          },
-        },
-        { type: "close" },
-      ],
-    }),
-  });
+  );
 
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(`Turso HTTP ${response.status}: ${text}`);
+    throw new Error(`D1 HTTP ${response.status}: ${text}`);
   }
 
   const data = (await response.json()) as {
-    results: {
-      type: string;
-      response?: {
-        type: string;
-        result?: {
-          cols: { name: string }[];
-          rows: { type: string; value?: unknown }[][];
-        };
-      };
-      error?: { message: string };
-    }[];
+    result: Array<{ results: Record<string, unknown>[]; success: boolean }>;
+    success: boolean;
+    errors: { message: string }[];
   };
 
-  const result = data.results[0];
-  if (result.type === "error") {
-    throw new Error(`Turso SQL error: ${result.error?.message}`);
+  if (!data.success) {
+    const msg = data.errors?.[0]?.message ?? "unknown error";
+    throw new Error(`D1 query failed: ${msg}`);
   }
 
-  const stmtResult = result.response?.result;
-  if (!stmtResult) return { rows: [] };
+  if (method === "run") return { rows: [] };
 
-  const rows = stmtResult.rows.map((row) => row.map(fromHranaValue));
+  const result = data.result?.[0];
+  if (!result?.results?.length) return { rows: [] };
 
-  if (method === "get") {
-    // drizzle-orm/sqlite-proxy expects a single flat row for "get", not wrapped in an array
-    return { rows: (rows[0] ?? []) as unknown as unknown[][] };
-  }
+  const cols = Object.keys(result.results[0]);
+  const rows = result.results.map((row) => cols.map((col) => row[col]));
+
+  if (method === "get") return { rows: rows[0] as unknown as unknown[][] };
 
   return { rows };
 }
 
-type DbClient = ReturnType<typeof drizzle<typeof schema>>;
+function createNativeClient(): DbClient | null {
+  try {
+    const ctx = getCloudflareContext();
+    const d1 = (ctx.env as unknown as { DB: D1Database }).DB;
+    if (d1) return drizzleD1(d1, { schema });
+  } catch {
+    // Context not available
+  }
+  return null;
+}
 
-function createDbClient(): DbClient {
-  const url = process.env.TURSO_DATABASE_URL;
-  const authToken = process.env.TURSO_AUTH_TOKEN;
+function createHttpClient(): DbClient {
+  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+  const databaseId = process.env.CLOUDFLARE_D1_DATABASE_ID;
+  const token = process.env.CLOUDFLARE_D1_TOKEN;
 
-  if (!url) {
+  if (!accountId || !databaseId || !token) {
     throw new Error(
-      "TURSO_DATABASE_URL is not set. Set it in .env for local dev or as a Cloudflare secret for production.",
+      "D1 binding unavailable and CLOUDFLARE_ACCOUNT_ID/DATABASE_ID/TOKEN env vars not set",
     );
   }
 
-  const httpUrl = toHttpUrl(url);
-
-  return drizzle(
-    async (sql, params, method) => {
-      return tursoFetch(httpUrl, authToken, sql, params, method);
-    },
+  return drizzleProxy(
+    async (sql, params, method) => d1Fetch(accountId, databaseId, token, sql, params, method),
     { schema },
-  );
+  ) as unknown as DbClient;
 }
 
-// Lazy proxy to avoid crashing during edge build when env vars are absent
+const isDev = process.env.NODE_ENV === "development";
 const globalForDb = globalThis as unknown as { db: DbClient | undefined };
 
+/**
+ * Production: native D1 binding (fast, correct relational queries).
+ * Dev: D1 HTTP API hitting remote D1 (local miniflare D1 has no tables).
+ */
 export const db = new Proxy({} as DbClient, {
-  get(_target, prop, receiver) {
+  get(_target, prop) {
     if (!globalForDb.db) {
-      globalForDb.db = createDbClient();
+      if (isDev) {
+        globalForDb.db = createHttpClient();
+      } else {
+        const native = createNativeClient();
+        globalForDb.db = native ?? createHttpClient();
+      }
     }
-    return Reflect.get(globalForDb.db, prop, receiver);
+    return (globalForDb.db as unknown as Record<string | symbol, unknown>)[prop];
   },
 });
 ```
 
 ### Why this works
 
-- **Zero external dependencies** — only uses `fetch` (available in all runtimes)
-- **Tiny bundle footprint** — no `@libsql/client` bloat
-- **Full Drizzle support** — relational queries (`db.query.comments.findFirst`), selects, inserts, all work
-- **Works everywhere** — Cloudflare Workers, Vercel Edge, Node.js, Deno
+- **Production:** `getCloudflareContext()` is synchronous and always available (set by the Worker entrypoint before any request). `drizzle-orm/d1` handles all query types correctly including relational `with:` clauses.
+- **Dev:** HTTP API hits the real remote D1. `NODE_ENV === "development"` skips the native binding entirely, avoiding the empty miniflare D1.
+- **Lazy Proxy:** `globalForDb.db` is only initialized on first use, never at build time.
 
-## Other Required Config
+---
 
-### open-next.config.ts
+## Required Config
 
-Prevent infinite build loop when `package.json` build command is `opennextjs-cloudflare build`:
+### wrangler.jsonc — D1 binding
 
-```typescript
-import { defineCloudflareConfig } from "@opennextjs/cloudflare";
-
-const config = defineCloudflareConfig({});
-
-export default {
-  ...config,
-  buildCommand: "npx next build",
-};
-```
-
-### package.json
-
-```json
+```jsonc
 {
-  "scripts": {
-    "build": "opennextjs-cloudflare build",
-    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy"
-  }
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "your-db-name",
+      "database_id": "your-db-id"
+    }
+  ]
 }
 ```
 
+The binding name `"DB"` must match what `db.ts` reads from `ctx.env.DB`.
+
+### drizzle.config.ts — migrations via HTTP API
+
+```typescript
+export default {
+  dialect: "sqlite",
+  driver: "d1-http",   // HTTP API driver for drizzle-kit push/generate (runs locally)
+  schema: "./src/lib/schema.ts",
+  out: "./drizzle",
+  dbCredentials: {
+    accountId: process.env.CLOUDFLARE_ACCOUNT_ID!,
+    databaseId: process.env.CLOUDFLARE_D1_DATABASE_ID!,
+    token: process.env.CLOUDFLARE_D1_TOKEN!,
+  },
+};
+```
+
+`drizzle-kit push` runs on your local machine and correctly uses the HTTP API to apply schema changes to the remote D1.
+
 ### next.config.ts
 
-Add `export const dynamic = "force-dynamic"` to any page that queries the DB at the top level, or the build will try to prerender it and fail (no DB available at build time).
+```typescript
+import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
+initOpenNextCloudflareForDev();
 
-### Environment Variables
+export default {};
+```
 
-Set via `npx wrangler secret put <NAME>` (not in `wrangler.jsonc` — those get committed to git):
+### .env (local dev only)
 
-- `TURSO_DATABASE_URL` — e.g. `libsql://your-db.turso.io`
-- `TURSO_AUTH_TOKEN` — from Turso dashboard
+```
+CLOUDFLARE_ACCOUNT_ID=...
+CLOUDFLARE_D1_DATABASE_ID=...
+CLOUDFLARE_D1_TOKEN=...   # a Cloudflare API token with D1 edit permissions
+```
+
+These are only needed locally for `next dev` (HTTP API fallback) and `drizzle-kit push`. In production, the native D1 binding handles everything — no env vars needed.
+
+---
 
 ## Gotchas
 
-1. **`@libsql/client` is auto-externalized by Next.js** — it's in `node_modules/next/dist/lib/server-external-packages.jsonc`. You can override with `transpilePackages: ["@libsql/client"]` in `next.config.ts`, but this adds ~250KB gzip to the bundle.
+1. **`initOpenNextCloudflareForDev` creates an empty local D1** — miniflare starts a fresh SQLite file with no tables. Don't rely on it for dev; use the HTTP API to hit your real D1 instead (handled by the `isDev` check above).
 
-2. **Free Workers tier = 3MB gzip limit** — Next.js + OpenNext alone is ~2.9MB. There's almost no room for additional bundled dependencies. Paid plan ($5/mo) gives 10MB.
+2. **`sqlite-proxy` breaks relational queries** — Drizzle's `db.query.table.findFirst({ with: { ... } })` returns `undefined` for the nested relation when using `sqlite-proxy` because the manual row-to-array conversion doesn't match what the relational query engine expects. Use `drizzle-orm/d1` in production.
 
-3. **`opennextjs-cloudflare build` calls `npm run build` internally** — if your build script IS `opennextjs-cloudflare build`, you get an infinite loop. Fix with `buildCommand: "npx next build"` in `open-next.config.ts`.
+3. **D1 HTTP API parameter limit** — 100 bound parameters per query. With 16 columns per row, batch inserts at max 6 rows per statement: `for (let i = 0; i < rows.length; i += 6) { await db.insert(table).values(rows.slice(i, i + 6)); }`. The native D1 binding has the same limit.
 
-4. **DB queries in pages cause prerender failures** — the build has no DB access. Use `export const dynamic = "force-dynamic"` or wrap in try/catch with empty fallback.
+4. **`global_fetch_strictly_public` flag** — if set in `wrangler.jsonc`, outbound `fetch()` inside Workers can only reach public hosts. `api.cloudflare.com` is public so the HTTP API works, but this is one reason to prefer the native binding in production.
 
-5. **Wrangler deploy overrides Dashboard config** — any env vars set in the Cloudflare Dashboard will be wiped on deploy unless also in `wrangler.jsonc`. Use `wrangler secret put` for secrets — those persist.
+5. **Wrangler deploy wipes Dashboard env vars** — any vars set in the Cloudflare Dashboard are overwritten on deploy unless also in `wrangler.jsonc`. Use `wrangler secret put` for secrets — those persist across deploys.
+
+6. **DB queries in pages cause prerender failures** — the build has no DB access. Add `export const dynamic = "force-dynamic"` to any page that queries the DB at the top level.
