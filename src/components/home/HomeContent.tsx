@@ -158,20 +158,27 @@ export function HomeContent({ scrolls: initialScrolls }: HomeContentProps) {
             <>
               {/* Hero area */}
               <section className="border-border border-b">
-                <div className="h-12 border-b border-border bg-[linear-gradient(120deg,var(--subtle),color-mix(in_oklab,var(--subtle)_82%,var(--primary)_18%))] md:h-14" />
+                <div className="h-10 border-b border-border bg-[linear-gradient(120deg,var(--subtle),color-mix(in_oklab,var(--subtle)_86%,var(--primary)_14%))] md:h-12" />
                 <div className="px-5 pb-5">
-                  <div className="-mt-8 flex items-start gap-4 md:gap-5">
+                  <div className="-mt-4 flex items-center gap-4">
                     <div className="bg-background border-border flex h-24 w-24 shrink-0 items-center justify-center rounded-full border-4 shadow-sm">
-                      <SchrollarLogo showText={false} size="lg" className="scale-125" />
+                      <SchrollarLogo
+                        showText={false}
+                        size="lg"
+                        className="scale-110"
+                      />
                     </div>
 
-                    <div className="min-h-24 min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <h1 className="font-heading text-foreground text-[34px] leading-none font-bold tracking-tight md:text-[40px]">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-3">
+                        <h1 className="font-heading text-foreground whitespace-nowrap text-[48px] leading-none font-bold tracking-tight md:text-[50px]">
                           r/Schrollar
                         </h1>
-                        <Link href="/onboarding" className="inline-block">
-                          <Button className="h-12 gap-2 px-5 text-[17px] font-bold" size="lg">
+                        <Link href="/onboarding" className="ml-auto inline-block shrink-0">
+                          <Button
+                            className="h-11 gap-2 px-5 text-[16px] font-bold"
+                            size="lg"
+                          >
                             <Plus className="h-4.5 w-4.5" />
                             New Schroll
                           </Button>
