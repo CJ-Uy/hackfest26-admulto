@@ -103,7 +103,8 @@ function createHttpClient(): DbClient {
   }
 
   return drizzleProxy(
-    async (sql, params, method) => d1Fetch(accountId, databaseId, token, sql, params, method),
+    async (sql, params, method) =>
+      d1Fetch(accountId, databaseId, token, sql, params, method),
     { schema },
   ) as unknown as DbClient;
 }
@@ -125,7 +126,9 @@ export const db = new Proxy({} as DbClient, {
         globalForDb.db = native ?? createHttpClient();
       }
     }
-    return (globalForDb.db as unknown as Record<string | symbol, unknown>)[prop];
+    return (globalForDb.db as unknown as Record<string | symbol, unknown>)[
+      prop
+    ];
   },
 });
 ```
@@ -148,9 +151,9 @@ export const db = new Proxy({} as DbClient, {
     {
       "binding": "DB",
       "database_name": "your-db-name",
-      "database_id": "your-db-id"
-    }
-  ]
+      "database_id": "your-db-id",
+    },
+  ],
 }
 ```
 
@@ -161,7 +164,7 @@ The binding name `"DB"` must match what `db.ts` reads from `ctx.env.DB`.
 ```typescript
 export default {
   dialect: "sqlite",
-  driver: "d1-http",   // HTTP API driver for drizzle-kit push/generate (runs locally)
+  driver: "d1-http", // HTTP API driver for drizzle-kit push/generate (runs locally)
   schema: "./src/lib/schema.ts",
   out: "./drizzle",
   dbCredentials: {

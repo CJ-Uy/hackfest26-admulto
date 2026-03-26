@@ -165,7 +165,11 @@ export function ExportActions({ text, papers }: ExportActionsProps) {
               : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground",
           )}
         >
-          {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+          {copied ? (
+            <Check className="h-3.5 w-3.5" />
+          ) : (
+            <Copy className="h-3.5 w-3.5" />
+          )}
           {copied ? "Copied" : "Copy"}
         </button>
         <button

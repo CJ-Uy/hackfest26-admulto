@@ -122,6 +122,8 @@ export const db = new Proxy({} as DbClient, {
         globalForDb.db = native ?? createHttpClient();
       }
     }
-    return (globalForDb.db as unknown as Record<string | symbol, unknown>)[prop];
+    return (globalForDb.db as unknown as Record<string | symbol, unknown>)[
+      prop
+    ];
   },
 });

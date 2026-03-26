@@ -20,9 +20,19 @@ import { ExportActions } from "./ExportActions";
 import { ExportPromptQuiz } from "./ExportPromptQuiz";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import type { ExportTheme, Paper, LitReviewExport, PaperTier } from "@/lib/types";
+import type {
+  ExportTheme,
+  Paper,
+  LitReviewExport,
+  PaperTier,
+} from "@/lib/types";
 
-type ExportMode = "references" | "with-summaries" | "themed" | "literature-review" | "research-prompt";
+type ExportMode =
+  | "references"
+  | "with-summaries"
+  | "themed"
+  | "literature-review"
+  | "research-prompt";
 
 const MODES: {
   value: ExportMode;
@@ -203,12 +213,17 @@ export function ExportView({ scrollId, papers }: ExportViewProps) {
     papers: SummarizedPaper[];
   } | null>(null);
   const [themedData, setThemedData] = useState<ThemedExport | null>(null);
-  const [litReviewData, setLitReviewData] = useState<LitReviewExport | null>(null);
+  const [litReviewData, setLitReviewData] = useState<LitReviewExport | null>(
+    null,
+  );
   const [promptData, setPromptData] = useState<string | null>(null);
   const [loadingPrompt, setLoadingPrompt] = useState(false);
   const [promptCopied, setPromptCopied] = useState(false);
   const [quizCompleted, setQuizCompleted] = useState(false);
-  const [scopingAnswers, setScopingAnswers] = useState<Record<string, string> | null>(null);
+  const [scopingAnswers, setScopingAnswers] = useState<Record<
+    string,
+    string
+  > | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -228,13 +243,22 @@ export function ExportView({ scrollId, papers }: ExportViewProps) {
 
   // Fetch research prompt after quiz is completed (or skipped)
   useEffect(() => {
-    if (mode !== "research-prompt" || !quizCompleted || promptData || loadingPrompt) return;
+    if (
+      mode !== "research-prompt" ||
+      !quizCompleted ||
+      promptData ||
+      loadingPrompt
+    )
+      return;
     let cancelled = false;
     setLoadingPrompt(true);
     fetch("/api/export-prompt", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ scrollId, scopingAnswers: scopingAnswers ?? undefined }),
+      body: JSON.stringify({
+        scrollId,
+        scopingAnswers: scopingAnswers ?? undefined,
+      }),
     })
       .then((res) => {
         if (!res.ok) throw new Error("Failed");
@@ -252,10 +276,12 @@ export function ExportView({ scrollId, papers }: ExportViewProps) {
     return () => {
       cancelled = true;
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, quizCompleted, scrollId, promptData]);
 
-  async function handleGenerateAI(selectedMode: "with-summaries" | "themed" | "literature-review") {
+  async function handleGenerateAI(
+    selectedMode: "with-summaries" | "themed" | "literature-review",
+  ) {
     if (generatingAI) return;
     setGeneratingAI(true);
 
@@ -276,7 +302,11 @@ export function ExportView({ scrollId, papers }: ExportViewProps) {
       } else {
         setThemedData(data as ThemedExport);
       }
-      toast.success(selectedMode === "literature-review" ? "Literature review generated!" : "AI summaries generated!");
+      toast.success(
+        selectedMode === "literature-review"
+          ? "Literature review generated!"
+          : "AI summaries generated!",
+      );
     } catch {
       toast.error("Failed to generate. Try again.");
     } finally {
@@ -339,7 +369,7 @@ export function ExportView({ scrollId, papers }: ExportViewProps) {
     <div className="px-3 py-4 sm:px-5 sm:py-6">
       {/* Mode selector — horizontal scroll on mobile, wrapped on desktop */}
       <div className="mb-5">
-        <div className="-mx-3 flex gap-1.5 overflow-x-auto px-3 pb-2 sm:-mx-0 sm:flex-wrap sm:px-0 sm:pb-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        <div className="-mx-3 flex gap-1.5 overflow-x-auto px-3 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] sm:-mx-0 sm:flex-wrap sm:px-0 sm:pb-0 [&::-webkit-scrollbar]:hidden">
           {MODES.map((m) => {
             const Icon = m.icon;
             const isActive = mode === m.value;
@@ -357,25 +387,41 @@ export function ExportView({ scrollId, papers }: ExportViewProps) {
                 <Icon
                   className={cn(
                     "h-3.5 w-3.5 shrink-0 transition-colors",
-                    isActive ? "text-primary-foreground" : "text-muted-foreground group-hover:text-foreground",
+                    isActive
+                      ? "text-primary-foreground"
+                      : "text-muted-foreground group-hover:text-foreground",
                   )}
                 />
-                <span className="text-[13px] font-medium whitespace-nowrap">{m.label}</span>
+                <span className="text-[13px] font-medium whitespace-nowrap">
+                  {m.label}
+                </span>
               </button>
             );
           })}
         </div>
-        <p className="text-muted-foreground mt-2.5 text-[13px]">{currentMode.desc}</p>
+        <p className="text-muted-foreground mt-2.5 text-[13px]">
+          {currentMode.desc}
+        </p>
       </div>
 
       {/* Generate AI button — prominent CTA when needed */}
       {needsGeneration && !generatingAI && (
         <button
-          onClick={() => handleGenerateAI(mode as "with-summaries" | "themed" | "literature-review")}
+          onClick={() =>
+            handleGenerateAI(
+              mode as "with-summaries" | "themed" | "literature-review",
+            )
+          }
           className="group bg-primary text-primary-foreground hover:bg-primary/90 mb-5 flex w-full items-center justify-center gap-2.5 rounded-xl px-5 py-3.5 text-[14px] font-semibold shadow-sm transition-all duration-200 active:scale-[0.98]"
         >
-          {mode === "literature-review" ? <BookOpen className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
-          {mode === "literature-review" ? "Generate Literature Review" : "Generate AI Summaries"}
+          {mode === "literature-review" ? (
+            <BookOpen className="h-4 w-4" />
+          ) : (
+            <Sparkles className="h-4 w-4" />
+          )}
+          {mode === "literature-review"
+            ? "Generate Literature Review"
+            : "Generate AI Summaries"}
           <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
         </button>
       )}
@@ -384,7 +430,9 @@ export function ExportView({ scrollId, papers }: ExportViewProps) {
         <div className="bg-muted/50 mb-5 flex items-center justify-center gap-2.5 rounded-xl px-5 py-4">
           <Loader2 className="text-primary h-4 w-4 animate-spin" />
           <span className="text-foreground text-[14px] font-medium">
-            {mode === "literature-review" ? "Generating literature review..." : "Generating AI summaries..."}
+            {mode === "literature-review"
+              ? "Generating literature review..."
+              : "Generating AI summaries..."}
           </span>
         </div>
       )}
@@ -423,7 +471,8 @@ export function ExportView({ scrollId, papers }: ExportViewProps) {
                     {paper.title}
                   </h2>
                   <p className="text-muted-foreground mt-1 text-[13px]">
-                    {paper.authors.join(", ") || "Unknown"} &middot; {paper.journal}, {paper.year}
+                    {paper.authors.join(", ") || "Unknown"} &middot;{" "}
+                    {paper.journal}, {paper.year}
                   </p>
                 </div>
               </div>
@@ -476,7 +525,11 @@ export function ExportView({ scrollId, papers }: ExportViewProps) {
                   </p>
                   {paper.doi && (
                     <a
-                      href={paper.doi.startsWith("http") ? paper.doi : `https://doi.org/${paper.doi}`}
+                      href={
+                        paper.doi.startsWith("http")
+                          ? paper.doi
+                          : `https://doi.org/${paper.doi}`
+                      }
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-primary inline-flex items-center gap-1.5 text-[13px] font-medium hover:underline"
@@ -526,7 +579,7 @@ export function ExportView({ scrollId, papers }: ExportViewProps) {
                           key={`${source.title}-${si}`}
                           className="border-border/60 bg-muted/30 rounded-xl border p-4"
                         >
-                          <p className="text-foreground text-[14px] font-semibold leading-snug">
+                          <p className="text-foreground text-[14px] leading-snug font-semibold">
                             {source.title}
                           </p>
                           <p className="text-muted-foreground mt-1 text-[13px]">
@@ -579,7 +632,7 @@ export function ExportView({ scrollId, papers }: ExportViewProps) {
                     >
                       <span
                         className={cn(
-                          "mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide",
+                          "mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold tracking-wide uppercase",
                           p.tier === "core"
                             ? "bg-primary/15 text-primary"
                             : p.tier === "supporting"
@@ -619,7 +672,7 @@ export function ExportView({ scrollId, papers }: ExportViewProps) {
                 <div key={i} className="flex items-start gap-2.5">
                   <span
                     className={cn(
-                      "mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide",
+                      "mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold tracking-wide uppercase",
                       ref.tier === "core"
                         ? "bg-primary/15 text-primary"
                         : ref.tier === "supporting"
@@ -640,19 +693,22 @@ export function ExportView({ scrollId, papers }: ExportViewProps) {
       )}
 
       {/* Research prompt — quiz then prompt */}
-      {mode === "research-prompt" && !quizCompleted && !promptData && !loadingPrompt && (
-        <ExportPromptQuiz
-          scrollId={scrollId}
-          onComplete={(answers) => {
-            setScopingAnswers(answers);
-            setQuizCompleted(true);
-          }}
-          onSkip={() => {
-            setScopingAnswers(null);
-            setQuizCompleted(true);
-          }}
-        />
-      )}
+      {mode === "research-prompt" &&
+        !quizCompleted &&
+        !promptData &&
+        !loadingPrompt && (
+          <ExportPromptQuiz
+            scrollId={scrollId}
+            onComplete={(answers) => {
+              setScopingAnswers(answers);
+              setQuizCompleted(true);
+            }}
+            onSkip={() => {
+              setScopingAnswers(null);
+              setQuizCompleted(true);
+            }}
+          />
+        )}
 
       {mode === "research-prompt" && loadingPrompt && (
         <div className="flex flex-col items-center justify-center px-4 py-12">
@@ -667,7 +723,9 @@ export function ExportView({ scrollId, papers }: ExportViewProps) {
         <div className="space-y-3">
           <div className="border-border/60 bg-muted/30 relative overflow-hidden rounded-xl border">
             <div className="border-border/60 flex items-center justify-between border-b px-4 py-2.5">
-              <span className="text-muted-foreground text-[12px] font-medium">Research Prompt</span>
+              <span className="text-muted-foreground text-[12px] font-medium">
+                Research Prompt
+              </span>
               <button
                 onClick={() => {
                   navigator.clipboard.writeText(promptData);
@@ -679,7 +737,7 @@ export function ExportView({ scrollId, papers }: ExportViewProps) {
                   "flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12px] font-medium transition-all",
                   promptCopied
                     ? "bg-primary/10 text-primary"
-                    : "bg-background text-muted-foreground border-border border hover:text-foreground",
+                    : "bg-background text-muted-foreground border-border hover:text-foreground border",
                 )}
               >
                 {promptCopied ? (

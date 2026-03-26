@@ -74,7 +74,9 @@ function extractJsonArrayCandidate(raw: string): unknown[] | null {
   return null;
 }
 
-export function extractJsonObjectCandidate(raw: string): Record<string, unknown> | null {
+export function extractJsonObjectCandidate(
+  raw: string,
+): Record<string, unknown> | null {
   const trimmed = raw.trim();
   const candidates: string[] = [];
 
@@ -789,7 +791,11 @@ RESPOND ONLY with valid JSON array, no markdown:
 
 // ─── Literature Review Generation ────────────────────────────────────────────
 
-import type { ScoredPaper, LitReviewExport, LitReviewSection } from "@/lib/types";
+import type {
+  ScoredPaper,
+  LitReviewExport,
+  LitReviewSection,
+} from "@/lib/types";
 
 interface ReviewOutlineTheme {
   title: string;
@@ -847,9 +853,18 @@ Rules:
   // Step 2: Generate introduction + per-theme sections + conclusion in parallel
   const corePapers = scoredPapers.filter((p) => p.tier === "core");
   const themeNames = themes.map((t) => t.title).join(", ");
-  const coreNames = corePapers.length > 0
-    ? corePapers.map((p) => `"${p.title}" (${p.authors[0]?.split(" ").pop() || "Unknown"}, ${p.year})`).join("; ")
-    : scoredPapers.slice(0, 3).map((p) => `"${p.title}"`).join("; ");
+  const coreNames =
+    corePapers.length > 0
+      ? corePapers
+          .map(
+            (p) =>
+              `"${p.title}" (${p.authors[0]?.split(" ").pop() || "Unknown"}, ${p.year})`,
+          )
+          .join("; ")
+      : scoredPapers
+          .slice(0, 3)
+          .map((p) => `"${p.title}"`)
+          .join("; ");
 
   // Introduction
   const introPromise = ollamaChat(
@@ -924,10 +939,7 @@ Depth rules based on paper tier:
   };
   const references = scoredPapers
     .slice()
-    .sort(
-      (a, b) =>
-        (tierOrder[a.tier] ?? 2) - (tierOrder[b.tier] ?? 2),
-    )
+    .sort((a, b) => (tierOrder[a.tier] ?? 2) - (tierOrder[b.tier] ?? 2))
     .map((p) => ({
       apaCitation: p.apaCitation,
       tier: p.tier,

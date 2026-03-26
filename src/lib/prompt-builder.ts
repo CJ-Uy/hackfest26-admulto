@@ -120,8 +120,10 @@ export async function buildResearchPrompt(
     : undefined;
 
   const outputAnswer = scopingAnswers
-    ? Object.entries(scopingAnswers).find(([q]) =>
-        q.toLowerCase().includes("output") || q.toLowerCase().includes("kind"),
+    ? Object.entries(scopingAnswers).find(
+        ([q]) =>
+          q.toLowerCase().includes("output") ||
+          q.toLowerCase().includes("kind"),
       )?.[1]
     : undefined;
 

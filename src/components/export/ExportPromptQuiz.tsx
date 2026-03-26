@@ -131,9 +131,7 @@ export function ExportPromptQuiz({
       <div className="flex flex-col items-center justify-center px-4 py-16">
         <Loader2 className="text-primary mb-3 h-6 w-6 animate-spin" />
         <p className="text-muted-foreground text-[14px]">
-          {generating
-            ? "Generating scoping questions..."
-            : "Loading..."}
+          {generating ? "Generating scoping questions..." : "Loading..."}
         </p>
       </div>
     );

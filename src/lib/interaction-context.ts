@@ -106,10 +106,7 @@ export async function gatherInteractionContext(
     .from(pollResponses)
     .innerJoin(polls, eq(pollResponses.pollId, polls.id))
     .where(
-      and(
-        eq(polls.scrollId, scrollId),
-        ne(polls.category, "export-prompt"),
-      ),
+      and(eq(polls.scrollId, scrollId), ne(polls.category, "export-prompt")),
     );
 
   // Get user posts
