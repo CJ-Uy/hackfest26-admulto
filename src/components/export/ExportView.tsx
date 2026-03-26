@@ -440,7 +440,7 @@ export function ExportView({ scrollId, papers }: ExportViewProps) {
 
           {summaryData.papers.map((paper, i) => (
             <div
-              key={paper.title}
+              key={`${paper.title}-${i}`}
               className={`py-4 ${i > 0 ? "border-border border-t" : ""}`}
             >
               <div className="mb-1 flex items-baseline gap-2">
@@ -506,7 +506,7 @@ export function ExportView({ scrollId, papers }: ExportViewProps) {
 
               {themes.map((theme, i) => (
                 <div
-                  key={theme.title}
+                  key={`${theme.title}-${i}`}
                   className={`py-4 ${i > 0 ? "border-border border-t" : ""}`}
                 >
                   <h2 className="font-heading text-foreground text-[15px] font-bold">
@@ -516,9 +516,9 @@ export function ExportView({ scrollId, papers }: ExportViewProps) {
                     {theme.summary}
                   </p>
                   <div className="mt-3 space-y-2">
-                    {theme.sources.map((source) => (
+                    {theme.sources.map((source, si) => (
                       <div
-                        key={source.title}
+                        key={`${source.title}-${si}`}
                         className="border-border min-w-0 rounded-md border p-3"
                       >
                         <p className="text-foreground text-[13px] font-semibold">
@@ -558,7 +558,7 @@ export function ExportView({ scrollId, papers }: ExportViewProps) {
           {/* Sections */}
           {litReviewData.sections.map((section, i) => (
             <div
-              key={section.title}
+              key={`${section.title}-${i}`}
               className={`py-4 ${i > 0 ? "border-border border-t" : ""}`}
             >
               <h2 className="font-heading text-foreground text-[15px] font-bold">
@@ -568,9 +568,9 @@ export function ExportView({ scrollId, papers }: ExportViewProps) {
                 {section.content}
               </p>
               <div className="mt-3 space-y-1.5">
-                {section.papers.map((p) => (
+                {section.papers.map((p, pi) => (
                   <div
-                    key={p.title}
+                    key={`${p.title}-${pi}`}
                     className="flex items-start gap-2"
                   >
                     <span
