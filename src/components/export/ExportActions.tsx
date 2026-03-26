@@ -4,6 +4,7 @@ import { useState } from "react";
 import {
   Copy,
   Download,
+  Check,
   FileText,
   BookOpen,
   Table,
@@ -70,6 +71,7 @@ interface ExportActionsProps {
 
 export function ExportActions({ text, papers }: ExportActionsProps) {
   const [format, setFormat] = useState<ExportFormat>("markdown");
+  const [copied, setCopied] = useState(false);
 
   function getContent(): string {
     switch (format) {
@@ -110,7 +112,9 @@ export function ExportActions({ text, papers }: ExportActionsProps) {
 
   function handleCopy() {
     navigator.clipboard.writeText(getContent());
+    setCopied(true);
     toast.success("Copied to clipboard");
+    setTimeout(() => setCopied(false), 2000);
   }
 
   function handleDownload() {
@@ -127,40 +131,49 @@ export function ExportActions({ text, papers }: ExportActionsProps) {
   return (
     <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
       {/* Format tabs */}
-      <div className="bg-subtle flex flex-wrap rounded-lg p-0.5">
+      <div className="bg-muted/60 flex rounded-lg p-1">
         {FORMATS.map((f) => {
           const Icon = f.icon;
+          const isActive = format === f.value;
           return (
             <button
               key={f.value}
               onClick={() => setFormat(f.value)}
               className={cn(
-                "flex items-center gap-1 rounded-md px-2.5 py-1 text-[11px] font-medium transition-all",
-                format === f.value
-                  ? "text-foreground bg-background shadow-sm"
+                "flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[12px] font-medium transition-all duration-150",
+                isActive
+                  ? "bg-background text-foreground shadow-sm"
                   : "text-muted-foreground hover:text-foreground",
               )}
             >
-              <Icon className="h-3 w-3" />
-              {f.label}
+              <Icon className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">{f.label}</span>
+              <span className="sm:hidden">{f.label.slice(0, 3)}</span>
             </button>
           );
         })}
       </div>
 
       {/* Actions */}
-      <div className="flex gap-1">
+      <div className="flex gap-1.5">
         <button
           onClick={handleCopy}
-          className="text-muted-foreground bg-subtle hover:bg-subtle-hover flex items-center gap-1 rounded-full px-3 py-1 text-[12px] font-semibold transition-colors"
+          className={cn(
+            "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-semibold transition-all duration-150",
+            copied
+              ? "bg-primary/10 text-primary"
+              : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground",
+          )}
         >
-          <Copy className="h-3.5 w-3.5" /> Copy
+          {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+          {copied ? "Copied" : "Copy"}
         </button>
         <button
           onClick={handleDownload}
-          className="text-muted-foreground bg-subtle hover:bg-subtle-hover flex items-center gap-1 rounded-full px-3 py-1 text-[12px] font-semibold transition-colors"
+          className="bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-semibold transition-all duration-150"
         >
-          <Download className="h-3.5 w-3.5" /> Download
+          <Download className="h-3.5 w-3.5" />
+          Download
         </button>
       </div>
     </div>

@@ -12,6 +12,8 @@ import {
   MessageSquareText,
   Copy,
   Check,
+  ChevronRight,
+  ArrowRight,
 } from "lucide-react";
 import { fetchScroll } from "@/lib/scroll-store";
 import { ExportActions } from "./ExportActions";
@@ -27,36 +29,42 @@ const MODES: {
   label: string;
   desc: string;
   icon: typeof List;
+  needsAI: boolean;
 }[] = [
   {
     value: "references",
-    label: "Reference List",
-    desc: "Simple numbered bibliography",
+    label: "References",
+    desc: "Numbered bibliography",
     icon: List,
+    needsAI: false,
   },
   {
     value: "with-summaries",
-    label: "With AI Summaries",
-    desc: "References + per-paper and overall AI summary",
+    label: "Summaries",
+    desc: "AI-enhanced references",
     icon: FileText,
+    needsAI: true,
   },
   {
     value: "themed",
-    label: "Themed & Grouped",
-    desc: "AI-organized by themes with section summaries",
+    label: "Themed",
+    desc: "Grouped by topic",
     icon: Layers,
+    needsAI: true,
   },
   {
     value: "literature-review",
-    label: "Literature Review",
-    desc: "AI-generated review weighted by your interactions",
+    label: "Lit Review",
+    desc: "Full review",
     icon: BookOpen,
+    needsAI: true,
   },
   {
     value: "research-prompt",
-    label: "Research Prompt",
-    desc: "Ready-to-paste prompt for your own AI assistant",
+    label: "Prompt",
+    desc: "For your AI",
     icon: MessageSquareText,
+    needsAI: false,
   },
 ];
 
@@ -278,17 +286,17 @@ export function ExportView({ scrollId, papers }: ExportViewProps) {
 
   if (loading) {
     return (
-      <div className="px-4 py-12 text-center">
-        <p className="text-muted-foreground text-[13px]">Loading...</p>
+      <div className="flex items-center justify-center px-4 py-16">
+        <Loader2 className="text-muted-foreground h-5 w-5 animate-spin" />
       </div>
     );
   }
 
   if (papers.length === 0) {
     return (
-      <div className="px-4 py-12 text-center">
-        <p className="text-muted-foreground text-[13px]">
-          No export data available yet.
+      <div className="px-4 py-16 text-center">
+        <p className="text-muted-foreground text-sm">
+          No papers available to export yet.
         </p>
       </div>
     );
@@ -325,66 +333,69 @@ export function ExportView({ scrollId, papers }: ExportViewProps) {
     (mode === "themed" && !themedData && outline.length === 0) ||
     (mode === "literature-review" && !litReviewData);
 
+  const currentMode = MODES.find((m) => m.value === mode)!;
+
   return (
-    <div className="px-4 py-4">
-      {/* Mode selector */}
-      <div className="mb-4 space-y-2">
-        {MODES.map((m) => {
-          const Icon = m.icon;
-          return (
-            <button
-              key={m.value}
-              onClick={() => setMode(m.value)}
-              className={cn(
-                "flex w-full items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors",
-                mode === m.value
-                  ? "border-primary bg-primary/5"
-                  : "border-border hover:border-primary/40",
-              )}
-            >
-              <Icon
+    <div className="px-3 py-4 sm:px-5 sm:py-6">
+      {/* Mode selector — horizontal scroll on mobile, wrapped on desktop */}
+      <div className="mb-5">
+        <div className="-mx-3 flex gap-1.5 overflow-x-auto px-3 pb-2 sm:-mx-0 sm:flex-wrap sm:px-0 sm:pb-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          {MODES.map((m) => {
+            const Icon = m.icon;
+            const isActive = mode === m.value;
+            return (
+              <button
+                key={m.value}
+                onClick={() => setMode(m.value)}
                 className={cn(
-                  "h-4 w-4 shrink-0",
-                  mode === m.value ? "text-primary" : "text-muted-foreground",
+                  "group relative flex shrink-0 items-center gap-2 rounded-full px-3.5 py-2 text-left transition-all duration-200",
+                  isActive
+                    ? "bg-primary text-primary-foreground shadow-md"
+                    : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground",
                 )}
-              />
-              <div>
-                <p className="text-sm font-medium">{m.label}</p>
-                <p className="text-muted-foreground text-xs">{m.desc}</p>
-              </div>
-            </button>
-          );
-        })}
+              >
+                <Icon
+                  className={cn(
+                    "h-3.5 w-3.5 shrink-0 transition-colors",
+                    isActive ? "text-primary-foreground" : "text-muted-foreground group-hover:text-foreground",
+                  )}
+                />
+                <span className="text-[13px] font-medium whitespace-nowrap">{m.label}</span>
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-muted-foreground mt-2.5 text-[13px]">{currentMode.desc}</p>
       </div>
 
-      {/* Generate AI summaries button (if needed) */}
-      {needsGeneration && (
+      {/* Generate AI button — prominent CTA when needed */}
+      {needsGeneration && !generatingAI && (
         <button
           onClick={() => handleGenerateAI(mode as "with-summaries" | "themed" | "literature-review")}
-          disabled={generatingAI}
-          className="text-primary hover:bg-primary/5 border-primary mb-4 flex w-full items-center justify-center gap-2 rounded-lg border px-4 py-3 text-sm font-semibold transition-colors disabled:opacity-50"
+          className="group bg-primary text-primary-foreground hover:bg-primary/90 mb-5 flex w-full items-center justify-center gap-2.5 rounded-xl px-5 py-3.5 text-[14px] font-semibold shadow-sm transition-all duration-200 active:scale-[0.98]"
         >
-          {generatingAI ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              {mode === "literature-review" ? "Generating literature review..." : "Generating AI summaries..."}
-            </>
-          ) : (
-            <>
-              {mode === "literature-review" ? <BookOpen className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
-              {mode === "literature-review" ? "Generate Literature Review" : "Generate AI Summaries"}
-            </>
-          )}
+          {mode === "literature-review" ? <BookOpen className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
+          {mode === "literature-review" ? "Generate Literature Review" : "Generate AI Summaries"}
+          <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
         </button>
       )}
 
-      {/* Export actions */}
-      <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-muted-foreground text-[12px]">
+      {generatingAI && (
+        <div className="bg-muted/50 mb-5 flex items-center justify-center gap-2.5 rounded-xl px-5 py-4">
+          <Loader2 className="text-primary h-4 w-4 animate-spin" />
+          <span className="text-foreground text-[14px] font-medium">
+            {mode === "literature-review" ? "Generating literature review..." : "Generating AI summaries..."}
+          </span>
+        </div>
+      )}
+
+      {/* Export actions bar */}
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-muted-foreground text-[13px]">
           {mode === "references"
             ? `${papers.length} papers collected`
             : mode === "research-prompt" && promptData
-              ? "Research prompt ready — copy and paste into your AI"
+              ? "Research prompt ready"
               : mode === "research-prompt" && loadingPrompt
                 ? "Building research prompt..."
                 : mode === "with-summaries" && summaryData
@@ -393,95 +404,91 @@ export function ExportView({ scrollId, papers }: ExportViewProps) {
                     ? "Behavior-aware literature review"
                     : mode === "themed" && (themedData || outline.length > 0)
                       ? "AI-organized research outline"
-                      : `${papers.length} papers — generate ${mode === "literature-review" ? "literature review" : "AI summaries"} above`}
+                      : `${papers.length} papers available`}
         </p>
         <ExportActions text={markdownText} papers={papers} />
       </div>
 
       {/* Content rendering */}
       {mode === "references" && (
-        <div className="space-y-0">
+        <div className="divide-border divide-y">
           {papers.map((paper, i) => (
-            <div
-              key={paper.id}
-              className={`py-4 ${i > 0 ? "border-border border-t" : ""}`}
-            >
-              <div className="mb-1 flex items-baseline gap-2">
-                <span className="text-primary text-[12px] font-bold">
+            <div key={paper.id} className="py-4 first:pt-0">
+              <div className="mb-1.5 flex items-start gap-3">
+                <span className="bg-muted text-muted-foreground mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold tabular-nums">
                   {i + 1}
                 </span>
-                <h2 className="font-heading text-foreground text-[14px] leading-snug font-bold">
-                  {paper.title}
-                </h2>
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-foreground text-[15px] leading-snug font-semibold">
+                    {paper.title}
+                  </h2>
+                  <p className="text-muted-foreground mt-1 text-[13px]">
+                    {paper.authors.join(", ") || "Unknown"} &middot; {paper.journal}, {paper.year}
+                  </p>
+                </div>
               </div>
-              <p className="text-muted-foreground text-[12px]">
-                {paper.authors.join(", ") || "Unknown"} &middot; {paper.journal}
-                , {paper.year}
-              </p>
-              <p className="text-muted-foreground bg-subtle mt-2 rounded px-2 py-1 font-mono text-[11px] break-all">
-                {paper.apaCitation}
-              </p>
+              <div className="ml-9">
+                <p className="text-muted-foreground border-border/60 bg-muted/40 rounded-lg border px-3 py-2 font-mono text-[12px] leading-relaxed break-all">
+                  {paper.apaCitation}
+                </p>
+              </div>
             </div>
           ))}
         </div>
       )}
 
       {mode === "with-summaries" && summaryData && (
-        <div className="space-y-0">
+        <div className="space-y-5">
           {/* Overall summary */}
-          <div className="border-primary/20 bg-primary/5 mb-4 rounded-lg border p-4">
-            <h3 className="text-foreground mb-1.5 text-[13px] font-bold">
+          <div className="border-primary/20 bg-primary/5 rounded-xl border-l-[3px] py-4 pr-4 pl-5">
+            <h3 className="text-foreground mb-2 text-[14px] font-bold tracking-tight">
               Overall Research Summary
             </h3>
-            <p className="text-foreground text-[13px] leading-relaxed">
+            <p className="text-foreground/85 text-[14px] leading-relaxed">
               {summaryData.overallSummary}
             </p>
           </div>
 
-          {summaryData.papers.map((paper, i) => (
-            <div
-              key={`${paper.title}-${i}`}
-              className={`py-4 ${i > 0 ? "border-border border-t" : ""}`}
-            >
-              <div className="mb-1 flex items-baseline gap-2">
-                <span className="text-primary text-[12px] font-bold">
-                  {i + 1}
-                </span>
-                <h2 className="font-heading text-foreground text-[14px] leading-snug font-bold">
-                  {paper.title}
-                </h2>
-              </div>
-              <p className="text-muted-foreground text-[12px]">
-                {paper.authors.join(", ") || "Unknown"} ({paper.year})
-              </p>
-              <div className="bg-primary/5 mt-2 rounded-md px-3 py-2">
-                <p className="text-foreground text-[12px] leading-relaxed">
-                  <span className="text-primary font-semibold">
-                    AI Summary:{" "}
+          <div className="divide-border divide-y">
+            {summaryData.papers.map((paper, i) => (
+              <div key={`${paper.title}-${i}`} className="py-4 first:pt-0">
+                <div className="mb-1.5 flex items-start gap-3">
+                  <span className="bg-muted text-muted-foreground mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold tabular-nums">
+                    {i + 1}
                   </span>
-                  {paper.aiSummary}
-                </p>
+                  <div className="min-w-0 flex-1">
+                    <h2 className="text-foreground text-[15px] leading-snug font-semibold">
+                      {paper.title}
+                    </h2>
+                    <p className="text-muted-foreground mt-1 text-[13px]">
+                      {paper.authors.join(", ") || "Unknown"} ({paper.year})
+                    </p>
+                  </div>
+                </div>
+                <div className="ml-9 space-y-2">
+                  <div className="bg-primary/5 rounded-lg px-3.5 py-2.5">
+                    <p className="text-foreground text-[13px] leading-relaxed">
+                      {paper.aiSummary}
+                    </p>
+                  </div>
+                  <p className="text-muted-foreground border-border/60 bg-muted/40 rounded-lg border px-3 py-2 font-mono text-[12px] leading-relaxed break-all">
+                    {paper.apaCitation}
+                  </p>
+                  {paper.doi && (
+                    <a
+                      href={paper.doi.startsWith("http") ? paper.doi : `https://doi.org/${paper.doi}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary inline-flex items-center gap-1.5 text-[13px] font-medium hover:underline"
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                      View Paper
+                    </a>
+                  )}
+                </div>
               </div>
-              <p className="text-muted-foreground bg-subtle mt-2 rounded px-2 py-1 font-mono text-[11px] break-all">
-                {paper.apaCitation}
-              </p>
-              {paper.doi && (
-                <a
-                  href={
-                    paper.doi.startsWith("http")
-                      ? paper.doi
-                      : `https://doi.org/${paper.doi}`
-                  }
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary mt-1 inline-flex items-center gap-1 text-[11px] hover:underline"
-                >
-                  <ExternalLink className="h-2.5 w-2.5" />
-                  View Paper
-                </a>
-              )}
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       )}
 
@@ -492,129 +499,127 @@ export function ExportView({ scrollId, papers }: ExportViewProps) {
           const overallSummary = themedData?.overallSummary;
 
           return (
-            <div className="space-y-0">
+            <div className="space-y-5">
               {overallSummary && (
-                <div className="border-primary/20 bg-primary/5 mb-4 rounded-lg border p-4">
-                  <h3 className="text-foreground mb-1.5 text-[13px] font-bold">
+                <div className="border-primary/20 bg-primary/5 rounded-xl border-l-[3px] py-4 pr-4 pl-5">
+                  <h3 className="text-foreground mb-2 text-[14px] font-bold tracking-tight">
                     Overall Research Summary
                   </h3>
-                  <p className="text-foreground text-[13px] leading-relaxed">
+                  <p className="text-foreground/85 text-[14px] leading-relaxed">
                     {overallSummary}
                   </p>
                 </div>
               )}
 
-              {themes.map((theme, i) => (
-                <div
-                  key={`${theme.title}-${i}`}
-                  className={`py-4 ${i > 0 ? "border-border border-t" : ""}`}
-                >
-                  <h2 className="font-heading text-foreground text-[15px] font-bold">
-                    {theme.title}
-                  </h2>
-                  <p className="text-muted-foreground mt-1.5 text-[13px] leading-relaxed">
-                    {theme.summary}
-                  </p>
-                  <div className="mt-3 space-y-2">
-                    {theme.sources.map((source, si) => (
-                      <div
-                        key={`${source.title}-${si}`}
-                        className="border-border min-w-0 rounded-md border p-3"
-                      >
-                        <p className="text-foreground text-[13px] font-semibold">
-                          {source.title}
-                        </p>
-                        <p className="text-muted-foreground mt-0.5 text-[12px]">
-                          {source.authors} ({source.year})
-                        </p>
-                        <p className="text-foreground mt-1.5 text-[13px]">
-                          {source.keyFinding}
-                        </p>
-                        <p className="text-muted-foreground bg-subtle mt-1.5 rounded px-2 py-1 font-mono text-[11px] break-all">
-                          {source.apaCitation}
-                        </p>
-                      </div>
-                    ))}
+              <div className="space-y-6">
+                {themes.map((theme, i) => (
+                  <div key={`${theme.title}-${i}`}>
+                    <h2 className="text-foreground mb-1.5 text-[16px] font-bold tracking-tight">
+                      {theme.title}
+                    </h2>
+                    <p className="text-muted-foreground mb-3 text-[14px] leading-relaxed">
+                      {theme.summary}
+                    </p>
+                    <div className="space-y-2.5">
+                      {theme.sources.map((source, si) => (
+                        <div
+                          key={`${source.title}-${si}`}
+                          className="border-border/60 bg-muted/30 rounded-xl border p-4"
+                        >
+                          <p className="text-foreground text-[14px] font-semibold leading-snug">
+                            {source.title}
+                          </p>
+                          <p className="text-muted-foreground mt-1 text-[13px]">
+                            {source.authors} ({source.year})
+                          </p>
+                          <p className="text-foreground/80 mt-2 text-[13px] leading-relaxed">
+                            {source.keyFinding}
+                          </p>
+                          <p className="text-muted-foreground border-border/60 bg-muted/40 mt-2.5 rounded-lg border px-3 py-2 font-mono text-[12px] break-all">
+                            {source.apaCitation}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           );
         })()}
 
       {/* Literature review rendering */}
       {mode === "literature-review" && litReviewData && (
-        <div className="space-y-0">
+        <div className="space-y-5">
           {/* Introduction */}
-          <div className="border-primary/20 bg-primary/5 rounded-lg border p-4">
-            <h3 className="text-foreground mb-1.5 text-[13px] font-bold">
+          <div className="border-primary/20 bg-primary/5 rounded-xl border-l-[3px] py-4 pr-4 pl-5">
+            <h3 className="text-foreground mb-2 text-[14px] font-bold tracking-tight">
               Introduction
             </h3>
-            <p className="text-foreground text-[13px] leading-relaxed">
+            <p className="text-foreground/85 text-[14px] leading-relaxed">
               {litReviewData.introduction}
             </p>
           </div>
 
           {/* Sections */}
-          {litReviewData.sections.map((section, i) => (
-            <div
-              key={`${section.title}-${i}`}
-              className={`py-4 ${i > 0 ? "border-border border-t" : ""}`}
-            >
-              <h2 className="font-heading text-foreground text-[15px] font-bold">
-                {section.title}
-              </h2>
-              <p className="text-foreground mt-1.5 text-[13px] leading-relaxed">
-                {section.content}
-              </p>
-              <div className="mt-3 space-y-1.5">
-                {section.papers.map((p, pi) => (
-                  <div
-                    key={`${p.title}-${pi}`}
-                    className="flex items-start gap-2"
-                  >
-                    <span
-                      className={cn(
-                        "mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase",
-                        p.tier === "core"
-                          ? "bg-primary/15 text-primary"
-                          : p.tier === "supporting"
-                            ? "bg-blue-500/15 text-blue-600 dark:text-blue-400"
-                            : "bg-muted text-muted-foreground",
-                      )}
+          <div className="space-y-6">
+            {litReviewData.sections.map((section, i) => (
+              <div key={`${section.title}-${i}`}>
+                <h2 className="text-foreground mb-1.5 text-[16px] font-bold tracking-tight">
+                  {section.title}
+                </h2>
+                <p className="text-foreground/85 mb-3 text-[14px] leading-relaxed">
+                  {section.content}
+                </p>
+                <div className="space-y-1.5">
+                  {section.papers.map((p, pi) => (
+                    <div
+                      key={`${p.title}-${pi}`}
+                      className="flex items-start gap-2.5"
                     >
-                      {p.tier}
-                    </span>
-                    <p className="text-muted-foreground font-mono text-[11px] break-all">
-                      {p.apaCitation}
-                    </p>
-                  </div>
-                ))}
+                      <span
+                        className={cn(
+                          "mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide",
+                          p.tier === "core"
+                            ? "bg-primary/15 text-primary"
+                            : p.tier === "supporting"
+                              ? "bg-blue-500/15 text-blue-600 dark:text-blue-400"
+                              : "bg-muted text-muted-foreground",
+                        )}
+                      >
+                        {p.tier}
+                      </span>
+                      <p className="text-muted-foreground font-mono text-[12px] leading-relaxed break-all">
+                        {p.apaCitation}
+                      </p>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
 
           {/* Conclusion */}
-          <div className="border-border border-t py-4">
-            <h3 className="text-foreground mb-1.5 text-[13px] font-bold">
+          <div className="border-border border-t pt-5">
+            <h3 className="text-foreground mb-2 text-[14px] font-bold tracking-tight">
               Conclusion
             </h3>
-            <p className="text-foreground text-[13px] leading-relaxed">
+            <p className="text-foreground/85 text-[14px] leading-relaxed">
               {litReviewData.conclusion}
             </p>
           </div>
 
           {/* References */}
-          <div className="border-border border-t py-4">
-            <h3 className="text-foreground mb-2 text-[13px] font-bold">
+          <div className="border-border border-t pt-5">
+            <h3 className="text-foreground mb-3 text-[14px] font-bold tracking-tight">
               References
             </h3>
             <div className="space-y-1.5">
               {litReviewData.references.map((ref, i) => (
-                <div key={i} className="flex items-start gap-2">
+                <div key={i} className="flex items-start gap-2.5">
                   <span
                     className={cn(
-                      "mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase",
+                      "mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide",
                       ref.tier === "core"
                         ? "bg-primary/15 text-primary"
                         : ref.tier === "supporting"
@@ -624,7 +629,7 @@ export function ExportView({ scrollId, papers }: ExportViewProps) {
                   >
                     {ref.tier}
                   </span>
-                  <p className="text-muted-foreground font-mono text-[11px] break-all">
+                  <p className="text-muted-foreground font-mono text-[12px] leading-relaxed break-all">
                     {ref.apaCitation}
                   </p>
                 </div>
@@ -650,9 +655,9 @@ export function ExportView({ scrollId, papers }: ExportViewProps) {
       )}
 
       {mode === "research-prompt" && loadingPrompt && (
-        <div className="px-4 py-8 text-center">
-          <Loader2 className="text-muted-foreground mx-auto mb-2 h-8 w-8 animate-spin" />
-          <p className="text-muted-foreground text-sm">
+        <div className="flex flex-col items-center justify-center px-4 py-12">
+          <Loader2 className="text-primary mb-3 h-6 w-6 animate-spin" />
+          <p className="text-muted-foreground text-[14px]">
             Building your research prompt...
           </p>
         </div>
@@ -660,23 +665,37 @@ export function ExportView({ scrollId, papers }: ExportViewProps) {
 
       {mode === "research-prompt" && promptData && !loadingPrompt && (
         <div className="space-y-3">
-          <div className="border-border bg-subtle relative rounded-lg border p-4">
-            <button
-              onClick={() => {
-                navigator.clipboard.writeText(promptData);
-                setPromptCopied(true);
-                toast.success("Prompt copied to clipboard!");
-                setTimeout(() => setPromptCopied(false), 2000);
-              }}
-              className="bg-background border-border hover:bg-muted absolute right-2 top-2 rounded-md border p-1.5 transition-colors"
-            >
-              {promptCopied ? (
-                <Check className="text-primary h-4 w-4" />
-              ) : (
-                <Copy className="text-muted-foreground h-4 w-4" />
-              )}
-            </button>
-            <pre className="text-foreground whitespace-pre-wrap text-[13px] leading-relaxed">
+          <div className="border-border/60 bg-muted/30 relative overflow-hidden rounded-xl border">
+            <div className="border-border/60 flex items-center justify-between border-b px-4 py-2.5">
+              <span className="text-muted-foreground text-[12px] font-medium">Research Prompt</span>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(promptData);
+                  setPromptCopied(true);
+                  toast.success("Prompt copied to clipboard!");
+                  setTimeout(() => setPromptCopied(false), 2000);
+                }}
+                className={cn(
+                  "flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12px] font-medium transition-all",
+                  promptCopied
+                    ? "bg-primary/10 text-primary"
+                    : "bg-background text-muted-foreground border-border border hover:text-foreground",
+                )}
+              >
+                {promptCopied ? (
+                  <>
+                    <Check className="h-3.5 w-3.5" />
+                    Copied
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-3.5 w-3.5" />
+                    Copy
+                  </>
+                )}
+              </button>
+            </div>
+            <pre className="text-foreground overflow-x-auto p-4 text-[13px] leading-relaxed whitespace-pre-wrap sm:p-5">
               {promptData}
             </pre>
           </div>
@@ -686,28 +705,31 @@ export function ExportView({ scrollId, papers }: ExportViewProps) {
               setPromptData(null);
               setScopingAnswers(null);
             }}
-            className="text-muted-foreground hover:text-foreground text-[12px] transition-colors"
+            className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-[13px] transition-colors"
           >
+            <ChevronRight className="h-3.5 w-3.5 rotate-180" />
             Re-scope prompt
           </button>
         </div>
       )}
 
-      {/* Show prompt to generate if AI mode selected but no data */}
+      {/* Empty state for AI modes */}
       {((mode === "with-summaries" && !summaryData) ||
         (mode === "themed" && !themedData && outline.length === 0) ||
         (mode === "literature-review" && !litReviewData)) &&
         !generatingAI && (
-          <div className="px-4 py-8 text-center">
-            {mode === "literature-review" ? (
-              <BookOpen className="text-muted-foreground mx-auto mb-2 h-8 w-8" />
-            ) : (
-              <Sparkles className="text-muted-foreground mx-auto mb-2 h-8 w-8" />
-            )}
-            <p className="text-muted-foreground text-sm">
+          <div className="flex flex-col items-center justify-center px-4 py-12 text-center">
+            <div className="bg-muted/60 mb-3 flex h-12 w-12 items-center justify-center rounded-full">
+              {mode === "literature-review" ? (
+                <BookOpen className="text-muted-foreground h-5 w-5" />
+              ) : (
+                <Sparkles className="text-muted-foreground h-5 w-5" />
+              )}
+            </div>
+            <p className="text-muted-foreground max-w-[240px] text-[14px] leading-relaxed">
               {mode === "literature-review"
-                ? <>Click &ldquo;Generate Literature Review&rdquo; above to create a behavior-aware review.</>
-                : <>Click &ldquo;Generate AI Summaries&rdquo; above to create this export.</>}
+                ? "Generate a behavior-aware literature review from your papers."
+                : "Generate AI summaries to create this export."}
             </p>
           </div>
         )}
