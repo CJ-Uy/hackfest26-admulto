@@ -33,7 +33,7 @@
   "r2_buckets": [
     {
       "binding": "OBJECT_STORAGE",
-      "bucket_name": "schrollar-pdfs",
+      "bucket_name": "schrollar",
     },
   ],
   "ai": {
