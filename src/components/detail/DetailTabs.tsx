@@ -548,8 +548,8 @@ export function DetailTabs({
     <div>
       {/* AI-generated "reactions" from other papers */}
       {generated.length > 0 && (
-        <div className="mb-4">
-          <div className="border-border/60 mb-3 rounded-lg border p-3 md:mb-2 md:rounded-none md:border-0 md:p-0">
+        <div className="mb-2">
+          <div className="flex items-center justify-between py-2">
             <h3 className="text-foreground flex items-center gap-2 text-[15px] font-bold">
               <Bot className="text-muted-foreground h-4 w-4" />
               What other researchers say ({generated.length})
@@ -558,7 +558,7 @@ export function DetailTabs({
               <button
                 onClick={handleGenerateComments}
                 disabled={generatingComments}
-                className="text-muted-foreground hover:text-primary bg-subtle hover:bg-subtle-hover mt-2 flex w-full items-center justify-center gap-1.5 rounded-full px-3 py-2 text-[13px] font-semibold transition-colors disabled:opacity-50 md:mt-0 md:ml-auto md:w-auto md:justify-start md:py-1.5 md:text-[12px]"
+                className="text-muted-foreground hover:text-primary hover:bg-subtle flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-semibold transition-colors disabled:opacity-50"
               >
                 <Sparkles
                   className={`h-3.5 w-3.5 ${generatingComments ? "animate-spin" : ""}`}
@@ -572,8 +572,11 @@ export function DetailTabs({
         </div>
       )}
 
+      {/* Separator between AI comments and user comments */}
+      {generated.length > 0 && <div className="border-border border-b mb-2" />}
+
       {/* User comments */}
-      <h3 className="text-foreground mb-2 text-[15px] font-bold">
+      <h3 className="text-foreground mb-2 pt-1 text-[15px] font-bold">
         Comments ({userComments.length})
       </h3>
 

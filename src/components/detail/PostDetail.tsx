@@ -37,23 +37,20 @@ export function PostDetail({
     : `https://doi.org/${paper.doi}`;
 
   return (
-    <div className="mx-auto max-w-[780px] px-4 pt-8 pb-4 md:pt-4">
+    <div>
       {/* Back */}
-      <div className="bg-background border-border sticky top-4 z-30 -mx-4 mb-3 border-b px-4 pt-2 pb-2 md:mx-0 md:pt-2">
-        <div className="bg-background pointer-events-none absolute -top-4 right-0 left-0 h-4" />
-        <div className="relative">
-          <button
-            onClick={() => router.push(`/schroll/${scrollId}`)}
-            className="text-muted-foreground hover:text-foreground mb-0.5 flex items-center gap-1.5 text-[15px] font-semibold transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to feed
-          </button>
-        </div>
+      <div className="bg-background border-border sticky top-14 z-30 border-b px-4 pt-2 pb-2">
+        <button
+          onClick={() => router.push(`/schroll/${scrollId}`)}
+          className="text-muted-foreground hover:text-foreground mb-0.5 flex items-center gap-1.5 text-[15px] font-semibold transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to feed
+        </button>
       </div>
 
-      {/* Paper card — matching feed card style */}
-      <div className="border-border border-b px-1 pb-3">
+      {/* Paper card — matching feed card style (same px-4 py-3 as PaperCard) */}
+      <div className="border-border border-b px-4 py-3">
         {/* Author row */}
         <div className="mb-2 flex items-center gap-2.5">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[13px] font-bold text-white" style={{ backgroundColor: getAvatarColor(paper.authors[0] || "U") }}>
@@ -107,7 +104,7 @@ export function PostDetail({
       </div>
 
       {/* Comments — includes reply input at bottom */}
-      <div className="mt-4">
+      <div className="px-4 py-3">
         <DetailTabs
           paperId={paper.id}
           scrollId={scrollId}
