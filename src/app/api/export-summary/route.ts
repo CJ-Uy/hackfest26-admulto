@@ -6,12 +6,14 @@ import {
   generateOverallSummary,
   generatePerPaperSummary,
   generateThemedExport,
+  generateLiteratureReview,
 } from "@/lib/ollama";
+import { computeEngagementScores } from "@/lib/engagement-scoring";
 
 export async function POST(req: NextRequest) {
   const { scrollId, mode } = (await req.json()) as {
     scrollId: string;
-    mode: "with-summaries" | "themed";
+    mode: "with-summaries" | "themed" | "literature-review";
   };
 
   if (!scrollId || !mode) {
@@ -56,6 +58,11 @@ export async function POST(req: NextRequest) {
           aiSummary: perPaperSummaries[i],
         })),
       });
+    } else if (mode === "literature-review") {
+      // Mode 4: Behavior-aware literature review
+      const scoredPapers = await computeEngagementScores(scrollId);
+      const litReview = await generateLiteratureReview(scoredPapers);
+      return NextResponse.json(litReview);
     } else {
       // Mode 3: Themed grouping with summaries
       const raw = await generateThemedExport(papersData);

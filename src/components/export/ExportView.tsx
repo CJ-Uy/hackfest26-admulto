@@ -8,14 +8,18 @@ import {
   Layers,
   Sparkles,
   ExternalLink,
+  BookOpen,
+  MessageSquareText,
+  Copy,
+  Check,
 } from "lucide-react";
 import { fetchScroll } from "@/lib/scroll-store";
 import { ExportActions } from "./ExportActions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import type { ExportTheme, Paper } from "@/lib/types";
+import type { ExportTheme, Paper, LitReviewExport, PaperTier } from "@/lib/types";
 
-type ExportMode = "references" | "with-summaries" | "themed";
+type ExportMode = "references" | "with-summaries" | "themed" | "literature-review" | "research-prompt";
 
 const MODES: {
   value: ExportMode;
@@ -40,6 +44,18 @@ const MODES: {
     label: "Themed & Grouped",
     desc: "AI-organized by themes with section summaries",
     icon: Layers,
+  },
+  {
+    value: "literature-review",
+    label: "Literature Review",
+    desc: "AI-generated review weighted by your interactions",
+    icon: BookOpen,
+  },
+  {
+    value: "research-prompt",
+    label: "Research Prompt",
+    desc: "Ready-to-paste prompt for your own AI assistant",
+    icon: MessageSquareText,
   },
 ];
 
@@ -111,6 +127,38 @@ function generateMarkdownWithSummaries(
   return lines.join("\n");
 }
 
+const TIER_LABELS: Record<PaperTier, string> = {
+  core: "Core",
+  supporting: "Supporting",
+  peripheral: "Peripheral",
+};
+
+function generateMarkdownLitReview(data: LitReviewExport): string {
+  const lines: string[] = ["# Literature Review\n"];
+  lines.push(`## Introduction\n\n${data.introduction}\n`);
+  lines.push("---\n");
+  data.sections.forEach((section) => {
+    lines.push(`## ${section.title}\n`);
+    lines.push(`${section.content}\n`);
+    if (section.papers.length > 0) {
+      lines.push("**Sources:**\n");
+      section.papers.forEach((p) => {
+        lines.push(`- [${TIER_LABELS[p.tier]}] ${p.apaCitation}`);
+      });
+      lines.push("");
+    }
+    lines.push("---\n");
+  });
+  lines.push(`## Conclusion\n\n${data.conclusion}\n`);
+  lines.push("---\n");
+  lines.push("## References\n");
+  data.references.forEach((r) => {
+    lines.push(`- [${TIER_LABELS[r.tier]}] ${r.apaCitation}`);
+  });
+  lines.push("");
+  return lines.join("\n");
+}
+
 function generateMarkdownThemed(data: ThemedExport): string {
   const lines: string[] = ["# Research Summary\n"];
   lines.push(`## Overall Summary\n\n${data.overallSummary}\n`);
@@ -146,6 +194,10 @@ export function ExportView({ scrollId, papers }: ExportViewProps) {
     papers: SummarizedPaper[];
   } | null>(null);
   const [themedData, setThemedData] = useState<ThemedExport | null>(null);
+  const [litReviewData, setLitReviewData] = useState<LitReviewExport | null>(null);
+  const [promptData, setPromptData] = useState<string | null>(null);
+  const [loadingPrompt, setLoadingPrompt] = useState(false);
+  const [promptCopied, setPromptCopied] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -163,7 +215,36 @@ export function ExportView({ scrollId, papers }: ExportViewProps) {
     };
   }, [scrollId]);
 
-  async function handleGenerateAI(selectedMode: "with-summaries" | "themed") {
+  // Auto-fetch research prompt when mode is selected
+  useEffect(() => {
+    if (mode !== "research-prompt" || promptData || loadingPrompt) return;
+    let cancelled = false;
+    setLoadingPrompt(true);
+    fetch("/api/export-prompt", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ scrollId }),
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed");
+        return res.json();
+      })
+      .then((data) => {
+        if (!cancelled) setPromptData((data as { prompt: string }).prompt);
+      })
+      .catch(() => {
+        if (!cancelled) toast.error("Failed to generate research prompt.");
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingPrompt(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, scrollId, promptData]);
+
+  async function handleGenerateAI(selectedMode: "with-summaries" | "themed" | "literature-review") {
     if (generatingAI) return;
     setGeneratingAI(true);
 
@@ -179,12 +260,14 @@ export function ExportView({ scrollId, papers }: ExportViewProps) {
 
       if (selectedMode === "with-summaries") {
         setSummaryData(data as typeof summaryData);
+      } else if (selectedMode === "literature-review") {
+        setLitReviewData(data as LitReviewExport);
       } else {
         setThemedData(data as ThemedExport);
       }
-      toast.success("AI summaries generated!");
+      toast.success(selectedMode === "literature-review" ? "Literature review generated!" : "AI summaries generated!");
     } catch {
-      toast.error("Failed to generate summaries. Try again.");
+      toast.error("Failed to generate. Try again.");
     } finally {
       setGeneratingAI(false);
     }
@@ -215,6 +298,10 @@ export function ExportView({ scrollId, papers }: ExportViewProps) {
       summaryData.overallSummary,
       summaryData.papers,
     );
+  } else if (mode === "literature-review" && litReviewData) {
+    markdownText = generateMarkdownLitReview(litReviewData);
+  } else if (mode === "research-prompt" && promptData) {
+    markdownText = promptData;
   } else if (mode === "themed" && themedData) {
     markdownText = generateMarkdownThemed(themedData);
   } else if (mode === "themed" && outline.length > 0) {
@@ -232,7 +319,8 @@ export function ExportView({ scrollId, papers }: ExportViewProps) {
 
   const needsGeneration =
     (mode === "with-summaries" && !summaryData) ||
-    (mode === "themed" && !themedData && outline.length === 0);
+    (mode === "themed" && !themedData && outline.length === 0) ||
+    (mode === "literature-review" && !litReviewData);
 
   return (
     <div className="px-4 py-4">
@@ -269,19 +357,19 @@ export function ExportView({ scrollId, papers }: ExportViewProps) {
       {/* Generate AI summaries button (if needed) */}
       {needsGeneration && (
         <button
-          onClick={() => handleGenerateAI(mode as "with-summaries" | "themed")}
+          onClick={() => handleGenerateAI(mode as "with-summaries" | "themed" | "literature-review")}
           disabled={generatingAI}
           className="text-primary hover:bg-primary/5 border-primary mb-4 flex w-full items-center justify-center gap-2 rounded-lg border px-4 py-3 text-sm font-semibold transition-colors disabled:opacity-50"
         >
           {generatingAI ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
-              Generating AI summaries...
+              {mode === "literature-review" ? "Generating literature review..." : "Generating AI summaries..."}
             </>
           ) : (
             <>
-              <Sparkles className="h-4 w-4" />
-              Generate AI Summaries
+              {mode === "literature-review" ? <BookOpen className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
+              {mode === "literature-review" ? "Generate Literature Review" : "Generate AI Summaries"}
             </>
           )}
         </button>
@@ -292,11 +380,17 @@ export function ExportView({ scrollId, papers }: ExportViewProps) {
         <p className="text-muted-foreground text-[12px]">
           {mode === "references"
             ? `${papers.length} papers collected`
-            : mode === "with-summaries" && summaryData
-              ? "AI-enhanced reference list"
-              : mode === "themed" && (themedData || outline.length > 0)
-                ? "AI-organized research outline"
-                : `${papers.length} papers — generate AI summaries above`}
+            : mode === "research-prompt" && promptData
+              ? "Research prompt ready — copy and paste into your AI"
+              : mode === "research-prompt" && loadingPrompt
+                ? "Building research prompt..."
+                : mode === "with-summaries" && summaryData
+                  ? "AI-enhanced reference list"
+                  : mode === "literature-review" && litReviewData
+                    ? "Behavior-aware literature review"
+                    : mode === "themed" && (themedData || outline.length > 0)
+                      ? "AI-organized research outline"
+                      : `${papers.length} papers — generate ${mode === "literature-review" ? "literature review" : "AI summaries"} above`}
         </p>
         <ExportActions text={markdownText} papers={papers} />
       </div>
@@ -445,15 +539,148 @@ export function ExportView({ scrollId, papers }: ExportViewProps) {
           );
         })()}
 
+      {/* Literature review rendering */}
+      {mode === "literature-review" && litReviewData && (
+        <div className="space-y-0">
+          {/* Introduction */}
+          <div className="border-primary/20 bg-primary/5 rounded-lg border p-4">
+            <h3 className="text-foreground mb-1.5 text-[13px] font-bold">
+              Introduction
+            </h3>
+            <p className="text-foreground text-[13px] leading-relaxed">
+              {litReviewData.introduction}
+            </p>
+          </div>
+
+          {/* Sections */}
+          {litReviewData.sections.map((section, i) => (
+            <div
+              key={section.title}
+              className={`py-4 ${i > 0 ? "border-border border-t" : ""}`}
+            >
+              <h2 className="font-heading text-foreground text-[15px] font-bold">
+                {section.title}
+              </h2>
+              <p className="text-foreground mt-1.5 text-[13px] leading-relaxed">
+                {section.content}
+              </p>
+              <div className="mt-3 space-y-1.5">
+                {section.papers.map((p) => (
+                  <div
+                    key={p.title}
+                    className="flex items-start gap-2"
+                  >
+                    <span
+                      className={cn(
+                        "mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase",
+                        p.tier === "core"
+                          ? "bg-primary/15 text-primary"
+                          : p.tier === "supporting"
+                            ? "bg-blue-500/15 text-blue-600 dark:text-blue-400"
+                            : "bg-muted text-muted-foreground",
+                      )}
+                    >
+                      {p.tier}
+                    </span>
+                    <p className="text-muted-foreground font-mono text-[11px] break-all">
+                      {p.apaCitation}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+
+          {/* Conclusion */}
+          <div className="border-border border-t py-4">
+            <h3 className="text-foreground mb-1.5 text-[13px] font-bold">
+              Conclusion
+            </h3>
+            <p className="text-foreground text-[13px] leading-relaxed">
+              {litReviewData.conclusion}
+            </p>
+          </div>
+
+          {/* References */}
+          <div className="border-border border-t py-4">
+            <h3 className="text-foreground mb-2 text-[13px] font-bold">
+              References
+            </h3>
+            <div className="space-y-1.5">
+              {litReviewData.references.map((ref, i) => (
+                <div key={i} className="flex items-start gap-2">
+                  <span
+                    className={cn(
+                      "mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase",
+                      ref.tier === "core"
+                        ? "bg-primary/15 text-primary"
+                        : ref.tier === "supporting"
+                          ? "bg-blue-500/15 text-blue-600 dark:text-blue-400"
+                          : "bg-muted text-muted-foreground",
+                    )}
+                  >
+                    {ref.tier}
+                  </span>
+                  <p className="text-muted-foreground font-mono text-[11px] break-all">
+                    {ref.apaCitation}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Research prompt rendering */}
+      {mode === "research-prompt" && loadingPrompt && (
+        <div className="px-4 py-8 text-center">
+          <Loader2 className="text-muted-foreground mx-auto mb-2 h-8 w-8 animate-spin" />
+          <p className="text-muted-foreground text-sm">
+            Building your research prompt...
+          </p>
+        </div>
+      )}
+
+      {mode === "research-prompt" && promptData && !loadingPrompt && (
+        <div className="space-y-3">
+          <div className="border-border bg-subtle relative rounded-lg border p-4">
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(promptData);
+                setPromptCopied(true);
+                toast.success("Prompt copied to clipboard!");
+                setTimeout(() => setPromptCopied(false), 2000);
+              }}
+              className="bg-background border-border hover:bg-muted absolute right-2 top-2 rounded-md border p-1.5 transition-colors"
+            >
+              {promptCopied ? (
+                <Check className="text-primary h-4 w-4" />
+              ) : (
+                <Copy className="text-muted-foreground h-4 w-4" />
+              )}
+            </button>
+            <pre className="text-foreground whitespace-pre-wrap text-[13px] leading-relaxed">
+              {promptData}
+            </pre>
+          </div>
+        </div>
+      )}
+
       {/* Show prompt to generate if AI mode selected but no data */}
       {((mode === "with-summaries" && !summaryData) ||
-        (mode === "themed" && !themedData && outline.length === 0)) &&
+        (mode === "themed" && !themedData && outline.length === 0) ||
+        (mode === "literature-review" && !litReviewData)) &&
         !generatingAI && (
           <div className="px-4 py-8 text-center">
-            <Sparkles className="text-muted-foreground mx-auto mb-2 h-8 w-8" />
+            {mode === "literature-review" ? (
+              <BookOpen className="text-muted-foreground mx-auto mb-2 h-8 w-8" />
+            ) : (
+              <Sparkles className="text-muted-foreground mx-auto mb-2 h-8 w-8" />
+            )}
             <p className="text-muted-foreground text-sm">
-              Click &ldquo;Generate AI Summaries&rdquo; above to create this
-              export.
+              {mode === "literature-review"
+                ? <>Click &ldquo;Generate Literature Review&rdquo; above to create a behavior-aware review.</>
+                : <>Click &ldquo;Generate AI Summaries&rdquo; above to create this export.</>}
             </p>
           </div>
         )}

@@ -663,3 +663,157 @@ RESPOND ONLY with valid JSON array, no markdown:
     return [];
   }
 }
+
+// ─── Literature Review Generation ────────────────────────────────────────────
+
+import type { ScoredPaper, LitReviewExport, LitReviewSection } from "@/lib/types";
+
+interface ReviewOutlineTheme {
+  title: string;
+  paperIndices: number[];
+}
+
+/**
+ * Generate a structured literature review via multi-call pipeline.
+ * Narrative depth per paper is proportional to its engagement tier.
+ */
+export async function generateLiteratureReview(
+  scoredPapers: ScoredPaper[],
+): Promise<LitReviewExport> {
+  // Step 1: Generate outline — group papers into 2-4 themes
+  const paperList = scoredPapers
+    .map(
+      (p, i) =>
+        `[${i}] "${p.title}" (${p.year}) [${p.tier.toUpperCase()}] — ${p.synthesis}`,
+    )
+    .join("\n");
+
+  const outlineRaw = await ollamaChat(
+    `You group research papers into thematic categories. RESPOND ONLY with valid JSON, no markdown:
+{"themes":[{"title":"Theme Name","paperIndices":[0,1]}]}
+
+Rules:
+- Create 2-4 themes
+- Every paper index must appear in exactly one theme
+- Theme titles should be concise (3-6 words)`,
+    `Group these papers into themes:\n\n${paperList}`,
+    SMART_MODEL,
+  );
+
+  let themes: ReviewOutlineTheme[];
+  try {
+    const jsonMatch = outlineRaw.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error("No JSON found");
+    const parsed = JSON.parse(jsonMatch[0]) as {
+      themes: ReviewOutlineTheme[];
+    };
+    themes = parsed.themes;
+    if (!Array.isArray(themes) || themes.length === 0) {
+      throw new Error("Empty themes");
+    }
+  } catch {
+    // Fallback: single theme with all papers
+    themes = [
+      {
+        title: "Research Overview",
+        paperIndices: scoredPapers.map((_, i) => i),
+      },
+    ];
+  }
+
+  // Step 2: Generate introduction + per-theme sections + conclusion in parallel
+  const corePapers = scoredPapers.filter((p) => p.tier === "core");
+  const themeNames = themes.map((t) => t.title).join(", ");
+  const coreNames = corePapers.length > 0
+    ? corePapers.map((p) => `"${p.title}" (${p.authors[0]?.split(" ").pop() || "Unknown"}, ${p.year})`).join("; ")
+    : scoredPapers.slice(0, 3).map((p) => `"${p.title}"`).join("; ");
+
+  // Introduction
+  const introPromise = ollamaChat(
+    "You write academic literature review introductions. Output ONLY the paragraph text, no markdown headers. Do NOT invent facts.",
+    `Write a 3-4 sentence introduction for a literature review. The review covers these themes: ${themeNames}. Key studies include: ${coreNames}.\n\nIntroduction:`,
+    SMART_MODEL,
+  );
+
+  // Per-theme sections (parallel)
+  const sectionPromises = themes.map((theme) => {
+    const themePapers = theme.paperIndices
+      .filter((i) => i >= 0 && i < scoredPapers.length)
+      .map((i) => scoredPapers[i]);
+
+    if (themePapers.length === 0) {
+      return Promise.resolve({
+        title: theme.title,
+        content: "",
+        papers: [] as LitReviewSection["papers"],
+      });
+    }
+
+    const papersDesc = themePapers
+      .map((p) => {
+        const authorLast = p.authors[0]?.split(" ").pop() || "Unknown";
+        return `- "${p.title}" (${authorLast}, ${p.year}) [${p.tier.toUpperCase()}]: ${p.synthesis}`;
+      })
+      .join("\n");
+
+    return ollamaChat(
+      `You write academic literature review sections. Output ONLY prose text with in-text citations (Author, Year). No markdown headers.
+
+Depth rules based on paper tier:
+- CORE papers: Discuss methodology and key findings in detail (2-3 sentences each)
+- SUPPORTING papers: Mention as corroborating or contrasting evidence (1 sentence each)
+- PERIPHERAL papers: Cite parenthetically without detailed discussion`,
+      `Write a literature review section titled "${theme.title}" discussing these papers:\n\n${papersDesc}\n\nSection text:`,
+      SMART_MODEL,
+    ).then((content) => ({
+      title: theme.title,
+      content,
+      papers: themePapers.map((p) => ({
+        title: p.title,
+        tier: p.tier,
+        apaCitation: p.apaCitation,
+      })),
+    }));
+  });
+
+  // Conclusion
+  const conclusionPromise = ollamaChat(
+    "You write academic literature review conclusions. Output ONLY the paragraph text, no markdown headers. Do NOT invent facts.",
+    `Write a 2-3 sentence conclusion for a literature review covering: ${themeNames}. Key findings come from: ${coreNames}. Synthesize the main takeaways and identify gaps or future directions.\n\nConclusion:`,
+    SMART_MODEL,
+  );
+
+  // Await all in parallel
+  const [introduction, ...rest] = await Promise.all([
+    introPromise,
+    ...sectionPromises,
+    conclusionPromise,
+  ]);
+
+  const conclusion = rest.pop() as string;
+  const sections = rest as LitReviewSection[];
+
+  // Build references list sorted by tier (core first)
+  const tierOrder: Record<string, number> = {
+    core: 0,
+    supporting: 1,
+    peripheral: 2,
+  };
+  const references = scoredPapers
+    .slice()
+    .sort(
+      (a, b) =>
+        (tierOrder[a.tier] ?? 2) - (tierOrder[b.tier] ?? 2),
+    )
+    .map((p) => ({
+      apaCitation: p.apaCitation,
+      tier: p.tier,
+    }));
+
+  return {
+    introduction,
+    sections: sections.filter((s) => s.content),
+    conclusion,
+    references,
+  };
+}

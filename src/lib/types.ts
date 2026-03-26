@@ -89,3 +89,40 @@ export interface OnboardingPreset {
   description: string;
   subfields: string[];
 }
+
+// ── Literature Review Export ──
+
+export type PaperTier = "core" | "supporting" | "peripheral";
+
+export interface ScoredPaper {
+  id: string;
+  title: string;
+  authors: string[];
+  year: number;
+  synthesis: string;
+  apaCitation: string;
+  doi: string;
+  credibilityScore: number;
+  citationCount: number;
+  engagementScore: number;
+  tier: PaperTier;
+  signals: {
+    upvoted: boolean;
+    downvoted: boolean;
+    bookmarked: boolean;
+    userCommentCount: number;
+  };
+}
+
+export interface LitReviewSection {
+  title: string;
+  content: string;
+  papers: Array<{ title: string; tier: PaperTier; apaCitation: string }>;
+}
+
+export interface LitReviewExport {
+  introduction: string;
+  sections: LitReviewSection[];
+  conclusion: string;
+  references: Array<{ apaCitation: string; tier: PaperTier }>;
+}
