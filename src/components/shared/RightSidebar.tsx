@@ -73,8 +73,13 @@ export function RightSidebar({
 
   const sidebarContent = (
     <div>
+      {/* Brand card */}
+      <SidebarBrandCard />
+
+      <hr className="border-border" />
+
       {/* Session header */}
-      <div className="pb-3">
+      <div className="pt-3 pb-3">
         <div className="bg-primary rounded-lg px-3 py-2.5 mb-3">
           <h3 className="text-primary-foreground text-[14px] font-bold">
             {scroll.title}
@@ -321,7 +326,7 @@ export function RightSidebar({
       )}
 
       {/* Desktop sidebar */}
-      <aside className="no-scrollbar hidden w-[272px] shrink-0 px-3 lg:sticky lg:top-12 lg:block lg:max-h-[calc(100vh-48px)] lg:overflow-y-auto">
+      <aside className="no-scrollbar hidden w-[240px] shrink-0 px-3 lg:sticky lg:top-12 lg:block lg:max-h-[calc(100vh-48px)] lg:overflow-y-auto">
         {sidebarContent}
       </aside>
     </>

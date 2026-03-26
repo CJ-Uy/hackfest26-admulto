@@ -81,9 +81,9 @@ export default function UserPostPage() {
     return (
       <div className="bg-page-bg min-h-screen">
         <Navbar />
-        <div className="flex justify-center gap-6 px-0 md:px-6">
+        <div className="flex">
           <Sidebar showMobileTrigger={false} />
-          <main className="w-full max-w-[600px] min-w-0 flex-1 border-x border-border">
+          <main className="w-full min-w-0 flex-1 border-x border-border">
             <UserPostDetailSkeleton />
           </main>
           <RightSidebarSkeleton />
@@ -96,7 +96,7 @@ export default function UserPostPage() {
     return (
       <div className="bg-page-bg min-h-screen">
         <Navbar />
-        <div className="flex justify-center gap-6 px-0 md:px-6">
+        <div className="flex">
           <Sidebar showMobileTrigger={false} />
           <main className="flex flex-1 items-center justify-center">
             <p className="text-muted-foreground">Post not found.</p>
@@ -110,10 +110,10 @@ export default function UserPostPage() {
     <div className="bg-page-bg min-h-screen">
       <Navbar />
 
-      <div className="flex justify-center gap-6 px-0 md:px-6">
+      <div className="flex">
         <Sidebar showMobileTrigger={false} />
 
-        <main className="w-full max-w-[600px] min-w-0 flex-1 border-x border-border pb-24 md:pb-0">
+        <main className="w-full min-w-0 flex-1 border-x border-border pb-24 md:pb-0">
           <UserPostDetail
             post={post}
             scrollId={scrollId}

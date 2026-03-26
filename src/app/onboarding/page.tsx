@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { ArrowLeft, BarChart3, FileText, Plus, Sparkles } from "lucide-react";
 import { TopicForm } from "@/components/onboarding/TopicForm";
 import { Sidebar, SidebarContent } from "@/components/shared/Sidebar";
+import { Navbar } from "@/components/shared/Navbar";
 import { SidebarBrandCard } from "@/components/shared/SidebarBrandCard";
 import { SchrollarLogo } from "@/components/shared/SchrollarLogo";
 import { Button } from "@/components/ui/button";
@@ -45,11 +46,13 @@ function OnboardingContent() {
   );
 
   return (
-    <div className="flex min-h-screen bg-[#dae0e6]">
-      <Sidebar showMobileTrigger={false} />
+    <div className="bg-page-bg min-h-screen">
+      <Navbar />
 
-      <div className="flex flex-1 justify-center gap-0 lg:gap-6 lg:px-6 lg:py-4">
-        <main className="bg-background w-full max-w-[780px] flex-1 pb-24 md:pb-0 lg:rounded-t-lg">
+      <div className="flex">
+        <Sidebar showMobileTrigger={false} />
+
+        <main className="w-full min-w-0 flex-1 border-x border-border pb-24 md:pb-0">
           <div className="border-border border-b px-4 pt-14 pb-4 md:pt-5">
             <div className="mb-2 flex items-center justify-between">
               <h1 className="font-heading text-foreground text-[24px] font-bold tracking-tight">
@@ -74,11 +77,12 @@ function OnboardingContent() {
           </div>
         </main>
 
-        <aside className="no-scrollbar hidden w-[340px] shrink-0 lg:sticky lg:top-4 lg:block lg:max-h-[calc(100vh-32px)] lg:overflow-y-auto">
+        <aside className="no-scrollbar hidden w-[240px] shrink-0 px-3 lg:sticky lg:top-12 lg:block lg:max-h-[calc(100vh-48px)] lg:overflow-y-auto">
           {onboardingSidebarContent}
         </aside>
       </div>
 
+      {/* Mobile bottom nav */}
       <div className="border-border bg-background/95 fixed inset-x-0 bottom-0 z-50 border-t px-3 py-2 pb-[calc(env(safe-area-inset-bottom)+8px)] backdrop-blur md:hidden">
         <div className="grid grid-cols-3 gap-2">
           <Sheet>

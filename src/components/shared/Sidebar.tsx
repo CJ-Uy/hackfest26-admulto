@@ -1,9 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, createContext, useContext } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Plus, ScrollText, Menu, Trash2 } from "lucide-react";
+import {
+  Plus,
+  ScrollText,
+  Menu,
+  Trash2,
+  ChevronsLeft,
+  ChevronsRight,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -26,7 +33,20 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { ThemeToggle } from "./ThemeToggle";
 
-export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
+const COLLAPSED_KEY = "sidebar-collapsed";
+
+const SidebarCollapsedContext = createContext(false);
+export function useSidebarCollapsed() {
+  return useContext(SidebarCollapsedContext);
+}
+
+export function SidebarContent({
+  onNavigate,
+  collapsed = false,
+}: {
+  onNavigate?: () => void;
+  collapsed?: boolean;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const [sessions, setSessions] = useState<ScrollSession[]>([]);
@@ -61,71 +81,88 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="px-3 pt-3">
+      <div className={cn("pt-3", collapsed ? "px-1.5" : "px-3")}>
         <Link href="/onboarding" onClick={onNavigate}>
           <Button
-            className="h-9 w-full justify-start gap-2 text-[14px]"
+            className={cn(
+              "h-9 gap-2 text-[14px]",
+              collapsed ? "w-9 justify-center p-0" : "w-full justify-start",
+            )}
             size="sm"
+            title={collapsed ? "New Schroll" : undefined}
           >
-            <Plus className="h-3.5 w-3.5" />
-            New Schroll
+            <Plus className="h-3.5 w-3.5 shrink-0" />
+            {!collapsed && "New Schroll"}
           </Button>
         </Link>
       </div>
 
-      <Separator className="mx-3 my-3 w-auto" />
+      <Separator className={cn("my-3 w-auto", collapsed ? "mx-1.5" : "mx-3")} />
 
-      <div className="flex-1 overflow-y-auto px-3">
-        <p className="text-muted-foreground mb-1.5 px-2 text-[11px] font-bold tracking-widest uppercase">
-          Recent
-        </p>
-        {sessions.length === 0 ? (
-          <p className="text-muted-foreground px-2 text-[13px]">
-            No schrolls yet.
+      <div className={cn("flex-1 overflow-y-auto", collapsed ? "px-1.5" : "px-3")}>
+        {!collapsed && (
+          <p className="text-muted-foreground mb-1.5 px-2 text-[11px] font-bold tracking-widest uppercase">
+            Recent
           </p>
+        )}
+        {sessions.length === 0 ? (
+          !collapsed && (
+            <p className="text-muted-foreground px-2 text-[13px]">
+              No schrolls yet.
+            </p>
+          )
         ) : (
           <nav className="space-y-0.5">
             {sessions.map((session) => (
               <div
                 key={session.id}
                 className={cn(
-                  "group hover:bg-subtle flex items-start gap-2 rounded-md px-2 py-1.5 transition-colors",
+                  "group hover:bg-subtle flex items-start gap-2 rounded-md transition-colors",
+                  collapsed ? "justify-center px-1 py-1.5" : "px-2 py-1.5",
                   pathname === `/schroll/${session.id}` && "bg-subtle",
                 )}
               >
                 <Link
                   href={`/schroll/${session.id}`}
                   onClick={onNavigate}
-                  className="flex min-w-0 flex-1 items-start gap-2"
+                  className={cn(
+                    "flex min-w-0 flex-1 items-start gap-2",
+                    collapsed && "justify-center",
+                  )}
+                  title={collapsed ? `${session.title} (${session.paperCount} papers)` : undefined}
                 >
                   <ScrollText className="text-muted-foreground mt-0.5 h-3.5 w-3.5 shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-foreground truncate text-[13px] leading-tight font-medium">
-                      {session.title}
-                    </p>
-                    <p className="text-muted-foreground text-[12px]">
-                      {session.paperCount} papers
-                    </p>
-                  </div>
+                  {!collapsed && (
+                    <div className="min-w-0">
+                      <p className="text-foreground truncate text-[13px] leading-tight font-medium">
+                        {session.title}
+                      </p>
+                      <p className="text-muted-foreground text-[12px]">
+                        {session.paperCount} papers
+                      </p>
+                    </div>
+                  )}
                 </Link>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setDeleteTarget(session);
-                  }}
-                  className="text-muted-foreground hover:text-destructive mt-0.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
-                  aria-label={`Delete ${session.title}`}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
+                {!collapsed && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDeleteTarget(session);
+                    }}
+                    className="text-muted-foreground hover:text-destructive mt-0.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
+                    aria-label={`Delete ${session.title}`}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                )}
               </div>
             ))}
           </nav>
         )}
       </div>
 
-      <div className="border-border border-t px-3 py-2">
+      <div className={cn("border-border border-t py-2", collapsed ? "px-1.5" : "px-3")}>
         <ThemeToggle />
       </div>
 
@@ -171,8 +208,40 @@ export function Sidebar({
 }: {
   showMobileTrigger?: boolean;
 }) {
+  const [collapsed, setCollapsed] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  // Load persisted state + listen for viewport changes
+  useEffect(() => {
+    const stored = localStorage.getItem(COLLAPSED_KEY);
+    if (stored !== null) {
+      setCollapsed(stored === "true");
+    } else if (window.innerWidth < 1280) {
+      setCollapsed(true);
+    }
+    setMounted(true);
+  }, []);
+
+  // Auto-collapse below xl on resize
+  useEffect(() => {
+    function handleResize() {
+      const userPref = localStorage.getItem(COLLAPSED_KEY);
+      if (userPref === null) {
+        setCollapsed(window.innerWidth < 1280);
+      }
+    }
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  function toggleCollapsed() {
+    const next = !collapsed;
+    setCollapsed(next);
+    localStorage.setItem(COLLAPSED_KEY, String(next));
+  }
+
   return (
-    <>
+    <SidebarCollapsedContext.Provider value={collapsed}>
       {/* Mobile hamburger */}
       {showMobileTrigger && (
         <div className="fixed top-0 left-0 z-50 p-3 md:hidden">
@@ -193,9 +262,31 @@ export function Sidebar({
       )}
 
       {/* Desktop sidebar */}
-      <aside className="no-scrollbar hidden w-[272px] shrink-0 overflow-y-auto border-r border-border md:sticky md:top-12 md:flex md:h-[calc(100vh-48px)] md:flex-col">
-        <SidebarContent />
+      <aside
+        className={cn(
+          "no-scrollbar hidden shrink-0 overflow-y-auto border-r border-border transition-all duration-200 md:sticky md:top-12 md:flex md:h-[calc(100vh-48px)] md:flex-col",
+          mounted
+            ? collapsed
+              ? "w-14"
+              : "w-[240px]"
+            : "w-[240px]",
+        )}
+      >
+        <SidebarContent collapsed={mounted && collapsed} />
+
+        {/* Collapse toggle */}
+        <button
+          onClick={toggleCollapsed}
+          className="text-muted-foreground hover:text-foreground hover:bg-subtle mx-auto mb-2 flex items-center justify-center rounded-md p-1.5 transition-colors"
+          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          {collapsed ? (
+            <ChevronsRight className="h-4 w-4" />
+          ) : (
+            <ChevronsLeft className="h-4 w-4" />
+          )}
+        </button>
       </aside>
-    </>
+    </SidebarCollapsedContext.Provider>
   );
 }

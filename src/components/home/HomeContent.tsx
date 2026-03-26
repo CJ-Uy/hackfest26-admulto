@@ -84,8 +84,10 @@ export function HomeContent({ scrolls: initialScrolls }: HomeContentProps) {
 
   const homeSidebarContent = (
     <div>
+      <SidebarBrandCard />
+      <hr className="border-border" />
       {/* Stats */}
-      <div className="pb-3">
+      <div className="pt-3 pb-3">
         <div className="grid grid-cols-2 gap-2">
           <div className="bg-subtle rounded-md p-2">
             <p className="text-muted-foreground text-[12px]">Schrolls</p>
@@ -146,11 +148,11 @@ export function HomeContent({ scrolls: initialScrolls }: HomeContentProps) {
         searchPlaceholder="Search your schrolls"
       />
 
-      <div className="flex justify-center gap-6 px-0 md:px-6">
+      <div className="flex">
         <Sidebar showMobileTrigger={false} />
 
         {/* Main content */}
-        <main className="w-full max-w-[600px] min-w-0 flex-1 border-x border-border pb-24 md:pb-0">
+        <main className="w-full min-w-0 flex-1 border-x border-border pb-24 md:pb-0">
           {hasScrolls ? (
             <>
               {/* Header with CTA */}
@@ -305,7 +307,7 @@ export function HomeContent({ scrolls: initialScrolls }: HomeContentProps) {
         </main>
 
         {/* Right sidebar - stats summary */}
-        <aside className="no-scrollbar hidden w-[272px] shrink-0 px-3 lg:sticky lg:top-12 lg:block lg:max-h-[calc(100vh-48px)] lg:overflow-y-auto">
+        <aside className="no-scrollbar hidden w-[240px] shrink-0 px-3 lg:sticky lg:top-12 lg:block lg:max-h-[calc(100vh-48px)] lg:overflow-y-auto">
           {homeSidebarContent}
         </aside>
       </div>

@@ -17,7 +17,7 @@ import {
   Send,
 } from "lucide-react";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+import { cn, getAvatarColor } from "@/lib/utils";
 import { SchrollarLogo } from "@/components/shared/SchrollarLogo";
 
 import { useCommentStream } from "@/hooks/useCommentStream";
@@ -428,7 +428,7 @@ export function DetailTabs({
       <div key={c.id}>
         {/* Comment with left border for threading */}
         <div
-          className={cn("border-border/50 py-3", depth > 0 && "border-l-2")}
+          className={cn("border-border/50 py-4 hover:bg-subtle/50 transition-colors", depth > 0 && "border-l-2")}
           style={
             depth > 0
               ? { paddingLeft: `${Math.min(depth, 5) * 1.25}rem` }
@@ -436,17 +436,24 @@ export function DetailTabs({
           }
         >
           {/* Author row */}
-          <div className="mb-1.5 flex items-center gap-2">
+          <div className="mb-2 flex items-center gap-2">
             <div
               className={cn(
-                "flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold",
+                "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold",
                 c.isGenerated
                   ? "bg-primary/10 text-primary"
-                  : "text-muted-foreground bg-subtle",
+                  : c.author === "You"
+                    ? ""
+                    : "text-white",
               )}
+              style={
+                !c.isGenerated && c.author !== "You"
+                  ? { backgroundColor: getAvatarColor(c.author) }
+                  : undefined
+              }
             >
               {c.isGenerated ? (
-                <Bot className="h-3 w-3" />
+                <Bot className="h-3.5 w-3.5" />
               ) : c.author === "You" ? (
                 <SchrollarLogo showText={false} size="sm" />
               ) : (
@@ -458,13 +465,13 @@ export function DetailTabs({
                 <a
                   href={`/schroll/${scrollId}/post/${sourcePaper.id}`}
                   onClick={(e) => e.stopPropagation()}
-                  className="text-primary truncate text-[13px] font-semibold hover:underline"
+                  className="text-foreground truncate text-[14px] font-semibold hover:underline"
                   title={sourcePaper.title}
                 >
                   {c.author}
                 </a>
               ) : (
-                <span className="text-foreground truncate text-[13px] font-semibold">
+                <span className="text-foreground truncate text-[14px] font-semibold">
                   {c.author}
                 </span>
               )}
@@ -477,12 +484,12 @@ export function DetailTabs({
           </div>
 
           {/* Content */}
-          <p className="text-foreground ml-8 text-[14px] leading-relaxed">
+          <p className="text-foreground ml-9 text-[15px] leading-relaxed">
             {c.content}
           </p>
 
           {/* Actions */}
-          <div className="mt-1.5 ml-8 flex flex-wrap items-center gap-1 md:flex-nowrap">
+          <div className="mt-2 ml-9 flex flex-wrap items-center gap-1 md:flex-nowrap">
             {c.relationship && (
               <RelationshipBadge relationship={c.relationship} />
             )}

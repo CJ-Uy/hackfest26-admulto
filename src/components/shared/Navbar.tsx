@@ -46,8 +46,8 @@ export function Navbar({
               Create
             </Button>
           </Link>
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#2b4ac7] text-[13px] font-bold text-white">
-            S
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary">
+            <SchrollarLogo showText={false} size="sm" className="text-primary-foreground" />
           </div>
         </div>
       </div>

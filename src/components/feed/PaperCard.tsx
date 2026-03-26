@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { BadgeCheck, MessageCircleReply } from "lucide-react";
 import type { Paper } from "@/lib/types";
+import { getAvatarColor } from "@/lib/utils";
 import { CardActions } from "./CardActions";
 
 interface PaperCardProps {
@@ -49,16 +50,7 @@ export function PaperCard({
       : paper.authors[0] || "Unknown";
   const initial = primaryAuthor.charAt(0).toUpperCase();
 
-  // Deterministic avatar color from author name
-  const avatarColors = [
-    "#FF4500", "#0079D3", "#46d160", "#FF8717", "#7193FF",
-    "#EA0027", "#00A6A5", "#CC3600", "#9B59B6", "#349E79",
-  ];
-  let hash = 0;
-  for (let i = 0; i < primaryAuthor.length; i++) {
-    hash = primaryAuthor.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const avatarColor = avatarColors[Math.abs(hash) % avatarColors.length];
+  const avatarColor = getAvatarColor(primaryAuthor);
 
   function navigateToDetail() {
     onClearNewComment?.();
