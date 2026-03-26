@@ -74,6 +74,40 @@ function extractJsonArrayCandidate(raw: string): unknown[] | null {
   return null;
 }
 
+export function extractJsonObjectCandidate(raw: string): Record<string, unknown> | null {
+  const trimmed = raw.trim();
+  const candidates: string[] = [];
+
+  // Raw response may already be JSON.
+  if (trimmed) candidates.push(trimmed);
+
+  // Support fenced output like ```json ... ```.
+  const fenceMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fenceMatch?.[1]) {
+    candidates.push(fenceMatch[1].trim());
+  }
+
+  // Extract braced object payload.
+  const firstBrace = trimmed.indexOf("{");
+  const lastBrace = trimmed.lastIndexOf("}");
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    candidates.push(trimmed.slice(firstBrace, lastBrace + 1));
+  }
+
+  for (const candidate of candidates) {
+    try {
+      const parsed = JSON.parse(candidate) as unknown;
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        return parsed as Record<string, unknown>;
+      }
+    } catch {
+      // Keep trying the next candidate.
+    }
+  }
+
+  return null;
+}
+
 async function ollamaChat(
   systemPrompt: string,
   userPrompt: string,
@@ -428,6 +462,69 @@ RESPOND ONLY with valid JSON array, no markdown:
   }
 }
 
+// ─── Export prompt question generation ────────────────────────────────────────
+
+export async function generateExportPromptQuestions(
+  papers: Array<{ title: string; synthesis: string }>,
+  topic: string,
+): Promise<Array<{ question: string; options: string[] }>> {
+  const paperSummaries = papers
+    .slice(0, 8)
+    .map((p, i) => `${i + 1}. "${p.title}" — ${p.synthesis}`)
+    .join("\n");
+
+  const prompt = `Based on this research feed about "${topic}", generate 4 multiple-choice questions to help scope the user's research prompt. Each question should have 3-4 options. The questions should help narrow down what kind of research prompt to generate.
+
+Papers in the feed:
+${paperSummaries}
+
+Types of questions to ask:
+- What is the primary purpose of this research (literature review, thesis, grant proposal, exploration)
+- What research methodology they are most interested in
+- What scope/depth they want (narrow deep-dive vs broad survey)
+- What kind of output they want from the AI (outline, bibliography, research questions, methodology)
+
+RESPOND ONLY with valid JSON array, no markdown:
+[
+  {
+    "question": "The question text",
+    "options": ["Option A", "Option B", "Option C", "Option D"]
+  }
+]`;
+
+  try {
+    const raw = await ollamaChat(
+      "You generate research scoping questions. Output ONLY valid JSON arrays.",
+      prompt,
+      SMART_MODEL,
+    );
+
+    const parsed = extractJsonArrayCandidate(raw);
+    if (!parsed) {
+      return [];
+    }
+
+    return (parsed as Array<{ question?: unknown; options?: unknown }>)
+      .filter(
+        (q) =>
+          typeof q.question === "string" &&
+          Array.isArray(q.options) &&
+          q.options.length >= 2,
+      )
+      .map((q) => ({
+        question: (q.question as string).trim(),
+        options: (q.options as unknown[])
+          .filter((opt): opt is string => typeof opt === "string")
+          .map((opt) => opt.trim())
+          .filter(Boolean),
+      }))
+      .filter((q) => q.question && q.options.length >= 2);
+  } catch (err) {
+    console.error("Failed to generate export prompt questions:", err);
+    return [];
+  }
+}
+
 // ─── Export summary generation ────────────────────────────────────────────────
 
 /**
@@ -464,6 +561,21 @@ export async function generatePerPaperSummary(
 /**
  * Generate a themed/grouped export with section summaries.
  */
+export interface ThemedExportResult {
+  overallSummary: string;
+  themes: Array<{
+    title: string;
+    summary: string;
+    sources: Array<{
+      title: string;
+      authors: string;
+      year: number;
+      keyFinding: string;
+      apaCitation: string;
+    }>;
+  }>;
+}
+
 export async function generateThemedExport(
   papers: Array<{
     title: string;
@@ -472,7 +584,7 @@ export async function generateThemedExport(
     year: number;
     apaCitation: string;
   }>,
-): Promise<string> {
+): Promise<ThemedExportResult> {
   const paperList = papers
     .map(
       (p, i) =>
@@ -480,7 +592,7 @@ export async function generateThemedExport(
     )
     .join("\n\n");
 
-  return ollamaChat(
+  const raw = await ollamaChat(
     `You are a research outline generator. Given academic papers, create a comprehensive themed export. Group papers into 2-4 thematic categories.
 
 RESPOND ONLY with valid JSON, no markdown:
@@ -512,6 +624,17 @@ Rules:
     `Papers to organize:\n\n${paperList}`,
     SMART_MODEL,
   );
+
+  const parsed = extractJsonObjectCandidate(raw);
+  if (
+    !parsed ||
+    typeof parsed.overallSummary !== "string" ||
+    !Array.isArray(parsed.themes)
+  ) {
+    throw new Error("Failed to parse themed export from AI response");
+  }
+
+  return parsed as unknown as ThemedExportResult;
 }
 
 // ─── PDF verification Q&A ─────────────────────────────────────────────────────

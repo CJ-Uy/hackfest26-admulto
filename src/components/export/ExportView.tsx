@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { fetchScroll } from "@/lib/scroll-store";
 import { ExportActions } from "./ExportActions";
+import { ExportPromptQuiz } from "./ExportPromptQuiz";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { ExportTheme, Paper, LitReviewExport, PaperTier } from "@/lib/types";
@@ -198,6 +199,8 @@ export function ExportView({ scrollId, papers }: ExportViewProps) {
   const [promptData, setPromptData] = useState<string | null>(null);
   const [loadingPrompt, setLoadingPrompt] = useState(false);
   const [promptCopied, setPromptCopied] = useState(false);
+  const [quizCompleted, setQuizCompleted] = useState(false);
+  const [scopingAnswers, setScopingAnswers] = useState<Record<string, string> | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -215,15 +218,15 @@ export function ExportView({ scrollId, papers }: ExportViewProps) {
     };
   }, [scrollId]);
 
-  // Auto-fetch research prompt when mode is selected
+  // Fetch research prompt after quiz is completed (or skipped)
   useEffect(() => {
-    if (mode !== "research-prompt" || promptData || loadingPrompt) return;
+    if (mode !== "research-prompt" || !quizCompleted || promptData || loadingPrompt) return;
     let cancelled = false;
     setLoadingPrompt(true);
     fetch("/api/export-prompt", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ scrollId }),
+      body: JSON.stringify({ scrollId, scopingAnswers: scopingAnswers ?? undefined }),
     })
       .then((res) => {
         if (!res.ok) throw new Error("Failed");
@@ -242,7 +245,7 @@ export function ExportView({ scrollId, papers }: ExportViewProps) {
       cancelled = true;
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, scrollId, promptData]);
+  }, [mode, quizCompleted, scrollId, promptData]);
 
   async function handleGenerateAI(selectedMode: "with-summaries" | "themed" | "literature-review") {
     if (generatingAI) return;
@@ -631,7 +634,21 @@ export function ExportView({ scrollId, papers }: ExportViewProps) {
         </div>
       )}
 
-      {/* Research prompt rendering */}
+      {/* Research prompt — quiz then prompt */}
+      {mode === "research-prompt" && !quizCompleted && !promptData && !loadingPrompt && (
+        <ExportPromptQuiz
+          scrollId={scrollId}
+          onComplete={(answers) => {
+            setScopingAnswers(answers);
+            setQuizCompleted(true);
+          }}
+          onSkip={() => {
+            setScopingAnswers(null);
+            setQuizCompleted(true);
+          }}
+        />
+      )}
+
       {mode === "research-prompt" && loadingPrompt && (
         <div className="px-4 py-8 text-center">
           <Loader2 className="text-muted-foreground mx-auto mb-2 h-8 w-8 animate-spin" />
@@ -663,6 +680,16 @@ export function ExportView({ scrollId, papers }: ExportViewProps) {
               {promptData}
             </pre>
           </div>
+          <button
+            onClick={() => {
+              setQuizCompleted(false);
+              setPromptData(null);
+              setScopingAnswers(null);
+            }}
+            className="text-muted-foreground hover:text-foreground text-[12px] transition-colors"
+          >
+            Re-scope prompt
+          </button>
         </div>
       )}
 

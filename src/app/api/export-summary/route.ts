@@ -65,27 +65,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(litReview);
     } else {
       // Mode 3: Themed grouping with summaries
-      const raw = await generateThemedExport(papersData);
-      const jsonMatch = raw.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error("Failed to parse themed export");
-      }
-
-      const parsed = JSON.parse(jsonMatch[0]) as {
-        overallSummary: string;
-        themes: Array<{
-          title: string;
-          summary: string;
-          sources: Array<{
-            title: string;
-            authors: string;
-            year: number;
-            keyFinding: string;
-            apaCitation: string;
-          }>;
-        }>;
-      };
-
+      const parsed = await generateThemedExport(papersData);
       return NextResponse.json(parsed);
     }
   } catch (err) {

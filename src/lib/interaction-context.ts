@@ -9,7 +9,7 @@ import {
   userPosts,
   scrolls,
 } from "@/lib/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, ne } from "drizzle-orm";
 
 export interface InteractionContext {
   topic: string;
@@ -97,7 +97,7 @@ export async function gatherInteractionContext(
     commentedMap.get(row.paperId)!.userComments.push(row.content);
   }
 
-  // Get poll responses
+  // Get poll responses (exclude export-prompt scoping questions)
   const pollRows = await db
     .select({
       question: polls.question,
@@ -105,7 +105,12 @@ export async function gatherInteractionContext(
     })
     .from(pollResponses)
     .innerJoin(polls, eq(pollResponses.pollId, polls.id))
-    .where(eq(polls.scrollId, scrollId));
+    .where(
+      and(
+        eq(polls.scrollId, scrollId),
+        ne(polls.category, "export-prompt"),
+      ),
+    );
 
   // Get user posts
   const postRows = await db

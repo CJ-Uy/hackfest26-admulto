@@ -10,6 +10,7 @@ function formatAuthor(authors: string[]): string {
 
 export async function buildResearchPrompt(
   scrollId: string,
+  scopingAnswers?: Record<string, string>,
 ): Promise<string> {
   const [scored, ctx] = await Promise.all([
     computeEngagementScores(scrollId),
@@ -32,6 +33,16 @@ export async function buildResearchPrompt(
   // Header
   lines.push(`I'm researching "${ctx.topic}". ${ctx.description}`);
   lines.push("");
+
+  // Scoping answers — research scope context
+  if (scopingAnswers && Object.keys(scopingAnswers).length > 0) {
+    lines.push("**My research scope:**");
+    for (const [question, answer] of Object.entries(scopingAnswers)) {
+      lines.push(`- Q: ${question} → A: ${answer}`);
+    }
+    lines.push("");
+  }
+
   lines.push(
     "Here are key papers I've reviewed, ranked by relevance to my interests:",
   );
@@ -101,13 +112,41 @@ export async function buildResearchPrompt(
     lines.push("");
   }
 
-  // Closing instructions
+  // Closing instructions — tailored by scoping answers
+  const purposeAnswer = scopingAnswers
+    ? Object.entries(scopingAnswers).find(([q]) =>
+        q.toLowerCase().includes("purpose"),
+      )?.[1]
+    : undefined;
+
+  const outputAnswer = scopingAnswers
+    ? Object.entries(scopingAnswers).find(([q]) =>
+        q.toLowerCase().includes("output") || q.toLowerCase().includes("kind"),
+      )?.[1]
+    : undefined;
+
   lines.push("Based on this foundation, help me:");
   lines.push("1. Identify gaps in this literature");
   lines.push(
     "2. Suggest related papers or research directions I may have missed",
   );
-  lines.push(`3. Draft an outline for a paper on ${ctx.topic}`);
+
+  let instruction3 = `3. Draft an outline for a paper on ${ctx.topic}`;
+  if (purposeAnswer) {
+    const lower = purposeAnswer.toLowerCase();
+    if (lower.includes("grant")) {
+      instruction3 = `3. Draft an outline for a grant proposal on ${ctx.topic}`;
+    } else if (lower.includes("literature review")) {
+      instruction3 = `3. Draft an outline for a literature review on ${ctx.topic}`;
+    } else if (lower.includes("thesis")) {
+      instruction3 = `3. Draft an outline for a thesis chapter on ${ctx.topic}`;
+    }
+  }
+  lines.push(instruction3);
+
+  if (outputAnswer) {
+    lines.push(`4. Format the response as: ${outputAnswer}`);
+  }
 
   return lines.join("\n");
 }
