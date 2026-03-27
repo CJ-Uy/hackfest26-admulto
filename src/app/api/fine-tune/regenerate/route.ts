@@ -45,27 +45,35 @@ async function updateProgress(
 }
 
 export async function POST(req: Request) {
-  const { scrollId } = (await req.json()) as { scrollId: string };
+  const { scrollId, answers: clientAnswers } = (await req.json()) as {
+    scrollId: string;
+    answers?: Record<string, string>;
+  };
 
   if (!scrollId) {
     return Response.json({ error: "scrollId required" }, { status: 400 });
   }
 
-  // Verify fine-tune responses exist before starting regeneration
-  const existingResponses = await db
-    .select({ id: pollResponses.id })
-    .from(pollResponses)
-    .innerJoin(polls, eq(pollResponses.pollId, polls.id))
-    .where(and(eq(polls.scrollId, scrollId), eq(polls.category, "fine-tune")));
+  const hasClientAnswers =
+    clientAnswers && Object.keys(clientAnswers).length > 0;
 
-  if (existingResponses.length === 0) {
-    return Response.json(
-      {
-        error:
-          "Please answer at least one fine-tune question before regenerating",
-      },
-      { status: 400 },
-    );
+  // Verify fine-tune responses exist — skip check if answers were sent in body
+  if (!hasClientAnswers) {
+    const existingResponses = await db
+      .select({ id: pollResponses.id })
+      .from(pollResponses)
+      .innerJoin(polls, eq(pollResponses.pollId, polls.id))
+      .where(and(eq(polls.scrollId, scrollId), eq(polls.category, "fine-tune")));
+
+    if (existingResponses.length === 0) {
+      return Response.json(
+        {
+          error:
+            "Please answer at least one fine-tune question before regenerating",
+        },
+        { status: 400 },
+      );
+    }
   }
 
   // Mark as regenerating
@@ -165,11 +173,17 @@ export async function POST(req: Request) {
           and(eq(polls.scrollId, scrollId), eq(polls.category, "fine-tune")),
         );
 
-      // Enrich the search query with fine-tune answers
+      // Enrich the search query with fine-tune answers (prefer client-provided)
       let searchQuery = buildRefinedQuery(ctx);
-      for (const ft of fineTuneResponses.slice(0, 3)) {
-        if (ft.answer && ft.answer.length > 3 && ft.answer !== "Other") {
-          searchQuery += " " + ft.answer;
+      let fineTuneAnswerValues: string[];
+      if (hasClientAnswers) {
+        fineTuneAnswerValues = Object.values(clientAnswers!);
+      } else {
+        fineTuneAnswerValues = fineTuneResponses.map((r) => r.answer);
+      }
+      for (const answer of fineTuneAnswerValues.slice(0, 3)) {
+        if (answer && answer.length > 3 && answer !== "Other") {
+          searchQuery += " " + answer;
         }
       }
 

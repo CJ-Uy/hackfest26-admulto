@@ -198,7 +198,7 @@ export function FineTuneView({ scrollId, onRegenerated }: FineTuneViewProps) {
       const res = await fetch("/api/fine-tune/regenerate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ scrollId }),
+        body: JSON.stringify({ scrollId, answers: Object.fromEntries(answers) }),
       });
 
       if (!res.ok) {
@@ -409,7 +409,7 @@ export function FineTuneView({ scrollId, onRegenerated }: FineTuneViewProps) {
           <div
             className="bg-primary h-full rounded-full transition-all duration-500 ease-out"
             style={{
-              width: `${((currentIndex + (answers.has(currentQuestion?.id ?? "") ? 1 : 0)) / totalQuestions) * 100}%`,
+              width: `${(currentIndex / totalQuestions) * 100}%`,
             }}
           />
         </div>

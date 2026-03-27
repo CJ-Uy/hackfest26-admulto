@@ -176,7 +176,7 @@ export function ExportPromptQuiz({
           <div
             className="bg-primary h-full rounded-full transition-all duration-500 ease-out"
             style={{
-              width: `${((currentIndex + (answers.has(currentQuestion?.id ?? "") ? 1 : 0)) / totalQuestions) * 100}%`,
+              width: `${(currentIndex / totalQuestions) * 100}%`,
             }}
           />
         </div>
