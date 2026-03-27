@@ -99,6 +99,7 @@ export function PostDetail({
           citationCount={paper.citationCount}
           apaCitation={paper.apaCitation}
           initialVoted={paper.voted}
+          initialDownvoted={paper.downvoted}
           initialBookmarked={paper.bookmarked}
         />
       </div>

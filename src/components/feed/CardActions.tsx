@@ -132,11 +132,12 @@ export function CardActions({
     if (newVoted && wasDownvoted) onDownvote?.(paperId, false);
 
     try {
-      await fetch("/api/votes", {
+      const res = await fetch("/api/votes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ paperId, value: 1 }),
       });
+      if (!res.ok) throw new Error("Vote API error");
     } catch {
       setUpvoted(!newVoted);
       if (wasDownvoted) setDownvoted(true);
@@ -158,11 +159,12 @@ export function CardActions({
     if (newDownvoted && wasUpvoted) onUpvote?.(paperId, false);
 
     try {
-      await fetch("/api/votes", {
+      const res = await fetch("/api/votes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ paperId, value: -1 }),
       });
+      if (!res.ok) throw new Error("Vote API error");
     } catch {
       setDownvoted(!newDownvoted);
       if (wasUpvoted) setUpvoted(true);
@@ -193,11 +195,12 @@ export function CardActions({
     toast.success(next ? "Saved" : "Removed from saved");
 
     try {
-      await fetch("/api/bookmarks", {
+      const res = await fetch("/api/bookmarks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ paperId }),
       });
+      if (!res.ok) throw new Error("Bookmark API error");
     } catch {
       setBookmarked(!next);
       toast.error("Bookmark failed. Please try again.");

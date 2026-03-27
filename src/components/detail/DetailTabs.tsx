@@ -16,6 +16,7 @@ import {
   ExternalLink,
   Send,
 } from "lucide-react";
+import Link from "next/link";
 import { toast } from "sonner";
 import { cn, getAvatarColor } from "@/lib/utils";
 import { SchrollarLogo } from "@/components/shared/SchrollarLogo";
@@ -462,14 +463,14 @@ export function DetailTabs({
             </div>
             <div className="flex min-w-0 flex-1 items-center gap-1.5">
               {sourcePaper ? (
-                <a
+                <Link
                   href={`/schroll/${scrollId}/post/${sourcePaper.id}`}
                   onClick={(e) => e.stopPropagation()}
                   className="text-foreground truncate text-[14px] font-semibold hover:underline"
                   title={sourcePaper.title}
                 >
                   {c.author}
-                </a>
+                </Link>
               ) : (
                 <span className="text-foreground truncate text-[14px] font-semibold">
                   {c.author}
@@ -501,7 +502,7 @@ export function DetailTabs({
               Reply
             </button>
             {sourcePaper && (
-              <a
+              <Link
                 href={`/schroll/${scrollId}/post/${sourcePaper.id}`}
                 className="text-muted-foreground hover:text-primary hover:bg-subtle flex items-center gap-1 rounded px-2 py-0.5 text-[12px] font-medium transition-colors"
                 onClick={(e) => e.stopPropagation()}
@@ -509,7 +510,7 @@ export function DetailTabs({
               >
                 <ExternalLink className="h-3 w-3" />
                 Source
-              </a>
+              </Link>
             )}
             <button
               onClick={() => handleDeleteComment(c.id)}
