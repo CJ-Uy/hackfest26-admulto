@@ -398,18 +398,20 @@ function ScrollPageInner() {
 
   // Generate More handler
   const handleGenerateMore = useCallback(async () => {
-    setIsGeneratingMore(true);
     setGenerateMoreProgress({ step: "searching" });
 
     try {
-      await fetch("/api/generate-more", {
+      const res = await fetch("/api/generate-more", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ scrollId }),
       });
+      if (!res.ok) throw new Error("Failed to start generation");
+      // Start polling only AFTER the DB has been set to "generating"
+      setIsGeneratingMore(true);
     } catch {
-      setIsGeneratingMore(false);
       setGenerateMoreProgress(null);
+      toast.error("Failed to generate more papers");
     }
   }, [scrollId]);
 

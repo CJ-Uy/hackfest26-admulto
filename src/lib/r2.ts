@@ -54,3 +54,37 @@ export async function deletePdfs(keys: string[]): Promise<void> {
   const bucket = await getBucket();
   await Promise.all(keys.map((key) => bucket.delete(key)));
 }
+
+/**
+ * Upload an image to R2 storage.
+ * @param key  Full R2 object key, e.g. "images/{scrollId}/{paperId}.png"
+ */
+export async function uploadImage(
+  buffer: ArrayBuffer,
+  key: string,
+  contentType = "image/png",
+): Promise<void> {
+  const bucket = await getBucket();
+  await bucket.put(key, buffer, {
+    httpMetadata: { contentType },
+  });
+}
+
+/**
+ * Retrieve an image from R2 storage.
+ */
+export async function getImage(key: string): Promise<ArrayBuffer | null> {
+  const bucket = await getBucket();
+  const obj = await bucket.get(key);
+  if (!obj) return null;
+  return obj.arrayBuffer();
+}
+
+/**
+ * Delete images from R2 storage (cleanup on scroll deletion).
+ */
+export async function deleteImages(keys: string[]): Promise<void> {
+  if (keys.length === 0) return;
+  const bucket = await getBucket();
+  await Promise.all(keys.map((key) => bucket.delete(key)));
+}
