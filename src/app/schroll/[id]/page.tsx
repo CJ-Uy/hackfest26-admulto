@@ -419,10 +419,16 @@ function ScrollPageInner() {
     return (
       <div className="bg-page-bg min-h-screen">
         <Navbar />
+        <Navbar
+          showMobile
+          searchValue={searchQuery}
+          onSearchChange={handleSearchChange}
+          searchPlaceholder="Search this feed"
+        />
         <div className="flex">
           <Sidebar showMobileTrigger={false} />
           <div className="flex min-w-0 flex-1 justify-center">
-          <main className="w-full max-w-[860px] min-w-0 flex-1">
+          <main className="w-full max-w-215 min-w-0 flex-1">
             <div className="px-4 pt-4 pb-3">
               <div className="mb-2 flex items-center gap-2">
                 <Skeleton className="h-5 w-20 rounded-full" />
@@ -432,7 +438,7 @@ function ScrollPageInner() {
               <Skeleton className="h-4 w-full" />
             </div>
 
-            <div className="bg-background border-border sticky top-12 z-30 border-b">
+            <div className="bg-background border-border sticky top-14 z-30 border-b md:top-12">
               <div className="flex">
                 {Array.from({ length: 3 }).map((_, i) => (
                   <div key={i} className="flex flex-1 justify-center py-3">
@@ -461,28 +467,23 @@ function ScrollPageInner() {
         onSearchChange={handleSearchChange}
         searchPlaceholder="Search this feed"
       />
+      <Navbar
+        showMobile
+        searchValue={searchQuery}
+        onSearchChange={handleSearchChange}
+        searchPlaceholder="Search this feed"
+      />
 
       <div className="flex">
         <Sidebar showMobileTrigger={false} />
 
         <div className="flex min-w-0 flex-1 justify-center">
         {/* Main content column */}
-        <main className="w-full max-w-[860px] min-w-0 flex-1 border-x border-border">
+        <main className="w-full max-w-215 min-w-0 flex-1 border-x border-border">
           <ScrollHeader scroll={scroll} />
 
-          {/* Mobile: keep search + tabs sticky together */}
-          <div className="bg-background border-border sticky top-0 z-30 border-b md:hidden">
-            <div className="px-4 py-2">
-              <div className="relative">
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => handleSearchChange(e.target.value)}
-                  placeholder="Search"
-                  className="bg-subtle border-border text-foreground placeholder:text-muted-foreground focus:border-primary focus:bg-background h-9 w-full rounded-full border pr-4 pl-9 text-[14px] focus:outline-none"
-                />
-              </div>
-            </div>
+          {/* Mobile: tabs sticky below mobile navbar */}
+          <div className="bg-background border-border sticky top-14 z-30 border-b md:hidden">
             <TabNav
               value={activeTab}
               onValueChange={setActiveTab}

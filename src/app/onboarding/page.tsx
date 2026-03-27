@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { ArrowLeft, BarChart3, FileText, Plus, Sparkles } from "lucide-react";
 import { TopicForm } from "@/components/onboarding/TopicForm";
@@ -20,6 +20,7 @@ import {
 function OnboardingContent() {
   const searchParams = useSearchParams();
   const initialTopic = searchParams.get("topic") || undefined;
+  const [mobileSearch, setMobileSearch] = useState("");
   const navTriggerClassName =
     "hover:bg-subtle text-foreground flex h-12 w-full items-center justify-center gap-1.5 rounded-lg px-2 text-[13px] font-semibold transition-colors";
 
@@ -48,13 +49,19 @@ function OnboardingContent() {
   return (
     <div className="bg-page-bg min-h-screen">
       <Navbar />
+      <Navbar
+        showMobile
+        searchValue={mobileSearch}
+        onSearchChange={setMobileSearch}
+        searchPlaceholder="Search Schrollar"
+      />
 
       <div className="flex">
         <Sidebar showMobileTrigger={false} />
 
         <div className="flex min-w-0 flex-1 justify-center">
-        <main className="w-full max-w-[860px] min-w-0 flex-1 border-x border-border pb-24 md:pb-0">
-          <div className="border-border border-b px-5 pt-14 pb-5 md:pt-6">
+        <main className="w-full max-w-215 min-w-0 flex-1 border-x border-border pb-24 md:pb-0">
+          <div className="border-border border-b px-5 pt-6 pb-5">
             <div className="mb-2 flex items-center justify-between">
               <h1 className="font-heading text-foreground text-[26px] font-bold tracking-tight">
                 Create a Schroll
@@ -78,7 +85,7 @@ function OnboardingContent() {
           </div>
         </main>
 
-        <aside className="no-scrollbar hidden w-[312px] shrink-0 px-3 lg:sticky lg:top-12 lg:block lg:max-h-[calc(100vh-48px)] lg:overflow-y-auto">
+        <aside className="no-scrollbar hidden w-78 shrink-0 px-3 lg:sticky lg:top-12 lg:block lg:max-h-[calc(100vh-48px)] lg:overflow-y-auto">
           {onboardingSidebarContent}
         </aside>
         </div>

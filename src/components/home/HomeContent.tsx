@@ -147,6 +147,12 @@ export function HomeContent({ scrolls: initialScrolls }: HomeContentProps) {
         onSearchChange={setSearchQuery}
         searchPlaceholder="Search your schrolls"
       />
+      <Navbar
+        showMobile
+        searchValue={searchQuery}
+        onSearchChange={setSearchQuery}
+        searchPlaceholder="Search your schrolls"
+      />
 
       <div className="flex">
         <Sidebar showMobileTrigger={false} />
@@ -159,26 +165,31 @@ export function HomeContent({ scrolls: initialScrolls }: HomeContentProps) {
                 {/* Hero area */}
                 <section className="border-border border-b">
                   <div className="px-5 py-5">
-                    <div className="flex items-center gap-4">
-                      <div className="bg-background border-border flex h-28 w-28 shrink-0 items-center justify-center rounded-full border-4 shadow-sm">
-                        <SchrollarLogo
-                          showText={false}
-                          size="lg"
-                          className="scale-180"
-                        />
+                    <div className="flex flex-col gap-4 md:flex-row md:items-center">
+                      <div className="flex items-center gap-4 md:shrink-0">
+                        <div className="bg-background border-border flex h-20 w-20 shrink-0 items-center justify-center rounded-full border-4 shadow-sm md:h-28 md:w-28">
+                          <SchrollarLogo
+                            showText={false}
+                            size="lg"
+                            className="scale-150 md:scale-180"
+                          />
+                        </div>
+                        <h1 className="font-heading text-foreground text-[34px] leading-none font-bold tracking-tight whitespace-normal md:hidden">
+                          Schrollar
+                        </h1>
                       </div>
 
-                      <div className="min-w-0 flex-1 px-4 py-4">
-                        <div className="flex items-center gap-3">
+                      <div className="min-w-0 flex-1 px-0 py-0 md:px-4 md:py-4">
+                        <div className="hidden items-center gap-3 md:flex md:gap-3">
                           <h1 className="font-heading text-foreground text-[34px] leading-none font-bold tracking-tight whitespace-nowrap md:text-[38px]">
                             Schrollar
                           </h1>
                           <Link
                             href="/onboarding"
-                            className="ml-auto inline-block shrink-0"
+                            className="inline-block w-full shrink-0 sm:w-auto md:ml-auto"
                           >
                             <Button
-                              className="h-10 gap-2 px-4 text-[15px] font-semibold"
+                              className="h-10 w-full justify-center gap-2 px-4 text-[15px] font-semibold sm:w-auto"
                               size="lg"
                             >
                               <Plus className="h-4.5 w-4.5" />
@@ -186,6 +197,16 @@ export function HomeContent({ scrolls: initialScrolls }: HomeContentProps) {
                             </Button>
                           </Link>
                         </div>
+
+                        <Link href="/onboarding" className="inline-block w-full md:hidden">
+                          <Button
+                            className="h-10 w-full justify-center gap-2 px-4 text-[15px] font-semibold"
+                            size="lg"
+                          >
+                            <Plus className="h-4.5 w-4.5" />
+                            New Schroll
+                          </Button>
+                        </Link>
 
                         <p className="text-muted-foreground mt-2 max-w-2xl text-[16px] leading-relaxed md:text-[17px]">
                           A profile-style home for your active research streams,
