@@ -50,10 +50,12 @@
     "enabled": true,
   },
   /**
-   * Smart Placement
+   * Smart Placement — routes the Worker to run nearest to upstream services
+   * (Ollama, Semantic Scholar, SearXNG) to reduce external call latency.
+   * Requires Cloudflare Workers paid plan.
    * https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
    */
-  // "placement": {  "mode": "smart" }
+  "placement": { "mode": "smart" }
   /**
    * Bindings
    * Bindings allow your Worker to interact with resources on the Cloudflare Developer Platform, including

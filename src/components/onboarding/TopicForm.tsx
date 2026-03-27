@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   Sparkles,
@@ -102,13 +102,12 @@ export function TopicForm({ initialTopic }: TopicFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState<ProgressInfo | null>(null);
-  const [scrollId, setScrollId] = useState<string | null>(null);
   const [submittedTopic, setSubmittedTopic] = useState("");
   const [subfields, setSubfields] = useState<string[]>([]);
   const [subfieldInput, setSubfieldInput] = useState("");
   const topicRef = useRef<HTMLInputElement>(null);
   const descRef = useRef<HTMLTextAreaElement>(null);
-  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   // PDF upload state
   const [pdfEnabled, setPdfEnabled] = useState(false);
@@ -117,85 +116,10 @@ export function TopicForm({ initialTopic }: TopicFormProps) {
   // PDF verification state
   const [showVerification, setShowVerification] = useState(false);
 
-  const stopPolling = useCallback(() => {
-    if (pollingRef.current) {
-      clearTimeout(pollingRef.current);
-      pollingRef.current = null;
-    }
+  const stopGeneration = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
   }, []);
-
-  // Drive paper-by-paper processing via process-next endpoint.
-  // Each call processes ONE paper and returns progress.
-  // Sequential: next call only fires after the previous completes.
-  useEffect(() => {
-    if (!scrollId) return;
-    let cancelled = false;
-
-    async function driveProcessing() {
-      while (!cancelled) {
-        try {
-          const res = await fetch("/api/generate-feed/process-next", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ scrollId }),
-          });
-
-          if (!res.ok) {
-            // Server error — wait and retry
-            await new Promise((r) => {
-              pollingRef.current = setTimeout(r, 3000);
-            });
-            continue;
-          }
-
-          const data = (await res.json()) as {
-            status: string;
-            progress: ProgressInfo | null;
-            done?: boolean;
-          };
-
-          if (cancelled) break;
-
-          if (data.status === "complete" || data.done) {
-            router.push(`/schroll/${scrollId}`);
-            return;
-          }
-
-          if (data.status === "error") {
-            setLoading(false);
-            setScrollId(null);
-            toast.error(
-              data.progress?.message ||
-                "Feed generation failed. Please try again.",
-            );
-            return;
-          }
-
-          setProgress(data.progress);
-        } catch {
-          // Transient network error — wait and retry
-          if (cancelled) break;
-          await new Promise((r) => {
-            pollingRef.current = setTimeout(r, 3000);
-          });
-          continue;
-        }
-
-        // Gap between requests to stay within Turso free-tier rate limits
-        if (!cancelled) {
-          await new Promise((r) => {
-            pollingRef.current = setTimeout(r, 2000);
-          });
-        }
-      }
-    }
-
-    driveProcessing();
-    return () => {
-      cancelled = true;
-      stopPolling();
-    };
-  }, [scrollId, router, stopPolling]);
 
   // Advanced settings
   const [advancedOpen, setAdvancedOpen] = useState(false);
@@ -326,10 +250,13 @@ export function TopicForm({ initialTopic }: TopicFormProps) {
   }
 
   async function doGenerate(topic: string | undefined) {
+    const abort = new AbortController();
+    abortRef.current = abort;
+
     try {
       const pdfKeys = pdfEnabled ? doneFiles.map((f) => f.key) : undefined;
 
-      const res = await fetch("/api/generate-feed", {
+      const res = await fetch("/api/generate-feed/run", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -343,6 +270,7 @@ export function TopicForm({ initialTopic }: TopicFormProps) {
           provider: provider || undefined,
           ollamaUrl: provider === "ollama" && ollamaUrl ? ollamaUrl : undefined,
         }),
+        signal: abort.signal,
       });
 
       if (!res.ok) {
@@ -350,12 +278,67 @@ export function TopicForm({ initialTopic }: TopicFormProps) {
         throw new Error(data.error || `API returned ${res.status}`);
       }
 
-      const data = (await res.json()) as { scroll: { id: string } };
-      if (!data.scroll?.id) throw new Error("No scroll ID received");
-      setScrollId(data.scroll.id);
+      if (!res.body) throw new Error("No response body");
+
+      // Read SSE stream
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let currentScrollId: string | null = null;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          let event: {
+            type: string;
+            scrollId?: string;
+            step?: string;
+            papersProcessed?: number;
+            total?: number;
+            message?: string;
+          };
+          try {
+            event = JSON.parse(line.slice(6)) as typeof event;
+          } catch {
+            continue;
+          }
+
+          if (event.type === "init" && event.scrollId) {
+            currentScrollId = event.scrollId;
+          } else if (event.type === "progress") {
+            setProgress({
+              step: event.step ?? "",
+              papersProcessed: event.papersProcessed,
+              total: event.total,
+            });
+          } else if (event.type === "complete" && event.scrollId) {
+            router.push(`/schroll/${event.scrollId}`);
+            return;
+          } else if (event.type === "error") {
+            throw new Error(event.message || "Feed generation failed");
+          }
+        }
+
+        if (abort.signal.aborted) break;
+      }
+
+      // Stream ended without a complete event — check if scroll finished anyway
+      if (currentScrollId) {
+        router.push(`/schroll/${currentScrollId}`);
+      }
     } catch (err) {
+      if ((err as { name?: string }).name === "AbortError") return;
       console.error("Feed generation failed:", err);
-      toast.error("Could not generate feed. Please try again.");
+      toast.error(
+        err instanceof Error ? err.message : "Could not generate feed. Please try again.",
+      );
       setLoading(false);
       setProgress(null);
     }
