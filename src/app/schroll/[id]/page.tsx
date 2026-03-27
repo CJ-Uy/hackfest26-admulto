@@ -19,7 +19,7 @@ import {
 } from "@/components/shared/LoadingSkeleton";
 import { Skeleton } from "@/components/ui/skeleton";
 
-import { useScrollStream } from "@/hooks/useScrollStream";
+import { useScrollStream, type ScrollProgress } from "@/hooks/useScrollStream";
 import { useCommentStream } from "@/hooks/useCommentStream";
 import { fetchScroll } from "@/lib/scroll-store";
 import { GenerationProgress } from "@/components/onboarding/GenerationProgress";
@@ -212,7 +212,7 @@ function ScrollPageInner() {
   useScrollStream({
     scrollId,
     enabled: scroll?.status === "generating" && !isGeneratingMore,
-    onProgress: useCallback((p) => setGeneratingProgress(p), []),
+    onProgress: useCallback((p: ScrollProgress) => setGeneratingProgress(p), []),
     onComplete: reloadScroll,
     onError: useCallback(() => {
       toast.error("Connection lost. Refreshing...");
