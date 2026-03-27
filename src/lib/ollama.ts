@@ -241,7 +241,7 @@ export async function generateReplyComment(
     ? `\n\nPrevious messages in this thread:\n${threadContext.map((m, i) => `${i + 1}. ${m}`).join("\n")}`
     : "";
 
-  return ollamaChat(
+  return aiChat(
     `You are a researcher replying to a reader's comment on a research paper platform. You are speaking from the perspective of the paper "${paperContext.title}" by ${authorStr}.
 
 CRITICAL RULES:
@@ -252,6 +252,7 @@ CRITICAL RULES:
 - Do NOT include any URLs or links.`,
     `YOUR PAPER'S SUMMARY (this is the ONLY information you can reference about your work):\n${paperContext.synthesis}${threadStr}\n\nThe reader's comment: "${userComment}"\n\nReply to them using ONLY facts from your summary:`,
     SMART_MODEL,
+    "smart",
   );
 }
 
@@ -297,10 +298,11 @@ RESPOND ONLY with valid JSON array, no markdown:
 ]`;
 
   try {
-    const raw = await ollamaChat(
+    const raw = await aiChat(
       "You generate realistic social media responses from researchers. Output ONLY valid JSON arrays.",
       prompt,
       SMART_MODEL,
+      "smart",
     );
 
     const jsonMatch = raw.match(/\[[\s\S]*\]/);
@@ -357,10 +359,11 @@ RESPOND ONLY with valid JSON array, no markdown:
 ]`;
 
   try {
-    const raw = await ollamaChat(
+    const raw = await aiChat(
       "You generate realistic social media responses from researchers. Output ONLY valid JSON arrays.",
       prompt,
       SMART_MODEL,
+      "smart",
     );
 
     const jsonMatch = raw.match(/\[[\s\S]*\]/);
@@ -386,7 +389,7 @@ export async function generateUserPostReply(
   userComment: string,
   webContext: string,
 ): Promise<string> {
-  return ollamaChat(
+  return aiChat(
     `You are a knowledgeable researcher replying to a comment on a research discussion platform. The original post was about a research topic.
 
 CRITICAL RULES:
@@ -396,6 +399,7 @@ CRITICAL RULES:
 - Do NOT use markdown formatting.`,
     `Original post: "${postContent}"\n\nRelevant context (ONLY use facts from this):\n${webContext}\n\nThe user's comment: "${userComment}"\n\nReply using ONLY information from the context above:`,
     SMART_MODEL,
+    "smart",
   );
 }
 
@@ -771,10 +775,11 @@ RESPOND ONLY with valid JSON array, no markdown:
 ]`;
 
   try {
-    const raw = await ollamaChat(
+    const raw = await aiChat(
       "You generate realistic social media comments between researchers. Output ONLY valid JSON arrays.",
       prompt,
       SMART_MODEL,
+      "smart",
     );
 
     // Extract JSON array from response

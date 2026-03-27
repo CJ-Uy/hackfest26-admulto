@@ -117,12 +117,10 @@ function ScrollPageInner() {
   }, [scrollId]);
 
   // Seed comments for papers that have none (best-effort, one-at-a-time)
-  // Skipped for Cloudflare AI scrolls to conserve neurons
   const seedingRef = useRef(false);
   const seedComments = useCallback(
-    async (paperList: Paper[], scrollData: ScrollSession) => {
+    async (paperList: Paper[]) => {
       if (seedingRef.current) return;
-      if (scrollData.aiProvider === "cloudflare") return;
       const needsComments = paperList.filter((p) => p.commentCount === 0);
       if (needsComments.length === 0) return;
       seedingRef.current = true;
@@ -167,8 +165,8 @@ function ScrollPageInner() {
         setDownvotedPapers(downed);
         setBookmarkedPapers(saved);
 
-        // Seed comments for papers with none (skipped for CF AI)
-        seedComments(stored.papers, stored.scroll);
+        // Seed comments for papers with none
+        seedComments(stored.papers);
       }
     }
 
@@ -529,11 +527,7 @@ function ScrollPageInner() {
                 onComment={handleComment}
                 onGenerateMore={handleGenerateMore}
                 onPost={handleNewPost}
-                onGenerateComments={
-                  scroll?.aiProvider === "cloudflare"
-                    ? undefined
-                    : handleGenerateComments
-                }
+                onGenerateComments={handleGenerateComments}
                 onDelete={handleDeletePaper}
                 onDeletePost={handleDeletePost}
                 generatingPostIds={generatingPostIds}

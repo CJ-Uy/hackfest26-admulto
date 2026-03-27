@@ -762,9 +762,8 @@ export function TopicForm({ initialTopic }: TopicFormProps) {
                       10,000 neurons/day (~2–3 feeds).
                     </p>
                     <p className="font-medium text-amber-600">
-                      Due to daily neuron limits, Cloudflare AI will only
-                      generate the feed — AI-generated comments and replies will
-                      be disabled. For the full experience with comments,
+                      Due to daily neuron limits (~2–3 feeds + comments per
+                      day), use sparingly. For faster, unlimited AI generation,
                       contact <strong>Charles Joshua Uy</strong> to turn on an
                       Ollama dev instance for demo.
                     </p>
