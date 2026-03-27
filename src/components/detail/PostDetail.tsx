@@ -49,7 +49,7 @@ export function PostDetail({
         </button>
       </div>
 
-      {/* Paper card — px-4 on individual sections so image can be full-width */}
+      {/* Paper card — px-4 on individual sections while keeping image slightly inset */}
       <div className="border-border border-b overflow-hidden">
         {/* Author row */}
         <div className="mb-2 flex items-center gap-2.5 px-4 pt-3">
@@ -76,7 +76,7 @@ export function PostDetail({
 
         {/* Figure image (when available from open-access PDF) */}
         {paper.imageUrl && (
-          <div className="bg-muted mb-2 w-full overflow-hidden">
+          <div className="bg-muted mb-2 mx-1 overflow-hidden rounded-md">
             <img
               src={paper.imageUrl}
               alt={`Figure from ${paper.title}`}
