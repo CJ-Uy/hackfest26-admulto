@@ -43,11 +43,11 @@ export function PaperCard({
 }: PaperCardProps) {
   const router = useRouter();
 
-  const primaryAuthor = paper.authors[0] ?? "Unknown";
+  const primaryAuthor = paper.authors[0] ?? "Web Search";
   const authorDisplay =
     paper.authors.length > 1
       ? `${paper.authors[0]} & ${paper.authors[1]}`
-      : paper.authors[0] || "Unknown";
+      : paper.authors[0] || "Web Search";
   const initial = primaryAuthor.charAt(0).toUpperCase();
 
   const avatarColor = getAvatarColor(primaryAuthor);
@@ -91,7 +91,7 @@ export function PaperCard({
 
       {/* Figure image (when available from open-access PDF) */}
       {paper.imageUrl && (
-        <div className="bg-muted mb-2 mx-1 overflow-hidden rounded-md shadow-sm">
+        <div className="bg-muted mb-2 mx-4 overflow-hidden rounded-md shadow-sm">
           <img
             src={paper.imageUrl}
             alt={`Figure from ${paper.title}`}

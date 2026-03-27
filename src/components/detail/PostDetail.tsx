@@ -30,7 +30,7 @@ export function PostDetail({
   const authorDisplay =
     paper.authors.length > 1
       ? `${paper.authors[0]} & ${paper.authors[1]}`
-      : paper.authors[0] || "Unknown";
+      : paper.authors[0] || "Web Search";
   const initial = (paper.authors[0] ?? "U").charAt(0).toUpperCase();
   const doiUrl = paper.doi.startsWith("http")
     ? paper.doi
@@ -76,7 +76,7 @@ export function PostDetail({
 
         {/* Figure image (when available from open-access PDF) */}
         {paper.imageUrl && (
-          <div className="bg-muted mb-2 mx-1 overflow-hidden rounded-md shadow-sm">
+          <div className="bg-muted mb-2 mx-4 overflow-hidden rounded-md shadow-sm">
             <img
               src={paper.imageUrl}
               alt={`Figure from ${paper.title}`}

@@ -399,7 +399,7 @@ function PaperList({
             {paper.title}
           </p>
           <p className="text-muted-foreground mt-0.5 text-[13px]">
-            {paper.authors[0] || "Unknown"} &middot; {paper.year}
+            {paper.authors[0] || "Web Search"} &middot; {paper.year}
           </p>
         </Link>
       ))}
