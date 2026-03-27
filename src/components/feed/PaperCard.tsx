@@ -91,7 +91,7 @@ export function PaperCard({
 
       {/* Figure image (when available from open-access PDF) */}
       {paper.imageUrl && (
-        <div className="bg-muted mb-2 mx-1 overflow-hidden rounded-md">
+        <div className="bg-muted mb-2 mx-1 overflow-hidden rounded-md shadow-sm">
           <img
             src={paper.imageUrl}
             alt={`Figure from ${paper.title}`}
