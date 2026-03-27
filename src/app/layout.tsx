@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/shared/ThemeProvider";
+import { BackgroundScrollDriver } from "@/components/shared/BackgroundScrollDriver";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -21,6 +22,7 @@ export default function RootLayout({
       </head>
       <body className="antialiased">
         <ThemeProvider>
+          <BackgroundScrollDriver />
           {children}
           <Toaster position="bottom-right" richColors />
         </ThemeProvider>

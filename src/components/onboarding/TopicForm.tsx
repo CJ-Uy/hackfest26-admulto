@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Sparkles,
@@ -13,7 +13,6 @@ import {
   Clock,
   FileUp,
 } from "lucide-react";
-import { GenerationProgress } from "./GenerationProgress";
 import { PdfUploader, type UploadedFile } from "./PdfUploader";
 import { PdfVerification } from "./PdfVerification";
 import { Input } from "@/components/ui/input";
@@ -22,13 +21,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-
-interface ProgressInfo {
-  step: string;
-  papersProcessed?: number;
-  total?: number;
-  message?: string;
-}
 
 interface OllamaModel {
   name: string;
@@ -101,14 +93,10 @@ function estimateGenerationTime(params: {
 export function TopicForm({ initialTopic }: TopicFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [progress, setProgress] = useState<ProgressInfo | null>(null);
-  const [scrollId, setScrollId] = useState<string | null>(null);
-  const [submittedTopic, setSubmittedTopic] = useState("");
   const [subfields, setSubfields] = useState<string[]>([]);
   const [subfieldInput, setSubfieldInput] = useState("");
   const topicRef = useRef<HTMLInputElement>(null);
   const descRef = useRef<HTMLTextAreaElement>(null);
-  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // PDF upload state
   const [pdfEnabled, setPdfEnabled] = useState(false);
@@ -116,86 +104,6 @@ export function TopicForm({ initialTopic }: TopicFormProps) {
   const [sourceMode, setSourceMode] = useState<SourceMode>("include");
   // PDF verification state
   const [showVerification, setShowVerification] = useState(false);
-
-  const stopPolling = useCallback(() => {
-    if (pollingRef.current) {
-      clearTimeout(pollingRef.current);
-      pollingRef.current = null;
-    }
-  }, []);
-
-  // Drive paper-by-paper processing via process-next endpoint.
-  // Each call processes ONE paper and returns progress.
-  // Sequential: next call only fires after the previous completes.
-  useEffect(() => {
-    if (!scrollId) return;
-    let cancelled = false;
-
-    async function driveProcessing() {
-      while (!cancelled) {
-        try {
-          const res = await fetch("/api/generate-feed/process-next", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ scrollId }),
-          });
-
-          if (!res.ok) {
-            // Server error — wait and retry
-            await new Promise((r) => {
-              pollingRef.current = setTimeout(r, 3000);
-            });
-            continue;
-          }
-
-          const data = (await res.json()) as {
-            status: string;
-            progress: ProgressInfo | null;
-            done?: boolean;
-          };
-
-          if (cancelled) break;
-
-          if (data.status === "complete" || data.done) {
-            router.push(`/schroll/${scrollId}`);
-            return;
-          }
-
-          if (data.status === "error") {
-            setLoading(false);
-            setScrollId(null);
-            toast.error(
-              data.progress?.message ||
-                "Feed generation failed. Please try again.",
-            );
-            return;
-          }
-
-          setProgress(data.progress);
-        } catch {
-          // Transient network error — wait and retry
-          if (cancelled) break;
-          await new Promise((r) => {
-            pollingRef.current = setTimeout(r, 3000);
-          });
-          continue;
-        }
-
-        // Gap between requests to stay within Turso free-tier rate limits
-        if (!cancelled) {
-          await new Promise((r) => {
-            pollingRef.current = setTimeout(r, 2000);
-          });
-        }
-      }
-    }
-
-    driveProcessing();
-    return () => {
-      cancelled = true;
-      stopPolling();
-    };
-  }, [scrollId, router, stopPolling]);
 
   // Advanced settings
   const [advancedOpen, setAdvancedOpen] = useState(false);
@@ -295,9 +203,7 @@ export function TopicForm({ initialTopic }: TopicFormProps) {
 
   function proceedToGenerate() {
     const topic = topicRef.current?.value?.trim();
-    setSubmittedTopic(topic || "your uploaded sources");
     setLoading(true);
-    setProgress({ step: pdfEnabled ? "extracting" : "searching" });
     doGenerate(topic);
   }
 
@@ -352,12 +258,12 @@ export function TopicForm({ initialTopic }: TopicFormProps) {
 
       const data = (await res.json()) as { scroll: { id: string } };
       if (!data.scroll?.id) throw new Error("No scroll ID received");
-      setScrollId(data.scroll.id);
+      // Redirect immediately — BackgroundScrollDriver drives process-next globally
+      router.push(`/schroll/${data.scroll.id}`);
     } catch (err) {
       console.error("Feed generation failed:", err);
       toast.error("Could not generate feed. Please try again.");
       setLoading(false);
-      setProgress(null);
     }
   }
 
@@ -387,11 +293,10 @@ export function TopicForm({ initialTopic }: TopicFormProps) {
 
   if (loading) {
     return (
-      <GenerationProgress
-        progress={progress}
-        topic={submittedTopic || "your topic"}
-        hasPdfs={pdfEnabled && doneFiles.length > 0}
-      />
+      <div className="flex flex-col items-center justify-center py-20 gap-4">
+        <Loader2 className="text-primary h-8 w-8 animate-spin" />
+        <p className="text-muted-foreground text-sm">Creating your schroll…</p>
+      </div>
     );
   }
 

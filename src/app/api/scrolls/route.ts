@@ -13,6 +13,7 @@ export async function GET() {
       mode: scrolls.mode,
       date: scrolls.date,
       paperCount: scrolls.paperCount,
+      status: scrolls.status,
     })
     .from(scrolls)
     .orderBy(desc(scrolls.createdAt));
