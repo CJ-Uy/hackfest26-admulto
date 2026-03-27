@@ -183,12 +183,12 @@ async function handleSearchPhase(
     // ── Search for papers ──
     let academicPapers: RawPaper[] = [];
     let webPapersList: RawPaper[] = [];
+    let expandedKeywords: string[] = [];
 
     if (!isOnlySources) {
       // Expand and correct the user's query before searching
       let academicQuery = config.topic || "";
       let webQuery = config.topic || "";
-      let expandedKeywords: string[] = [];
       if (config.topic) {
         try {
           const expanded = await expandSearchQuery(config.topic, config.description, config.subfields);
