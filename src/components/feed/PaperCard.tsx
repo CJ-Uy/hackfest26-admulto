@@ -59,12 +59,12 @@ export function PaperCard({
 
   return (
     <article
-      className="animate-card-enter border-border hover:bg-muted/50 cursor-pointer overflow-hidden border-b px-4 py-3 transition-colors"
+      className="animate-card-enter border-border hover:bg-muted/50 cursor-pointer overflow-hidden border-b transition-colors"
       style={{ animationDelay: `${index * 40}ms` }}
       onClick={navigateToDetail}
     >
       {/* Author row */}
-      <div className="mb-2 flex items-center gap-2.5">
+      <div className="mb-2 flex items-center gap-2.5 px-4 pt-3">
         <div
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[13px] font-bold text-white"
           style={{ backgroundColor: avatarColor }}
@@ -85,24 +85,37 @@ export function PaperCard({
       </div>
 
       {/* Title */}
-      <h3 className="font-heading text-foreground mb-1 text-[17px] leading-snug font-bold">
+      <h3 className="font-heading text-foreground mb-1 px-4 text-[17px] leading-snug font-bold">
         {paper.title}
       </h3>
 
+      {/* Figure image (when available from open-access PDF) */}
+      {paper.imageUrl && (
+        <div className="bg-muted mb-2 w-full overflow-hidden">
+          <img
+            src={paper.imageUrl}
+            alt={`Figure from ${paper.title}`}
+            className="w-full max-h-120 object-cover object-top"
+            loading="lazy"
+          />
+        </div>
+      )}
+
       {/* Synthesis */}
-      <p className="text-muted-foreground line-clamp-3 text-[15px] leading-relaxed">
+      <p className="text-muted-foreground line-clamp-3 px-4 text-[15px] leading-relaxed">
         {paper.synthesis}
       </p>
 
       {/* Reply notification badge */}
       {hasReplyNotif && (
-        <div className="mt-1.5 flex items-center gap-1.5 rounded-md bg-blue-50 px-2.5 py-1.5 text-[12px] font-medium text-blue-600">
+        <div className="mt-1.5 mx-4 flex items-center gap-1.5 rounded-md bg-blue-50 px-2.5 py-1.5 text-[12px] font-medium text-blue-600">
           <MessageCircleReply className="h-3.5 w-3.5" />A researcher replied to
           your comment
         </div>
       )}
 
       {/* Actions */}
+      <div className="px-4 pb-3">
       <CardActions
         paperId={paper.id}
         credibilityScore={paper.credibilityScore}
@@ -120,6 +133,7 @@ export function PaperCard({
         onDelete={onDelete}
         hasNewComments={hasNewComments}
       />
+      </div>
     </article>
   );
 }

@@ -56,6 +56,7 @@ export const papers = sqliteTable("paper", {
     .default(sql`0`),
   embedding: text("embedding"), // JSON-stringified 768-dim float array from nomic-embed-text
   groundingData: text("grounding_data"), // JSON-stringified DeBERTa verification result
+  imageKey: text("image_key"), // R2 object key for extracted figure, e.g. "images/{scrollId}/{paperId}.png"
 });
 
 export const comments = sqliteTable("comment", {

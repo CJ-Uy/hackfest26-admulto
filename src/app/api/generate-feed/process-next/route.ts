@@ -7,7 +7,8 @@ import {
 } from "@/lib/ollama";
 import { searchPapers, type RawPaper } from "@/lib/paper-search";
 import { webSearch } from "@/lib/search";
-import { getPdf } from "@/lib/r2";
+import { getPdf, uploadImage } from "@/lib/r2";
+import { fetchPdfAndExtractFigure } from "@/lib/pdf-images";
 import { extractPdfContent, pdfToRawPaper } from "@/lib/pdf-extract";
 import { db } from "@/lib/db";
 import { scrolls, papers, polls } from "@/lib/schema";
@@ -279,9 +280,10 @@ async function handleSearchPhase(
           commentCount: 0,
           apaCitation: "",
           isUserUpload: p.source === "pdf_upload",
-          // Store abstract temporarily in groundingData for synthesis generation
+          // Store abstract + open-access PDF URL temporarily for synthesis/image generation
           groundingData: JSON.stringify({
             abstract: (p.abstract || "").slice(0, 2000),
+            openAccessPdfUrl: p.openAccessPdfUrl || null,
           }),
         };
       });
@@ -398,12 +400,17 @@ async function handleProcessPhase(
         ? `[User's reference material for context: ${config.pdfContextText.slice(0, 1500)}]\n\n`
         : "";
 
-    // Recover abstract from groundingData where we stored it during search
+    // Recover abstract and open-access PDF URL from groundingData
     let abstract = "";
+    let openAccessPdfUrl: string | null = null;
     if (nextPaper.groundingData) {
       try {
-        const gd = JSON.parse(nextPaper.groundingData) as { abstract?: string };
+        const gd = JSON.parse(nextPaper.groundingData) as {
+          abstract?: string;
+          openAccessPdfUrl?: string | null;
+        };
         abstract = gd.abstract || "";
+        openAccessPdfUrl = gd.openAccessPdfUrl || null;
       } catch {
         // ignore
       }
@@ -424,6 +431,21 @@ async function handleProcessPhase(
       ),
     ]);
 
+    // Attempt figure extraction (non-fatal — papers without images render normally)
+    let imageKey: string | null = null;
+    if (openAccessPdfUrl) {
+      try {
+        const pngBuffer = await fetchPdfAndExtractFigure(openAccessPdfUrl);
+        if (pngBuffer) {
+          const key = `images/${scrollId}/${nextPaper.id}.png`;
+          await uploadImage(pngBuffer, key);
+          imageKey = key; // only set after successful upload
+        }
+      } catch {
+        // ignore — image is optional
+      }
+    }
+
     // Update paper with real synthesis, clear the temp groundingData
     await db
       .update(papers)
@@ -431,6 +453,7 @@ async function handleProcessPhase(
         synthesis,
         apaCitation,
         groundingData: null,
+        ...(imageKey ? { imageKey } : {}),
       })
       .where(eq(papers.id, nextPaper.id));
 
