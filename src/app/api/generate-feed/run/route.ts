@@ -10,6 +10,7 @@ import { searchPapers, type RawPaper } from "@/lib/paper-search";
 import { webSearch } from "@/lib/search";
 import { getPdf, uploadImage } from "@/lib/r2";
 import { fetchPdfAndExtractFigure } from "@/lib/pdf-images";
+import { fillScrollImages } from "@/lib/image-fill";
 import { extractPdfContent, pdfToRawPaper } from "@/lib/pdf-extract";
 import { db } from "@/lib/db";
 import { scrolls, papers, polls } from "@/lib/schema";
@@ -349,6 +350,9 @@ export async function POST(req: Request) {
             ? `[User's reference material for context: ${pdfContextText.slice(0, 1500)}]\n\n`
             : "";
 
+        // Track which papers received images during synthesis (for the fill pass below)
+        const papersWithImages = new Set<string>();
+
         await withConcurrency(
           insertedPapers,
           async (paper) => {
@@ -393,6 +397,8 @@ export async function POST(req: Request) {
                   }
                 } catch { /* ignore */ }
               }
+
+              if (imageKey) papersWithImages.add(paper.id);
 
               await db
                 .update(papers)
@@ -442,6 +448,13 @@ export async function POST(req: Request) {
             );
           },
           SYNTHESIS_CONCURRENCY,
+        );
+
+        // ── Fill missing images (every 3rd paper must have an image) ──────
+        await fillScrollImages(
+          scrollId,
+          insertedPapers.map((p) => ({ id: p.id, title: p.title })),
+          papersWithImages,
         );
 
         // ── Finalize ──────────────────────────────────────────────────────

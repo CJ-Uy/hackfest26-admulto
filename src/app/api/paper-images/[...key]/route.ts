@@ -1,4 +1,5 @@
 import { getImage } from "@/lib/r2";
+import { detectImageMime } from "@/lib/image-fill";
 
 export async function GET(
   _req: Request,
@@ -14,9 +15,11 @@ export async function GET(
       return new Response("Not found", { status: 404 });
     }
 
+    const contentType = detectImageMime(buffer);
+
     return new Response(buffer, {
       headers: {
-        "Content-Type": "image/png",
+        "Content-Type": contentType,
         "Cache-Control": "public, max-age=31536000, immutable",
       },
     });

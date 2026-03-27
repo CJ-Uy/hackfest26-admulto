@@ -10,6 +10,7 @@ import { searchPapers, type RawPaper } from "@/lib/paper-search";
 import { webSearch } from "@/lib/search";
 import { getPdf, uploadImage } from "@/lib/r2";
 import { fetchPdfAndExtractFigure } from "@/lib/pdf-images";
+import { fillScrollImages } from "@/lib/image-fill";
 import { extractPdfContent, pdfToRawPaper } from "@/lib/pdf-extract";
 import { db } from "@/lib/db";
 import { scrolls, papers, polls } from "@/lib/schema";
@@ -563,6 +564,22 @@ async function finalizeScroll(
   const subfields = rawData.config.subfields;
 
   try {
+    // ── Fill missing images (every 3rd paper must have one) ───────────────
+    const allPapers = await db
+      .select({ id: papers.id, title: papers.title, imageKey: papers.imageKey })
+      .from(papers)
+      .where(eq(papers.scrollId, scrollId))
+      .orderBy(asc(papers.id));
+
+    const papersWithImages = new Set(
+      allPapers.filter((p) => p.imageKey).map((p) => p.id),
+    );
+    await fillScrollImages(
+      scrollId,
+      allPapers.map((p) => ({ id: p.id, title: p.title })),
+      papersWithImages,
+    );
+
     const [{ count }] = await db
       .select({ count: sql<number>`count(*)` })
       .from(papers)
