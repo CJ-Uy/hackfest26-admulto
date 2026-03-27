@@ -53,11 +53,7 @@ export async function GET(
       voted: paper.votes.length > 0 && paper.votes[0].value === 1,
       downvoted: paper.votes.length > 0 && paper.votes[0].value === -1,
       bookmarked: paper.bookmarks.length > 0,
-      imageUrl: paper.imageKey
-        ? paper.imageKey.startsWith("http")
-          ? paper.imageKey
-          : `/api/paper-images/${paper.imageKey}`
-        : undefined,
+      imageUrl: paper.imageKey ? `/api/paper-images/${paper.imageKey}` : undefined,
       groundingData: paper.groundingData
         ? JSON.parse(paper.groundingData)
         : null,

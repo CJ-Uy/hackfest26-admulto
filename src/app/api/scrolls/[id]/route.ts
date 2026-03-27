@@ -36,8 +36,7 @@ export async function DELETE(
       .where(eq(papers.scrollId, id));
     const imageKeys = scrollPapers
       .map((p) => p.imageKey)
-      // Only delete R2-stored images; external URLs (http/https) are not in R2
-      .filter((k): k is string => k !== null && k !== undefined && !k.startsWith("http"));
+      .filter((k): k is string => k !== null && k !== undefined);
     if (imageKeys.length > 0) {
       await deleteImages(imageKeys);
     }
@@ -104,11 +103,7 @@ export async function GET(
     voted: p.votes.length > 0 && p.votes[0].value === 1,
     downvoted: p.votes.length > 0 && p.votes[0].value === -1,
     bookmarked: p.bookmarks.length > 0,
-    imageUrl: p.imageKey
-      ? p.imageKey.startsWith("http")
-        ? p.imageKey
-        : `/api/paper-images/${p.imageKey}`
-      : undefined,
+    imageUrl: p.imageKey ? `/api/paper-images/${p.imageKey}` : undefined,
     groundingData: p.groundingData ? JSON.parse(p.groundingData) : null,
   }));
 

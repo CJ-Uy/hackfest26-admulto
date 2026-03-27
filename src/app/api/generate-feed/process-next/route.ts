@@ -185,34 +185,32 @@ async function handleSearchPhase(
 
     if (!isOnlySources) {
       // Expand and correct the user's query before searching
-      let searchQuery = config.topic || "";
+      let academicQuery = config.topic || "";
+      let webQuery = config.topic || "";
       if (config.topic) {
         try {
           const expanded = await expandSearchQuery(config.topic, config.description, config.subfields);
-          const allTerms = [
-            expanded.correctedTopic,
-            ...expanded.keywords.slice(0, 4),
-            ...expanded.relatedTerms.slice(0, 2),
-          ];
-          searchQuery = [...new Set(allTerms)].join(" ");
-          console.log(`[process-next] Expanded query: "${searchQuery}" (original: "${config.topic}")`);
-          // Update scroll title if spelling was corrected
+          academicQuery = [expanded.correctedTopic, ...expanded.keywords.slice(0, 1)].filter(Boolean).join(" ");
+          webQuery = [expanded.correctedTopic, ...expanded.keywords.slice(0, 4), ...expanded.relatedTerms.slice(0, 2)].filter(Boolean).join(" ");
+          console.log(`[process-next] Academic query: "${academicQuery}" | Web query: "${webQuery}"`);
           if (expanded.correctedTopic && expanded.correctedTopic.toLowerCase() !== config.topic.toLowerCase()) {
             await db.update(scrolls).set({ title: expanded.correctedTopic }).where(eq(scrolls.id, scrollId)).catch(() => {});
           }
         } catch {
-          if (config.subfields?.length) searchQuery += " " + config.subfields.slice(0, 2).join(" ");
+          if (config.subfields?.length) academicQuery += " " + config.subfields.slice(0, 1).join(" ");
+          webQuery = academicQuery;
         }
       } else if (config.subfields?.length) {
-        searchQuery += " " + config.subfields.slice(0, 2).join(" ");
+        academicQuery += " " + config.subfields.slice(0, 1).join(" ");
+        webQuery = academicQuery;
       }
 
       const [searchResults, webResults] = await Promise.all([
-        searchPapers(searchQuery, 20, { skipEmbeddings: true }).catch((err) => {
+        searchPapers(academicQuery, 20, { skipEmbeddings: true }).catch((err) => {
           console.error(`[process-next] searchPapers failed:`, err);
           return [] as RawPaper[];
         }),
-        webSearch(searchQuery, 15).catch((err) => {
+        webSearch(webQuery, 15).catch((err) => {
           console.error(`[process-next] webSearch failed:`, err);
           return [] as {
             title: string;

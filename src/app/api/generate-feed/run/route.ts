@@ -198,38 +198,47 @@ export async function POST(req: Request) {
           controller.enqueue(encode({ type: "progress", step: "expanding" }));
           let searchQuery = topic || "";
           let expandedQuery = { correctedTopic: topic || "", keywords: [] as string[], relatedTerms: [] as string[] };
+          // academicQuery: short and focused (academic APIs work best with 2-4 words)
+          // webQuery: broader expansion (SearXNG handles natural-language queries well)
+          let academicQuery = topic || "";
+          let webQuery = topic || "";
           if (topic) {
             try {
               expandedQuery = await expandSearchQuery(topic, description, subfields);
-              // Build a richer query: corrected topic + top keywords + related terms
-              const allTerms = [
+              // Academic APIs: corrected topic + at most 1 extra keyword
+              academicQuery = [
+                expandedQuery.correctedTopic,
+                ...expandedQuery.keywords.slice(0, 1),
+              ].filter(Boolean).join(" ");
+              // Web search: full expansion for broader coverage
+              webQuery = [
                 expandedQuery.correctedTopic,
                 ...expandedQuery.keywords.slice(0, 4),
                 ...expandedQuery.relatedTerms.slice(0, 2),
-              ];
-              searchQuery = [...new Set(allTerms)].join(" ");
-              console.log(`[run] Expanded query: "${searchQuery}" (original: "${topic}")`);
+              ].filter(Boolean).join(" ");
+              console.log(`[run] Academic query: "${academicQuery}" | Web query: "${webQuery}"`);
               // Update scroll title if spelling was corrected
               if (expandedQuery.correctedTopic && expandedQuery.correctedTopic.toLowerCase() !== topic.toLowerCase()) {
                 await db.update(scrolls).set({ title: expandedQuery.correctedTopic }).where(eq(scrolls.id, scrollId)).catch(() => {});
               }
             } catch {
-              // Fall back to original topic + subfields
-              searchQuery = topic || "";
-              if (subfields?.length) searchQuery += " " + subfields.slice(0, 2).join(" ");
+              academicQuery = topic || "";
+              if (subfields?.length) academicQuery += " " + subfields.slice(0, 1).join(" ");
+              webQuery = academicQuery;
             }
           } else if (subfields?.length) {
-            searchQuery += " " + subfields.slice(0, 2).join(" ");
+            academicQuery += " " + subfields.slice(0, 1).join(" ");
+            webQuery = academicQuery;
           }
 
           const [searchResults, webResults] = await Promise.all([
-            searchPapers(searchQuery, 20, { skipEmbeddings: true }).catch(
+            searchPapers(academicQuery, 20, { skipEmbeddings: true }).catch(
               (err) => {
                 console.error(`[run] searchPapers failed:`, err);
                 return [] as RawPaper[];
               },
             ),
-            webSearch(searchQuery, 15).catch((err) => {
+            webSearch(webQuery, 15).catch((err) => {
               console.error(`[run] webSearch failed:`, err);
               return [] as {
                 title: string;
