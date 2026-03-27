@@ -192,11 +192,11 @@ export async function POST(req: Request) {
         // ── Academic + web search ─────────────────────────────────────────
         let academicPapers: RawPaper[] = [];
         let webPapersList: RawPaper[] = [];
+        let expandedQuery = { correctedTopic: topic || "", keywords: [] as string[], relatedTerms: [] as string[] };
 
         if (!isOnlySources) {
           // Expand and correct the user's query before searching
           controller.enqueue(encode({ type: "progress", step: "expanding" }));
-          let expandedQuery = { correctedTopic: topic || "", keywords: [] as string[], relatedTerms: [] as string[] };
           // academicQuery: short and focused (academic APIs work best with 2-4 words)
           // webQuery: broader expansion (SearXNG handles natural-language queries well)
           let academicQuery = topic || "";
