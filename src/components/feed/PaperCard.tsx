@@ -43,12 +43,14 @@ export function PaperCard({
 }: PaperCardProps) {
   const router = useRouter();
 
-  const primaryAuthor = paper.authors[0] ?? "Unknown";
-  const authorDisplay =
-    paper.authors.length > 1
+  const isWebResult = paper.authors.length === 0;
+  const primaryAuthor = paper.authors[0] ?? "Web Search";
+  const authorDisplay = isWebResult
+    ? "Web Search"
+    : paper.authors.length > 1
       ? `${paper.authors[0]} & ${paper.authors[1]}`
-      : paper.authors[0] || "Unknown";
-  const initial = primaryAuthor.charAt(0).toUpperCase();
+      : paper.authors[0];
+  const initial = isWebResult ? "W" : primaryAuthor.charAt(0).toUpperCase();
 
   const avatarColor = getAvatarColor(primaryAuthor);
 

@@ -102,10 +102,6 @@ export async function fetchPdfAndExtractFigure(
 
     if (!res.ok) return null;
 
-    // Reject HTML pages (landing pages, paywalls) that aren't actual PDFs
-    const contentType = res.headers.get("content-type") ?? "";
-    if (!contentType.includes("application/pdf")) return null;
-
     const contentLength = Number(res.headers.get("content-length") ?? 0);
     if (contentLength > MAX_PDF_BYTES) return null;
 

@@ -15,6 +15,9 @@ import { scrolls, papers, polls } from "@/lib/schema";
 import { eq, sql, asc } from "drizzle-orm";
 import type { ExportTheme } from "@/lib/types";
 
+// ─── Feed size ────────────────────────────────────────────────────────────────
+const FEED_SIZE = 8;
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 interface Config {
@@ -236,9 +239,9 @@ async function handleSearchPhase(
       (a, b) => (b.citationCount || 0) - (a.citationCount || 0),
     );
 
-    // Build final list: up to 12 academic + fill with web
-    const targetAcademic = Math.min(academicPapers.length, 12);
-    const targetWeb = Math.min(webPapersList.length, 12 - targetAcademic);
+    // Build final list: up to FEED_SIZE academic + fill with web
+    const targetAcademic = Math.min(academicPapers.length, FEED_SIZE);
+    const targetWeb = Math.min(webPapersList.length, FEED_SIZE - targetAcademic);
 
     const academicTitles = new Set(
       academicPapers.slice(0, targetAcademic).map((p) => p.title.toLowerCase()),

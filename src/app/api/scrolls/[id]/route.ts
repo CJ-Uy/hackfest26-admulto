@@ -107,12 +107,15 @@ export async function GET(
     groundingData: p.groundingData ? JSON.parse(p.groundingData) : null,
   }));
 
-  // Eye candy: show papers with images first
-  responsePapers.sort((a, b) => {
-    if (a.imageUrl && !b.imageUrl) return -1;
-    if (!a.imageUrl && b.imageUrl) return 1;
-    return 0;
-  });
+  // Alternate image/no-image papers for visual variety
+  const withImage = responsePapers.filter((p) => p.imageUrl);
+  const withoutImage = responsePapers.filter((p) => !p.imageUrl);
+  const interleaved: typeof responsePapers = [];
+  const maxLen = Math.max(withImage.length, withoutImage.length);
+  for (let i = 0; i < maxLen; i++) {
+    if (i < withImage.length) interleaved.push(withImage[i]);
+    if (i < withoutImage.length) interleaved.push(withoutImage[i]);
+  }
 
   const responseUserPosts: UserPost[] = (scroll.userPosts || []).map((up) => ({
     id: up.id,
@@ -153,7 +156,7 @@ export async function GET(
         ? (JSON.parse(scroll.pdfKeys) as string[])
         : undefined,
     },
-    papers: responsePapers,
+    papers: interleaved,
     exportOutline,
     polls: responsePolls,
     userPosts: responseUserPosts,
