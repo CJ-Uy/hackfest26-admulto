@@ -1,9 +1,21 @@
 /**
- * R2 storage client for PDF uploads.
+ * R2 storage client.
  *
- * Uses native R2Bucket binding via Cloudflare Workers.
- * For local dev, use `wrangler dev` to get R2 bindings.
+ * Production: native R2Bucket binding via getCloudflareContext().
+ * Development: S3-compatible HTTP API (same pattern as db.ts fallback).
  */
+
+import {
+  S3Client,
+  PutObjectCommand,
+  GetObjectCommand,
+  DeleteObjectCommand,
+} from "@aws-sdk/client-s3";
+
+const isDev = process.env.NODE_ENV === "development";
+const R2_BUCKET_NAME = "schrollar";
+
+// --------------- Production: native R2 binding ---------------
 
 async function getBucket(): Promise<R2Bucket> {
   const { getCloudflareContext } = await import("@opennextjs/cloudflare");
@@ -17,10 +29,31 @@ async function getBucket(): Promise<R2Bucket> {
   return bucket;
 }
 
-/**
- * Upload a PDF to R2 storage.
- * Returns the R2 object key.
- */
+// --------------- Development: S3-compatible API ---------------
+
+const globalForR2 = globalThis as unknown as { s3Client?: S3Client };
+
+function getS3Client(): S3Client {
+  if (!globalForR2.s3Client) {
+    const accountId = process.env.R2_ACCOUNT_ID;
+    const accessKeyId = process.env.R2_ACCESS_KEY_ID;
+    const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
+    if (!accountId || !accessKeyId || !secretAccessKey) {
+      throw new Error(
+        "R2 binding unavailable and R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY env vars not set",
+      );
+    }
+    globalForR2.s3Client = new S3Client({
+      region: "auto",
+      endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+      credentials: { accessKeyId, secretAccessKey },
+    });
+  }
+  return globalForR2.s3Client;
+}
+
+// --------------- Exported functions ---------------
+
 export async function uploadPdf(
   buffer: ArrayBuffer,
   filename: string,
@@ -29,6 +62,18 @@ export async function uploadPdf(
   const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, "_");
   const key = `temp/${id}/${safeName}`;
 
+  if (isDev) {
+    const s3 = getS3Client();
+    await s3.send(
+      new PutObjectCommand({
+        Bucket: R2_BUCKET_NAME,
+        Key: key,
+        Body: new Uint8Array(buffer),
+        ContentType: "application/pdf",
+      }),
+    );
+    return key;
+  }
   const bucket = await getBucket();
   await bucket.put(key, buffer, {
     httpMetadata: { contentType: "application/pdf" },
@@ -36,21 +81,39 @@ export async function uploadPdf(
   return key;
 }
 
-/**
- * Retrieve a PDF from R2 storage.
- */
 export async function getPdf(key: string): Promise<ArrayBuffer | null> {
+  if (isDev) {
+    const s3 = getS3Client();
+    try {
+      const resp = await s3.send(
+        new GetObjectCommand({ Bucket: R2_BUCKET_NAME, Key: key }),
+      );
+      const bytes = await resp.Body!.transformToByteArray();
+      return bytes.buffer as ArrayBuffer;
+    } catch (e: unknown) {
+      if ((e as { name?: string }).name === "NoSuchKey") return null;
+      throw e;
+    }
+  }
   const bucket = await getBucket();
   const obj = await bucket.get(key);
   if (!obj) return null;
   return obj.arrayBuffer();
 }
 
-/**
- * Delete PDFs from R2 storage (cleanup after generation).
- */
 export async function deletePdfs(keys: string[]): Promise<void> {
   if (keys.length === 0) return;
+  if (isDev) {
+    const s3 = getS3Client();
+    await Promise.all(
+      keys.map((key) =>
+        s3.send(
+          new DeleteObjectCommand({ Bucket: R2_BUCKET_NAME, Key: key }),
+        ),
+      ),
+    );
+    return;
+  }
   const bucket = await getBucket();
   await Promise.all(keys.map((key) => bucket.delete(key)));
 }
@@ -64,27 +127,57 @@ export async function uploadImage(
   key: string,
   contentType = "image/png",
 ): Promise<void> {
+  if (isDev) {
+    const s3 = getS3Client();
+    await s3.send(
+      new PutObjectCommand({
+        Bucket: R2_BUCKET_NAME,
+        Key: key,
+        Body: new Uint8Array(buffer),
+        ContentType: contentType,
+      }),
+    );
+    return;
+  }
   const bucket = await getBucket();
   await bucket.put(key, buffer, {
     httpMetadata: { contentType },
   });
 }
 
-/**
- * Retrieve an image from R2 storage.
- */
 export async function getImage(key: string): Promise<ArrayBuffer | null> {
+  if (isDev) {
+    const s3 = getS3Client();
+    try {
+      const resp = await s3.send(
+        new GetObjectCommand({ Bucket: R2_BUCKET_NAME, Key: key }),
+      );
+      const bytes = await resp.Body!.transformToByteArray();
+      return bytes.buffer as ArrayBuffer;
+    } catch (e: unknown) {
+      if ((e as { name?: string }).name === "NoSuchKey") return null;
+      throw e;
+    }
+  }
   const bucket = await getBucket();
   const obj = await bucket.get(key);
   if (!obj) return null;
   return obj.arrayBuffer();
 }
 
-/**
- * Delete images from R2 storage (cleanup on scroll deletion).
- */
 export async function deleteImages(keys: string[]): Promise<void> {
   if (keys.length === 0) return;
+  if (isDev) {
+    const s3 = getS3Client();
+    await Promise.all(
+      keys.map((key) =>
+        s3.send(
+          new DeleteObjectCommand({ Bucket: R2_BUCKET_NAME, Key: key }),
+        ),
+      ),
+    );
+    return;
+  }
   const bucket = await getBucket();
   await Promise.all(keys.map((key) => bucket.delete(key)));
 }
