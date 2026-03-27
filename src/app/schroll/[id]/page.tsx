@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { toast } from "sonner";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
 import { Sidebar } from "@/components/shared/Sidebar";
 import { Navbar } from "@/components/shared/Navbar";
 import { ScrollHeader } from "@/components/shared/ScrollHeader";
@@ -23,6 +22,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useScrollStream } from "@/hooks/useScrollStream";
 import { useCommentStream } from "@/hooks/useCommentStream";
 import { fetchScroll } from "@/lib/scroll-store";
+import { GenerationProgress } from "@/components/onboarding/GenerationProgress";
 
 import type {
   ScrollSession,
@@ -88,6 +88,12 @@ function ScrollPageInner() {
     step: string;
     papersProcessed?: number;
     total?: number;
+  } | null>(null);
+  const [generatingProgress, setGeneratingProgress] = useState<{
+    step: string;
+    papersProcessed?: number;
+    total?: number;
+    message?: string;
   } | null>(null);
 
   const fetchCommentCounts = useCallback(async () => {
@@ -206,6 +212,7 @@ function ScrollPageInner() {
   useScrollStream({
     scrollId,
     enabled: scroll?.status === "generating" && !isGeneratingMore,
+    onProgress: useCallback((p) => setGeneratingProgress(p), []),
     onComplete: reloadScroll,
     onError: useCallback(() => {
       toast.error("Connection lost. Refreshing...");
@@ -503,12 +510,12 @@ function ScrollPageInner() {
             {/* Tab content */}
             <div className="overflow-hidden pb-20">
               {scroll.status === "generating" && (
-                <div className="flex flex-col items-center justify-center px-4 py-16">
-                  <Loader2 className="text-primary mb-4 h-8 w-8 animate-spin" />
-                  <p className="text-muted-foreground text-sm">
-                    Your feed is still being generated. This page will update
-                    automatically.
-                  </p>
+                <div className="px-5 pb-8">
+                  <GenerationProgress
+                    progress={generatingProgress}
+                    topic={scroll.title}
+                    hasPdfs={scroll.mode === "pdf_only" || scroll.mode === "pdf_include" || scroll.mode === "pdf_context"}
+                  />
                 </div>
               )}
               {scroll.status !== "generating" && activeTab === "feed" && (
