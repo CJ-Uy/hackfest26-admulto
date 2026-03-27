@@ -107,12 +107,11 @@ export async function GET(
     groundingData: p.groundingData ? JSON.parse(p.groundingData) : null,
   }));
 
-  // Alternate image/no-image papers for visual variety
+  // Alternate image/no-image papers: image, no-image, image, no-image, ...
   const withImage = responsePapers.filter((p) => p.imageUrl);
   const withoutImage = responsePapers.filter((p) => !p.imageUrl);
   const interleaved: typeof responsePapers = [];
-  const maxLen = Math.max(withImage.length, withoutImage.length);
-  for (let i = 0; i < maxLen; i++) {
+  for (let i = 0; i < Math.max(withImage.length, withoutImage.length); i++) {
     if (i < withImage.length) interleaved.push(withImage[i]);
     if (i < withoutImage.length) interleaved.push(withoutImage[i]);
   }
