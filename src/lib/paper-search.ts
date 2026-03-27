@@ -18,6 +18,7 @@ export interface RawPaper {
   citationCount: number;
   source: "openalex" | "crossref" | "semantic_scholar" | "web" | "pdf_upload";
   embedding?: number[]; // nomic-embed-text embedding, attached during search dedup
+  openAccessPdfUrl?: string; // direct URL to open-access PDF for image extraction
 }
 
 // ─── OpenAlex (primary — free, 100k req/day with polite pool) ───────────────
@@ -41,7 +42,7 @@ async function searchOpenAlex(query: string, limit = 15): Promise<RawPaper[]> {
       search: query.slice(0, 200),
       per_page: String(limit),
       select:
-        "id,title,authorships,publication_year,cited_by_count,primary_location,doi,abstract_inverted_index",
+        "id,title,authorships,publication_year,cited_by_count,primary_location,doi,abstract_inverted_index,open_access",
       mailto: "schrollar-app@example.com", // polite pool
     });
 
@@ -70,6 +71,9 @@ async function searchOpenAlex(query: string, limit = 15): Promise<RawPaper[]> {
           r.primary_location?.source?.display_name || "Academic Publication";
         const doi = (r.doi as string)?.replace("https://doi.org/", "") || "";
 
+        const openAccessPdfUrl =
+          ((r.open_access as AnyRecord)?.oa_url as string) || undefined;
+
         return {
           id: (r.id as string) || `oa-${Math.random().toString(36).slice(2)}`,
           title: r.title as string,
@@ -80,6 +84,7 @@ async function searchOpenAlex(query: string, limit = 15): Promise<RawPaper[]> {
           doi,
           citationCount: (r.cited_by_count as number) || 0,
           source: "openalex",
+          openAccessPdfUrl,
         };
       })
       .filter((p): p is RawPaper => p !== null);
@@ -178,7 +183,7 @@ async function searchSemanticScholar(
       query: query.slice(0, 200),
       limit: String(limit),
       fields:
-        "title,abstract,url,year,citationCount,authors,venue,externalIds,journal",
+        "title,abstract,url,year,citationCount,authors,venue,externalIds,journal,openAccessPdf",
     });
 
     const headers: Record<string, string> = {};
@@ -216,6 +221,9 @@ async function searchSemanticScholar(
           (r.journal as AnyRecord)?.name ||
           "Academic Publication";
 
+        const openAccessPdfUrl =
+          ((r.openAccessPdf as AnyRecord)?.url as string) || undefined;
+
         return {
           id:
             (r.paperId as string) ||
@@ -228,6 +236,7 @@ async function searchSemanticScholar(
           doi: (r.externalIds as AnyRecord)?.DOI || "",
           citationCount: (r.citationCount as number) || 0,
           source: "semantic_scholar",
+          openAccessPdfUrl,
         };
       })
       .filter((p): p is RawPaper => p !== null);

@@ -76,9 +76,28 @@ export function PostDetail({
           {paper.title}
         </h1>
 
+        {/* Figure */}
+        {paper.imageUrl && (
+          <div className="my-2 overflow-hidden rounded-lg">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={paper.imageUrl}
+              alt={`Figure from ${paper.title}`}
+              className="bg-muted w-full object-contain"
+              loading="lazy"
+            />
+          </div>
+        )}
+
         {/* Synthesis — full text, not clamped */}
         <p className="text-muted-foreground text-[15px] leading-relaxed">
-          {paper.synthesis}
+          {paper.synthesis === "__PENDING__" ? (
+            <span className="italic opacity-50">Generating summary…</span>
+          ) : paper.synthesis.startsWith("[Summary unavailable") ? (
+            <span className="italic opacity-50">Summary could not be generated for this paper.</span>
+          ) : (
+            paper.synthesis
+          )}
         </p>
 
         {/* DOI link */}

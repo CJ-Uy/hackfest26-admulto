@@ -7,7 +7,8 @@ import {
 } from "@/lib/ollama";
 import { searchPapers, type RawPaper } from "@/lib/paper-search";
 import { webSearch } from "@/lib/search";
-import { getPdf } from "@/lib/r2";
+import { getPdf, uploadImage } from "@/lib/r2";
+import { fetchPdfAndExtractFigure, extractFirstFigure } from "@/lib/pdf-images";
 import { extractPdfContent, pdfToRawPaper } from "@/lib/pdf-extract";
 import { db } from "@/lib/db";
 import { scrolls, papers, polls } from "@/lib/schema";
@@ -146,6 +147,7 @@ async function handleSearchPhase(
   try {
     // ── Extract PDFs if provided ──
     const pdfPapers: RawPaper[] = [];
+    const pdfImageBuffers = new Map<string, ArrayBuffer>(); // title → PNG buffer
     let pdfContextText = "";
 
     if (hasPdfs && config.pdfKeys) {
@@ -157,8 +159,19 @@ async function handleSearchPhase(
             buffer,
             key.split("/").pop() || "document.pdf",
           );
-          pdfPapers.push(pdfToRawPaper(extracted));
+          const rawPaper = pdfToRawPaper(extracted);
+          pdfPapers.push(rawPaper);
           pdfContextText += `\n\n--- ${extracted.title} ---\n${extracted.text.slice(0, 2000)}`;
+
+          // Extract figure from uploaded PDF (non-fatal)
+          try {
+            const imgBuf = await extractFirstFigure(buffer);
+            if (imgBuf) {
+              pdfImageBuffers.set(rawPaper.title, imgBuf);
+            }
+          } catch {
+            // non-fatal
+          }
         } catch (err) {
           console.error(`Failed to extract PDF ${key}:`, err);
         }
@@ -279,9 +292,10 @@ async function handleSearchPhase(
           commentCount: 0,
           apaCitation: "",
           isUserUpload: p.source === "pdf_upload",
-          // Store abstract temporarily in groundingData for synthesis generation
+          // Store abstract + PDF URL temporarily in groundingData for processing
           groundingData: JSON.stringify({
             abstract: (p.abstract || "").slice(0, 2000),
+            openAccessPdfUrl: p.openAccessPdfUrl || null,
           }),
         };
       });
@@ -290,6 +304,30 @@ async function handleSearchPhase(
       const CHUNK_SIZE = 6;
       for (let i = 0; i < paperRows.length; i += CHUNK_SIZE) {
         await db.insert(papers).values(paperRows.slice(i, i + CHUNK_SIZE));
+      }
+
+      // Upload extracted images for user-uploaded PDFs and associate with paper IDs
+      if (pdfImageBuffers.size > 0) {
+        const insertedPapers = await db
+          .select({ id: papers.id, title: papers.title })
+          .from(papers)
+          .where(eq(papers.scrollId, scrollId));
+
+        for (const p of insertedPapers) {
+          const imgBuf = pdfImageBuffers.get(p.title);
+          if (imgBuf) {
+            try {
+              const imageKey = `images/${scrollId}/${p.id}.png`;
+              await uploadImage(imgBuf, imageKey, "image/png");
+              await db
+                .update(papers)
+                .set({ imageKey })
+                .where(eq(papers.id, p.id));
+            } catch {
+              // non-fatal
+            }
+          }
+        }
       }
     }
 
@@ -398,12 +436,17 @@ async function handleProcessPhase(
         ? `[User's reference material for context: ${config.pdfContextText.slice(0, 1500)}]\n\n`
         : "";
 
-    // Recover abstract from groundingData where we stored it during search
+    // Recover abstract + PDF URL from groundingData where we stored it during search
     let abstract = "";
+    let openAccessPdfUrl: string | null = null;
     if (nextPaper.groundingData) {
       try {
-        const gd = JSON.parse(nextPaper.groundingData) as { abstract?: string };
+        const gd = JSON.parse(nextPaper.groundingData) as {
+          abstract?: string;
+          openAccessPdfUrl?: string;
+        };
         abstract = gd.abstract || "";
+        openAccessPdfUrl = gd.openAccessPdfUrl || null;
       } catch {
         // ignore
       }
@@ -424,12 +467,30 @@ async function handleProcessPhase(
       ),
     ]);
 
+    // Attempt image extraction from open-access PDF (non-fatal)
+    let imageKey: string | null = null;
+    if (openAccessPdfUrl) {
+      try {
+        const imageBuffer = await fetchPdfAndExtractFigure(openAccessPdfUrl);
+        if (imageBuffer) {
+          imageKey = `images/${scrollId}/${nextPaper.id}.png`;
+          await uploadImage(imageBuffer, imageKey, "image/png");
+        }
+      } catch (err) {
+        console.warn(
+          `[process-next] Image extraction failed for "${nextPaper.title}":`,
+          err,
+        );
+      }
+    }
+
     // Update paper with real synthesis, clear the temp groundingData
     await db
       .update(papers)
       .set({
         synthesis,
         apaCitation,
+        imageKey,
         groundingData: null,
       })
       .where(eq(papers.id, nextPaper.id));

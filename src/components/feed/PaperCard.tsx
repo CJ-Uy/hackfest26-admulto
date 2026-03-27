@@ -83,9 +83,28 @@ export function PaperCard({
         {paper.title}
       </h3>
 
+      {/* Figure preview */}
+      {paper.imageUrl && (
+        <div className="mb-2 overflow-hidden rounded-lg">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={paper.imageUrl}
+            alt={`Figure from ${paper.title}`}
+            className="bg-muted max-h-64 w-full object-contain"
+            loading="lazy"
+          />
+        </div>
+      )}
+
       {/* Synthesis */}
       <p className="text-muted-foreground line-clamp-3 text-[15px] leading-relaxed">
-        {paper.synthesis}
+        {paper.synthesis === "__PENDING__" ? (
+          <span className="italic opacity-50">Generating summary…</span>
+        ) : paper.synthesis.startsWith("[Summary unavailable") ? (
+          <span className="italic opacity-50">Summary could not be generated for this paper.</span>
+        ) : (
+          paper.synthesis
+        )}
       </p>
 
       {/* Reply notification badge */}

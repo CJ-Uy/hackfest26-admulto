@@ -10,6 +10,7 @@ import {
 } from "@/lib/schema";
 import { eq, desc } from "drizzle-orm";
 import type { Paper, ExportTheme, Poll, UserPost } from "@/lib/types";
+import { deleteImages } from "@/lib/r2";
 
 export async function DELETE(
   _req: Request,
@@ -23,6 +24,22 @@ export async function DELETE(
 
   if (!scroll) {
     return Response.json({ error: "Schroll not found" }, { status: 404 });
+  }
+
+  // Clean up images from R2 (best-effort)
+  try {
+    const scrollPapers = await db
+      .select({ imageKey: papers.imageKey })
+      .from(papers)
+      .where(eq(papers.scrollId, id));
+    const imageKeys = scrollPapers
+      .map((p) => p.imageKey)
+      .filter((k): k is string => !!k);
+    if (imageKeys.length > 0) {
+      await deleteImages(imageKeys).catch(() => {});
+    }
+  } catch {
+    // non-fatal
   }
 
   await db.delete(scrolls).where(eq(scrolls.id, id));
@@ -84,6 +101,9 @@ export async function GET(
     voted: p.votes.length > 0 && p.votes[0].value === 1,
     downvoted: p.votes.length > 0 && p.votes[0].value === -1,
     bookmarked: p.bookmarks.length > 0,
+    imageUrl: p.imageKey
+      ? `/api/paper-images/${p.imageKey}`
+      : undefined,
     groundingData: p.groundingData ? JSON.parse(p.groundingData) : null,
   }));
 

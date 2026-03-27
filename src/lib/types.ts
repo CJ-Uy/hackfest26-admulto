@@ -16,6 +16,7 @@ export interface Paper {
   isUserUpload?: boolean;
   embedding?: number[]; // nomic-embed-text embedding for semantic similarity
   bookmarked?: boolean;
+  imageUrl?: string; // URL to paper figure served from R2
   groundingData?: {
     card_verified: boolean;
     claims: { claim: string; entailment_score: number; passed: boolean }[];
