@@ -14,9 +14,9 @@ import {
   Sparkles,
   Trash2,
   ExternalLink,
+  Share2,
   Send,
 } from "lucide-react";
-import Link from "next/link";
 import { toast } from "sonner";
 import { cn, getAvatarColor } from "@/lib/utils";
 import { SchrollarLogo } from "@/components/shared/SchrollarLogo";
@@ -29,6 +29,7 @@ interface ScrollPaperRef {
   title: string;
   authors: string[];
   doi: string;
+  apaCitation?: string;
 }
 
 interface DetailTabsProps {
@@ -463,14 +464,16 @@ export function DetailTabs({
             </div>
             <div className="flex min-w-0 flex-1 items-center gap-1.5">
               {sourcePaper ? (
-                <Link
-                  href={`/schroll/${scrollId}/post/${sourcePaper.id}`}
-                  onClick={(e) => e.stopPropagation()}
+                <a
+                  href={sourcePaper.doi.startsWith("http") ? sourcePaper.doi : `https://doi.org/${sourcePaper.doi}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e: React.MouseEvent) => e.stopPropagation()}
                   className="text-foreground truncate text-[14px] font-semibold hover:underline"
                   title={sourcePaper.title}
                 >
                   {c.author}
-                </Link>
+                </a>
               ) : (
                 <span className="text-foreground truncate text-[14px] font-semibold">
                   {c.author}
@@ -502,15 +505,29 @@ export function DetailTabs({
               Reply
             </button>
             {sourcePaper && (
-              <Link
-                href={`/schroll/${scrollId}/post/${sourcePaper.id}`}
+              <a
+                href={sourcePaper.doi.startsWith("http") ? sourcePaper.doi : `https://doi.org/${sourcePaper.doi}`}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="text-muted-foreground hover:text-primary hover:bg-subtle flex items-center gap-1 rounded px-2 py-0.5 text-[12px] font-medium transition-colors"
-                onClick={(e) => e.stopPropagation()}
+                onClick={(e: React.MouseEvent) => e.stopPropagation()}
                 title={sourcePaper.title || "View source"}
               >
                 <ExternalLink className="h-3 w-3" />
                 Source
-              </Link>
+              </a>
+            )}
+            {sourcePaper?.apaCitation && (
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(sourcePaper.apaCitation!);
+                  toast.success("APA citation copied!");
+                }}
+                className="text-muted-foreground hover:text-primary hover:bg-subtle flex items-center gap-1 rounded px-2 py-0.5 text-[12px] font-medium transition-colors"
+              >
+                <Share2 className="h-3 w-3" />
+                Cite
+              </button>
             )}
             <button
               onClick={() => handleDeleteComment(c.id)}

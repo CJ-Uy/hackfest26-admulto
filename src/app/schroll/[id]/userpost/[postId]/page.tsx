@@ -125,6 +125,7 @@ export default function UserPostPage() {
               title: p.title,
               authors: p.authors,
               doi: p.doi,
+              apaCitation: p.apaCitation,
             }))}
           />
         </main>
