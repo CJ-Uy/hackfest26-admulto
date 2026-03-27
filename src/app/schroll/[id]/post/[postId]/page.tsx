@@ -18,6 +18,7 @@ export default function PostPage() {
   const params = useParams();
   const scrollId = params.id as string;
   const postId = params.postId as string;
+  const [searchQuery, setSearchQuery] = useState("");
   const [paper, setPaper] = useState<Paper | null>(null);
   const [scrollPapers, setScrollPapers] = useState<
     { id: string; title: string; authors: string[]; doi: string }[]
@@ -123,10 +124,16 @@ export default function PostPage() {
     return (
       <div className="bg-page-bg min-h-screen">
         <Navbar />
+        <Navbar
+          showMobile
+          searchValue={searchQuery}
+          onSearchChange={setSearchQuery}
+          searchPlaceholder="Search this feed"
+        />
         <div className="flex">
           <Sidebar showMobileTrigger={false} />
           <div className="flex min-w-0 flex-1 justify-center">
-            <main className="border-border w-full max-w-[860px] min-w-0 flex-1 border-x">
+            <main className="border-border w-full max-w-215 min-w-0 flex-1 border-x">
               <PostDetailSkeleton />
             </main>
             <RightSidebarSkeleton />
@@ -140,6 +147,12 @@ export default function PostPage() {
     return (
       <div className="bg-page-bg min-h-screen">
         <Navbar />
+        <Navbar
+          showMobile
+          searchValue={searchQuery}
+          onSearchChange={setSearchQuery}
+          searchPlaceholder="Search this feed"
+        />
         <div className="flex">
           <Sidebar showMobileTrigger={false} />
           <main className="flex flex-1 items-center justify-center">
@@ -153,12 +166,18 @@ export default function PostPage() {
   return (
     <div className="bg-page-bg min-h-screen">
       <Navbar />
+      <Navbar
+        showMobile
+        searchValue={searchQuery}
+        onSearchChange={setSearchQuery}
+        searchPlaceholder="Search this feed"
+      />
 
       <div className="flex">
         <Sidebar showMobileTrigger={false} />
 
         <div className="flex min-w-0 flex-1 justify-center">
-          <main className="border-border w-full max-w-[860px] min-w-0 flex-1 border-x pb-24 md:pb-0">
+          <main className="border-border w-full max-w-215 min-w-0 flex-1 border-x pb-24 md:pb-0">
             <PostDetail
               paper={paper}
               scrollId={scrollId}

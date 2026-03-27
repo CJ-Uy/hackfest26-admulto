@@ -39,7 +39,7 @@ export function PostDetail({
   return (
     <div>
       {/* Back */}
-      <div className="bg-background border-border sticky top-14 z-30 border-b px-4 pt-2 pb-2">
+      <div className="bg-background border-border sticky top-14 z-30 border-b px-4 pt-2 pb-2 md:top-12">
         <button
           onClick={() => router.push(`/schroll/${scrollId}`)}
           className="text-muted-foreground hover:text-foreground mb-0.5 flex items-center gap-1.5 text-[15px] font-semibold transition-colors"

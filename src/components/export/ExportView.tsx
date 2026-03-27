@@ -369,7 +369,7 @@ export function ExportView({ scrollId, papers }: ExportViewProps) {
     <div className="px-3 py-4 sm:px-5 sm:py-6">
       {/* Mode selector — horizontal scroll on mobile, wrapped on desktop */}
       <div className="mb-5">
-        <div className="-mx-3 flex gap-1.5 overflow-x-auto px-3 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] sm:-mx-0 sm:flex-wrap sm:px-0 sm:pb-0 [&::-webkit-scrollbar]:hidden">
+        <div className="-mx-3 flex justify-start gap-1.5 overflow-x-auto px-3 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:justify-center sm:px-0 sm:pb-0 [&::-webkit-scrollbar]:hidden">
           {MODES.map((m) => {
             const Icon = m.icon;
             const isActive = mode === m.value;
@@ -784,7 +784,7 @@ export function ExportView({ scrollId, papers }: ExportViewProps) {
                 <Sparkles className="text-muted-foreground h-5 w-5" />
               )}
             </div>
-            <p className="text-muted-foreground max-w-[240px] text-[14px] leading-relaxed">
+            <p className="text-muted-foreground max-w-60 text-[14px] leading-relaxed">
               {mode === "literature-review"
                 ? "Generate a behavior-aware literature review from your papers."
                 : "Generate AI summaries to create this export."}
