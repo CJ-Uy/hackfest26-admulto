@@ -30,6 +30,7 @@ interface Config {
   sourceMode?: string;
   pdfKeys?: string[];
   pdfContextText?: string;
+  expandedKeywords?: string[];
 }
 
 /** rawResults is now tiny — just phase + config + index. Papers live in the DB. */
@@ -187,12 +188,14 @@ async function handleSearchPhase(
       // Expand and correct the user's query before searching
       let academicQuery = config.topic || "";
       let webQuery = config.topic || "";
+      let expandedKeywords: string[] = [];
       if (config.topic) {
         try {
           const expanded = await expandSearchQuery(config.topic, config.description, config.subfields);
-          // Academic APIs: corrected topic ONLY — extra keywords hurt recall
+          // Academic APIs: corrected topic ONLY — extra keywords hurt recall in APIs
           academicQuery = expanded.correctedTopic || config.topic;
           webQuery = [expanded.correctedTopic, ...expanded.keywords.slice(0, 4), ...expanded.relatedTerms.slice(0, 2)].filter(Boolean).join(" ");
+          expandedKeywords = [expanded.correctedTopic, ...expanded.keywords].filter(Boolean);
           console.log(`[process-next] Academic query: "${academicQuery}" | Web query: "${webQuery}"`);
           if (expanded.correctedTopic && expanded.correctedTopic.toLowerCase() !== config.topic.toLowerCase()) {
             await db.update(scrolls).set({ title: expanded.correctedTopic }).where(eq(scrolls.id, scrollId)).catch(() => {});
@@ -206,11 +209,22 @@ async function handleSearchPhase(
         webQuery = academicQuery;
       }
 
-      const [searchResults, webResults] = await Promise.all([
-        searchPapers(academicQuery, 20, { skipEmbeddings: true }).catch((err) => {
-          console.error(`[process-next] searchPapers failed:`, err);
-          return [] as RawPaper[];
-        }),
+      // Build multiple academic query variations: full topic + each keyword individually
+      const academicQueryVariants = [
+        academicQuery,
+        ...expandedKeywords.slice(1, 4), // skip correctedTopic (already first), take up to 3 keywords
+      ].filter((q): q is string => Boolean(q?.trim()));
+      const uniqueAcademicQueries = [...new Set(academicQueryVariants)];
+
+      const [allAcademicSets, webResults] = await Promise.all([
+        Promise.all(
+          uniqueAcademicQueries.map((q) =>
+            searchPapers(q, 15, { skipEmbeddings: true }).catch((err) => {
+              console.error(`[process-next] searchPapers("${q}") failed:`, err);
+              return [] as RawPaper[];
+            }),
+          ),
+        ),
         webSearch(webQuery, 15).catch((err) => {
           console.error(`[process-next] webSearch failed:`, err);
           return [] as {
@@ -222,7 +236,18 @@ async function handleSearchPhase(
         }),
       ]);
 
-      academicPapers = searchResults;
+      // Merge and deduplicate all academic results by title
+      const seenAcademic = new Set<string>();
+      for (const results of allAcademicSets) {
+        for (const paper of results) {
+          const key = paper.title.toLowerCase().trim();
+          if (!seenAcademic.has(key)) {
+            seenAcademic.add(key);
+            academicPapers.push(paper);
+          }
+        }
+      }
+      console.log(`[process-next] Merged ${academicPapers.length} unique academic papers from ${uniqueAcademicQueries.length} queries`);
 
       webPapersList = webResults
         .filter((r) => r.snippet && r.snippet.length >= 20)
@@ -322,6 +347,7 @@ async function handleSearchPhase(
       config: {
         ...config,
         pdfContextText: pdfContextText || undefined,
+        expandedKeywords: expandedKeywords.length ? expandedKeywords : undefined,
       },
     };
 
@@ -577,6 +603,7 @@ async function finalizeScroll(
       scrollId,
       allPapers.map((p) => ({ id: p.id, title: p.title })),
       papersWithImages,
+      rawData.config.expandedKeywords,
     );
 
     const [{ count }] = await db

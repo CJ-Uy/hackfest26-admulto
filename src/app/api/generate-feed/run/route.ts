@@ -196,7 +196,6 @@ export async function POST(req: Request) {
         if (!isOnlySources) {
           // Expand and correct the user's query before searching
           controller.enqueue(encode({ type: "progress", step: "expanding" }));
-          let searchQuery = topic || "";
           let expandedQuery = { correctedTopic: topic || "", keywords: [] as string[], relatedTerms: [] as string[] };
           // academicQuery: short and focused (academic APIs work best with 2-4 words)
           // webQuery: broader expansion (SearXNG handles natural-language queries well)
@@ -228,12 +227,22 @@ export async function POST(req: Request) {
             webQuery = academicQuery;
           }
 
-          const [searchResults, webResults] = await Promise.all([
-            searchPapers(academicQuery, 20, { skipEmbeddings: true }).catch(
-              (err) => {
-                console.error(`[run] searchPapers failed:`, err);
-                return [] as RawPaper[];
-              },
+          // Build multiple academic query variations: full topic + each keyword individually
+          // Running them in parallel across academic APIs gives far more unique paper results
+          const academicQueryVariants = [
+            academicQuery,
+            ...expandedQuery.keywords.slice(0, 3),
+          ].filter((q): q is string => Boolean(q?.trim()));
+          const uniqueAcademicQueries = [...new Set(academicQueryVariants)];
+
+          const [allAcademicSets, webResults] = await Promise.all([
+            Promise.all(
+              uniqueAcademicQueries.map((q) =>
+                searchPapers(q, 15, { skipEmbeddings: true }).catch((err) => {
+                  console.error(`[run] searchPapers("${q}") failed:`, err);
+                  return [] as RawPaper[];
+                }),
+              ),
             ),
             webSearch(webQuery, 15).catch((err) => {
               console.error(`[run] webSearch failed:`, err);
@@ -246,7 +255,18 @@ export async function POST(req: Request) {
             }),
           ]);
 
-          academicPapers = searchResults;
+          // Merge and deduplicate all academic results by title
+          const seenAcademic = new Set<string>();
+          for (const results of allAcademicSets) {
+            for (const paper of results) {
+              const key = paper.title.toLowerCase().trim();
+              if (!seenAcademic.has(key)) {
+                seenAcademic.add(key);
+                academicPapers.push(paper);
+              }
+            }
+          }
+          console.log(`[run] Merged ${academicPapers.length} unique academic papers from ${uniqueAcademicQueries.length} queries`);
           webPapersList = webResults
             .filter((r) => r.snippet && r.snippet.length >= 20)
             .map((r) => ({
@@ -461,6 +481,7 @@ export async function POST(req: Request) {
           scrollId,
           insertedPapers.map((p) => ({ id: p.id, title: p.title })),
           papersWithImages,
+          [expandedQuery.correctedTopic, ...expandedQuery.keywords].filter(Boolean),
         );
 
         // ── Finalize ──────────────────────────────────────────────────────
