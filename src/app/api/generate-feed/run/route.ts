@@ -2,6 +2,7 @@ import {
   generateSynthesis,
   generateApaCitation,
   generateExportOutline,
+  expandSearchQuery,
   setModels,
   configureProvider,
 } from "@/lib/ollama";
@@ -192,8 +193,31 @@ export async function POST(req: Request) {
         let webPapersList: RawPaper[] = [];
 
         if (!isOnlySources) {
+          // Expand and correct the user's query before searching
+          controller.enqueue(encode({ type: "progress", step: "expanding" }));
           let searchQuery = topic || "";
-          if (subfields?.length) {
+          let expandedQuery = { correctedTopic: topic || "", keywords: [] as string[], relatedTerms: [] as string[] };
+          if (topic) {
+            try {
+              expandedQuery = await expandSearchQuery(topic, description, subfields);
+              // Build a richer query: corrected topic + top keywords + related terms
+              const allTerms = [
+                expandedQuery.correctedTopic,
+                ...expandedQuery.keywords.slice(0, 4),
+                ...expandedQuery.relatedTerms.slice(0, 2),
+              ];
+              searchQuery = [...new Set(allTerms)].join(" ");
+              console.log(`[run] Expanded query: "${searchQuery}" (original: "${topic}")`);
+              // Update scroll title if spelling was corrected
+              if (expandedQuery.correctedTopic && expandedQuery.correctedTopic.toLowerCase() !== topic.toLowerCase()) {
+                await db.update(scrolls).set({ title: expandedQuery.correctedTopic }).where(eq(scrolls.id, scrollId)).catch(() => {});
+              }
+            } catch {
+              // Fall back to original topic + subfields
+              searchQuery = topic || "";
+              if (subfields?.length) searchQuery += " " + subfields.slice(0, 2).join(" ");
+            }
+          } else if (subfields?.length) {
             searchQuery += " " + subfields.slice(0, 2).join(" ");
           }
 

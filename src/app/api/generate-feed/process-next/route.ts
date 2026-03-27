@@ -2,6 +2,7 @@ import {
   generateSynthesis,
   generateApaCitation,
   generateExportOutline,
+  expandSearchQuery,
   setModels,
   configureProvider,
 } from "@/lib/ollama";
@@ -182,8 +183,26 @@ async function handleSearchPhase(
     let webPapersList: RawPaper[] = [];
 
     if (!isOnlySources) {
+      // Expand and correct the user's query before searching
       let searchQuery = config.topic || "";
-      if (config.subfields?.length) {
+      if (config.topic) {
+        try {
+          const expanded = await expandSearchQuery(config.topic, config.description, config.subfields);
+          const allTerms = [
+            expanded.correctedTopic,
+            ...expanded.keywords.slice(0, 4),
+            ...expanded.relatedTerms.slice(0, 2),
+          ];
+          searchQuery = [...new Set(allTerms)].join(" ");
+          console.log(`[process-next] Expanded query: "${searchQuery}" (original: "${config.topic}")`);
+          // Update scroll title if spelling was corrected
+          if (expanded.correctedTopic && expanded.correctedTopic.toLowerCase() !== config.topic.toLowerCase()) {
+            await db.update(scrolls).set({ title: expanded.correctedTopic }).where(eq(scrolls.id, scrollId)).catch(() => {});
+          }
+        } catch {
+          if (config.subfields?.length) searchQuery += " " + config.subfields.slice(0, 2).join(" ");
+        }
+      } else if (config.subfields?.length) {
         searchQuery += " " + config.subfields.slice(0, 2).join(" ");
       }
 

@@ -119,6 +119,86 @@ async function ollamaChat(
   return aiChat(systemPrompt, userPrompt, model, tier);
 }
 
+// ─── Search query expansion ───────────────────────────────────────────────────
+
+export interface ExpandedQuery {
+  correctedTopic: string;
+  keywords: string[];
+  relatedTerms: string[];
+}
+
+/**
+ * Takes the user's raw topic, description, and interest subfields and returns
+ * a structured set of search terms: spelling-corrected topic, core keywords,
+ * and related academic terms. Falls back gracefully on failure.
+ */
+export async function expandSearchQuery(
+  topic: string,
+  description?: string,
+  subfields?: string[],
+): Promise<ExpandedQuery> {
+  const subfieldStr = subfields?.length
+    ? `\nInterests/subfields: ${subfields.join(", ")}`
+    : "";
+  const descStr = description ? `\nDescription: ${description}` : "";
+
+  const fallback: ExpandedQuery = {
+    correctedTopic: topic,
+    keywords: [topic],
+    relatedTerms: subfields?.slice(0, 3) ?? [],
+  };
+
+  try {
+    const raw = await ollamaChat(
+      `You are a research search query optimizer. Given a research topic, description, and interests, extract the most important search terms, fix any spelling errors, and suggest related academic keywords.
+
+RESPOND ONLY with valid JSON in this exact format, no markdown, no explanation:
+{
+  "correctedTopic": "spelling-corrected version of the main topic",
+  "keywords": ["key1", "key2", "key3", "key4", "key5"],
+  "relatedTerms": ["related1", "related2", "related3", "related4"]
+}
+
+Rules:
+- correctedTopic: fix spelling errors, keep it concise (2-5 words)
+- keywords: 4-6 core academic terms directly from the topic/description
+- relatedTerms: 3-5 broader or adjacent academic concepts that expand coverage
+- All terms should be suitable for academic database searches
+- No full sentences, only individual terms or short phrases`,
+      `Topic: ${topic}${descStr}${subfieldStr}`,
+    );
+
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return fallback;
+
+    const parsed = JSON.parse(jsonMatch[0]) as Partial<ExpandedQuery>;
+
+    const correctedTopic =
+      typeof parsed.correctedTopic === "string" && parsed.correctedTopic.trim()
+        ? parsed.correctedTopic.trim()
+        : topic;
+
+    const keywords = Array.isArray(parsed.keywords)
+      ? (parsed.keywords as unknown[])
+          .filter((k): k is string => typeof k === "string" && k.trim().length > 0)
+          .map((k) => k.trim())
+          .slice(0, 6)
+      : [topic];
+
+    const relatedTerms = Array.isArray(parsed.relatedTerms)
+      ? (parsed.relatedTerms as unknown[])
+          .filter((k): k is string => typeof k === "string" && k.trim().length > 0)
+          .map((k) => k.trim())
+          .slice(0, 5)
+      : [];
+
+    return { correctedTopic, keywords, relatedTerms };
+  } catch (err) {
+    console.warn("[ollama] expandSearchQuery failed, using fallback:", err);
+    return fallback;
+  }
+}
+
 export async function generateSynthesis(
   title: string,
   abstract: string,

@@ -38,6 +38,12 @@ const STEPS = [
     pdfOnly: true,
   },
   {
+    key: "expanding",
+    label: "Expanding your query",
+    detail: "Extracting keywords & fixing spelling",
+    icon: Sparkles,
+  },
+  {
     key: "searching",
     label: "Searching databases",
     detail: "Querying Semantic Scholar & web sources",
@@ -272,8 +278,10 @@ function getProgressPercent(progress: ProgressInfo | null): number {
       return 5;
     case "extracting":
       return 8;
+    case "expanding":
+      return 12;
     case "searching":
-      return 15;
+      return 18;
     case "processing": {
       const base = 20;
       const range = 60;
