@@ -190,7 +190,8 @@ async function handleSearchPhase(
       if (config.topic) {
         try {
           const expanded = await expandSearchQuery(config.topic, config.description, config.subfields);
-          academicQuery = [expanded.correctedTopic, ...expanded.keywords.slice(0, 1)].filter(Boolean).join(" ");
+          // Academic APIs: corrected topic ONLY — extra keywords hurt recall
+          academicQuery = expanded.correctedTopic || config.topic;
           webQuery = [expanded.correctedTopic, ...expanded.keywords.slice(0, 4), ...expanded.relatedTerms.slice(0, 2)].filter(Boolean).join(" ");
           console.log(`[process-next] Academic query: "${academicQuery}" | Web query: "${webQuery}"`);
           if (expanded.correctedTopic && expanded.correctedTopic.toLowerCase() !== config.topic.toLowerCase()) {

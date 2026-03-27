@@ -17,7 +17,7 @@ import { eq } from "drizzle-orm";
 /** Ensure an image exists on every Nth paper (1-indexed: 3rd, 6th, 9th…). */
 const IMAGE_EVERY_N = 3;
 const WIKI_THUMB_SIZE = 800;
-const FETCH_TIMEOUT_MS = 8_000;
+const FETCH_TIMEOUT_MS = 5_000;
 
 // User-Agent required by Wikimedia API policy
 const USER_AGENT =
@@ -170,56 +170,58 @@ export async function fillScrollImages(
     `[image-fill] Filling ${targets.length} Wikipedia images for scroll ${scrollId}`,
   );
 
-  for (const paper of targets) {
-    try {
-      const queries = titleToKeywords(paper.title);
-      let thumbUrl: string | null = null;
+  await Promise.all(
+    targets.map(async (paper) => {
+      try {
+        const queries = titleToKeywords(paper.title);
+        let thumbUrl: string | null = null;
 
-      // 1. Try REST Summary API first (direct lookup, most reliable)
-      for (const query of queries.slice(0, 2)) {
-        thumbUrl = await getWikiSummaryThumb(query);
-        if (thumbUrl) break;
-      }
-
-      // 2. Fall back to generator search API (fuzzy)
-      if (!thumbUrl) {
-        for (const query of queries) {
-          thumbUrl = await getWikiSearchThumb(query);
+        // 1. Try REST Summary API first (direct lookup, most reliable)
+        for (const query of queries.slice(0, 2)) {
+          thumbUrl = await getWikiSummaryThumb(query);
           if (thumbUrl) break;
         }
-      }
 
-      if (!thumbUrl) {
+        // 2. Fall back to generator search API (fuzzy)
+        if (!thumbUrl) {
+          for (const query of queries) {
+            thumbUrl = await getWikiSearchThumb(query);
+            if (thumbUrl) break;
+          }
+        }
+
+        if (!thumbUrl) {
+          console.log(
+            `[image-fill] No Wikipedia image for "${paper.title.slice(0, 60)}"`,
+          );
+          return;
+        }
+
+        // 3. Download the image bytes
+        const buffer = await downloadImage(thumbUrl);
+        if (!buffer || buffer.byteLength === 0) {
+          console.log(`[image-fill] Download failed for "${paper.title.slice(0, 60)}"`);
+          return;
+        }
+
+        // 4. Upload to R2
+        const mime = detectImageMime(buffer);
+        const ext = mime === "image/png" ? "png" : mime === "image/gif" ? "gif" : mime === "image/webp" ? "webp" : "jpg";
+        const r2Key = `images/${scrollId}/${paper.id}.${ext}`;
+        await uploadImage(buffer, r2Key, mime);
+
+        // 5. Store R2 key in DB
+        await db
+          .update(papers)
+          .set({ imageKey: r2Key })
+          .where(eq(papers.id, paper.id));
+
         console.log(
-          `[image-fill] No Wikipedia image for "${paper.title.slice(0, 60)}"`,
+          `[image-fill] ✅ R2 image saved for "${paper.title.slice(0, 60)}" → ${r2Key}`,
         );
-        continue;
+      } catch (err) {
+        console.warn(`[image-fill] Failed for paper ${paper.id}:`, err);
       }
-
-      // 3. Download the image bytes
-      const buffer = await downloadImage(thumbUrl);
-      if (!buffer || buffer.byteLength === 0) {
-        console.log(`[image-fill] Download failed for "${paper.title.slice(0, 60)}"`);
-        continue;
-      }
-
-      // 4. Upload to R2
-      const mime = detectImageMime(buffer);
-      const ext = mime === "image/png" ? "png" : mime === "image/gif" ? "gif" : mime === "image/webp" ? "webp" : "jpg";
-      const r2Key = `images/${scrollId}/${paper.id}.${ext}`;
-      await uploadImage(buffer, r2Key, mime);
-
-      // 5. Store R2 key in DB
-      await db
-        .update(papers)
-        .set({ imageKey: r2Key })
-        .where(eq(papers.id, paper.id));
-
-      console.log(
-        `[image-fill] ✅ R2 image saved for "${paper.title.slice(0, 60)}" → ${r2Key}`,
-      );
-    } catch (err) {
-      console.warn(`[image-fill] Failed for paper ${paper.id}:`, err);
-    }
-  }
+    }),
+  );
 }

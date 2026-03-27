@@ -205,11 +205,8 @@ export async function POST(req: Request) {
           if (topic) {
             try {
               expandedQuery = await expandSearchQuery(topic, description, subfields);
-              // Academic APIs: corrected topic + at most 1 extra keyword
-              academicQuery = [
-                expandedQuery.correctedTopic,
-                ...expandedQuery.keywords.slice(0, 1),
-              ].filter(Boolean).join(" ");
+              // Academic APIs: corrected topic ONLY — extra keywords hurt recall
+              academicQuery = expandedQuery.correctedTopic || topic;
               // Web search: full expansion for broader coverage
               webQuery = [
                 expandedQuery.correctedTopic,
