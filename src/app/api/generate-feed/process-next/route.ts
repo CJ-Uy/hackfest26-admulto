@@ -416,6 +416,19 @@ async function handleProcessPhase(
       }
     }
 
+    // Fallback: derive PDF URL from DOI when no open-access URL was found
+    if (!openAccessPdfUrl && nextPaper.doi) {
+      const doi = nextPaper.doi;
+      const arxivMatch =
+        doi.match(/10\.48550\/arXiv\.(.+)/i) ||
+        doi.match(/arxiv[:/](\d{4}\.\d+)/i);
+      if (arxivMatch) {
+        openAccessPdfUrl = `https://arxiv.org/pdf/${arxivMatch[1]}`;
+      } else if (doi.startsWith("10.1101/")) {
+        openAccessPdfUrl = `https://www.biorxiv.org/content/${doi}.full.pdf`;
+      }
+    }
+
     const [synthesis, apaCitation] = await Promise.all([
       generateSynthesis(
         nextPaper.title,

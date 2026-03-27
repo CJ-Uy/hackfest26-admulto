@@ -107,6 +107,13 @@ export async function GET(
     groundingData: p.groundingData ? JSON.parse(p.groundingData) : null,
   }));
 
+  // Eye candy: show papers with images first
+  responsePapers.sort((a, b) => {
+    if (a.imageUrl && !b.imageUrl) return -1;
+    if (!a.imageUrl && b.imageUrl) return 1;
+    return 0;
+  });
+
   const responseUserPosts: UserPost[] = (scroll.userPosts || []).map((up) => ({
     id: up.id,
     content: up.content,

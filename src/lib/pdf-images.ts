@@ -14,7 +14,7 @@ const MIN_WIDTH = 200;
 const MIN_HEIGHT = 150;
 const MAX_PDF_BYTES = 10 * 1024 * 1024; // 10 MB
 const FETCH_TIMEOUT_MS = 8_000;
-const MAX_PAGES = 8;
+const MAX_PAGES = 15;
 
 /**
  * Convert raw pixel data (1/3/4 channels) to RGBA ArrayBuffer.
