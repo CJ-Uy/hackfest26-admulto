@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/dialog";
 import { fetchAllScrollSessions, deleteScroll } from "@/lib/scroll-store";
 import type { ScrollSession } from "@/lib/types";
+import scrollsLock from "../../../schrolls-lock.json";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { ThemeToggle } from "./ThemeToggle";
@@ -150,7 +151,7 @@ export function SidebarContent({
                     </div>
                   )}
                 </Link>
-                {!collapsed && (
+                {!collapsed && !scrollsLock.lockedIds.includes(session.id) && (
                   <button
                     type="button"
                     onClick={(e) => {
