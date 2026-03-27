@@ -126,10 +126,10 @@ export default function PostPage() {
         <div className="flex">
           <Sidebar showMobileTrigger={false} />
           <div className="flex min-w-0 flex-1 justify-center">
-          <main className="w-full max-w-[860px] min-w-0 flex-1 border-x border-border">
-            <PostDetailSkeleton />
-          </main>
-          <RightSidebarSkeleton />
+            <main className="border-border w-full max-w-[860px] min-w-0 flex-1 border-x">
+              <PostDetailSkeleton />
+            </main>
+            <RightSidebarSkeleton />
           </div>
         </div>
       </div>
@@ -158,30 +158,30 @@ export default function PostPage() {
         <Sidebar showMobileTrigger={false} />
 
         <div className="flex min-w-0 flex-1 justify-center">
-        <main className="w-full max-w-[860px] min-w-0 flex-1 border-x border-border pb-24 md:pb-0">
-          <PostDetail
-            paper={paper}
-            scrollId={scrollId}
-            scrollPapers={scrollPapers}
-            disableAiComments={false}
-          />
-        </main>
+          <main className="border-border w-full max-w-[860px] min-w-0 flex-1 border-x pb-24 md:pb-0">
+            <PostDetail
+              paper={paper}
+              scrollId={scrollId}
+              scrollPapers={scrollPapers}
+              disableAiComments={false}
+            />
+          </main>
 
-        {scroll ? (
-          <RightSidebar
-            scroll={scroll}
-            papers={allPapers}
-            upvotedPapers={upvotedPapers}
-            downvotedPapers={downvotedPapers}
-            bookmarkedPapers={bookmarkedPapers}
-            yourCommentCounts={yourCommentCounts}
-            userPosts={userPosts}
-            scrollId={scrollId}
-            showMobileTrigger={false}
-          />
-        ) : (
-          <RightSidebarSkeleton />
-        )}
+          {scroll ? (
+            <RightSidebar
+              scroll={scroll}
+              papers={allPapers}
+              upvotedPapers={upvotedPapers}
+              downvotedPapers={downvotedPapers}
+              bookmarkedPapers={bookmarkedPapers}
+              yourCommentCounts={yourCommentCounts}
+              userPosts={userPosts}
+              scrollId={scrollId}
+              showMobileTrigger={false}
+            />
+          ) : (
+            <RightSidebarSkeleton />
+          )}
         </div>
       </div>
 

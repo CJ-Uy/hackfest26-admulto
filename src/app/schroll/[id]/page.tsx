@@ -428,32 +428,32 @@ function ScrollPageInner() {
         <div className="flex">
           <Sidebar showMobileTrigger={false} />
           <div className="flex min-w-0 flex-1 justify-center">
-          <main className="w-full max-w-215 min-w-0 flex-1">
-            <div className="px-4 pt-4 pb-3">
-              <div className="mb-2 flex items-center gap-2">
-                <Skeleton className="h-5 w-20 rounded-full" />
-                <Skeleton className="h-4 w-40" />
+            <main className="w-full max-w-215 min-w-0 flex-1">
+              <div className="px-4 pt-4 pb-3">
+                <div className="mb-2 flex items-center gap-2">
+                  <Skeleton className="h-5 w-20 rounded-full" />
+                  <Skeleton className="h-4 w-40" />
+                </div>
+                <Skeleton className="mb-2 h-7 w-3/4" />
+                <Skeleton className="h-4 w-full" />
               </div>
-              <Skeleton className="mb-2 h-7 w-3/4" />
-              <Skeleton className="h-4 w-full" />
-            </div>
 
-            <div className="bg-background border-border sticky top-14 z-30 border-b md:top-12">
-              <div className="flex">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="flex flex-1 justify-center py-3">
-                    <Skeleton className="h-5 w-16" />
-                  </div>
-                ))}
+              <div className="bg-background border-border sticky top-14 z-30 border-b md:top-12">
+                <div className="flex">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="flex flex-1 justify-center py-3">
+                      <Skeleton className="h-5 w-16" />
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
 
-            <div className="pt-2">
-              <FeedSkeleton />
-            </div>
-          </main>
+              <div className="pt-2">
+                <FeedSkeleton />
+              </div>
+            </main>
 
-          <RightSidebarSkeleton />
+            <RightSidebarSkeleton />
           </div>
         </div>
       </div>
@@ -478,126 +478,126 @@ function ScrollPageInner() {
         <Sidebar showMobileTrigger={false} />
 
         <div className="flex min-w-0 flex-1 justify-center">
-        {/* Main content column */}
-        <main className="w-full max-w-215 min-w-0 flex-1 border-x border-border">
-          <ScrollHeader scroll={scroll} />
+          {/* Main content column */}
+          <main className="border-border w-full max-w-215 min-w-0 flex-1 border-x">
+            <ScrollHeader scroll={scroll} />
 
-          {/* Mobile: tabs sticky below mobile navbar */}
-          <div className="bg-background border-border sticky top-14 z-30 border-b md:hidden">
-            <TabNav
-              value={activeTab}
-              onValueChange={setActiveTab}
-              tabs={TABS}
-            />
-          </div>
-
-          {/* Desktop: tabs sticky below navbar */}
-          <div className="bg-background border-border sticky top-12 z-30 hidden border-b md:block">
-            <TabNav
-              value={activeTab}
-              onValueChange={setActiveTab}
-              tabs={TABS}
-            />
-          </div>
-
-          {/* Tab content */}
-          <div className="overflow-hidden pb-20">
-            {scroll.status === "generating" && (
-              <div className="flex flex-col items-center justify-center px-4 py-16">
-                <Loader2 className="text-primary mb-4 h-8 w-8 animate-spin" />
-                <p className="text-muted-foreground text-sm">
-                  Your feed is still being generated. This page will update
-                  automatically.
-                </p>
-              </div>
-            )}
-            {scroll.status !== "generating" && activeTab === "feed" && (
-              <FeedView
-                scrollId={scrollId}
-                papers={papers}
-                polls={polls}
-                searchQuery={searchQuery}
-                scrollTitle={scroll.title}
-                userPosts={userPosts}
-                commentCounts={commentCounts}
-                bookmarkedPapers={bookmarkedPapers}
-                downvotedPapers={downvotedPapers}
-                isGeneratingMore={isGeneratingMore}
-                generateMoreProgress={generateMoreProgress}
-                onUpvote={handleUpvote}
-                onDownvote={handleDownvote}
-                onBookmark={handleBookmark}
-                onComment={handleComment}
-                onGenerateMore={handleGenerateMore}
-                onPost={handleNewPost}
-                onGenerateComments={handleGenerateComments}
-                onDelete={handleDeletePaper}
-                onDeletePost={handleDeletePost}
-                generatingPostIds={generatingPostIds}
-                newCommentIds={newCommentIds}
-                replyNotifIds={replyNotifIds}
-                onClearNewComment={(id: string) => {
-                  setNewCommentIds((prev) => {
-                    if (!prev.has(id)) return prev;
-                    const next = new Set(prev);
-                    next.delete(id);
-                    return next;
-                  });
-                  setReplyNotifIds((prev) => {
-                    if (!prev.has(id)) return prev;
-                    const next = new Set(prev);
-                    next.delete(id);
-                    return next;
-                  });
-                }}
+            {/* Mobile: tabs sticky below mobile navbar */}
+            <div className="bg-background border-border sticky top-14 z-30 border-b md:hidden">
+              <TabNav
+                value={activeTab}
+                onValueChange={setActiveTab}
+                tabs={TABS}
               />
-            )}
-            {scroll.status !== "generating" && activeTab === "fine-tune" && (
-              <FineTuneView
-                scrollId={scrollId}
-                onRegenerated={async () => {
-                  const stored = await fetchScroll(scrollId);
-                  if (stored) {
-                    setScroll(stored.scroll);
-                    setPapers(stored.papers);
-                    setPolls(stored.polls || []);
-                    setUserPosts(stored.userPosts || []);
-                    const voted = new Set<string>();
-                    const downed = new Set<string>();
-                    const saved = new Set<string>();
-                    stored.papers.forEach((p) => {
-                      if (p.voted) voted.add(p.id);
-                      if (p.downvoted) downed.add(p.id);
-                      if (p.bookmarked) saved.add(p.id);
+            </div>
+
+            {/* Desktop: tabs sticky below navbar */}
+            <div className="bg-background border-border sticky top-12 z-30 hidden border-b md:block">
+              <TabNav
+                value={activeTab}
+                onValueChange={setActiveTab}
+                tabs={TABS}
+              />
+            </div>
+
+            {/* Tab content */}
+            <div className="overflow-hidden pb-20">
+              {scroll.status === "generating" && (
+                <div className="flex flex-col items-center justify-center px-4 py-16">
+                  <Loader2 className="text-primary mb-4 h-8 w-8 animate-spin" />
+                  <p className="text-muted-foreground text-sm">
+                    Your feed is still being generated. This page will update
+                    automatically.
+                  </p>
+                </div>
+              )}
+              {scroll.status !== "generating" && activeTab === "feed" && (
+                <FeedView
+                  scrollId={scrollId}
+                  papers={papers}
+                  polls={polls}
+                  searchQuery={searchQuery}
+                  scrollTitle={scroll.title}
+                  userPosts={userPosts}
+                  commentCounts={commentCounts}
+                  bookmarkedPapers={bookmarkedPapers}
+                  downvotedPapers={downvotedPapers}
+                  isGeneratingMore={isGeneratingMore}
+                  generateMoreProgress={generateMoreProgress}
+                  onUpvote={handleUpvote}
+                  onDownvote={handleDownvote}
+                  onBookmark={handleBookmark}
+                  onComment={handleComment}
+                  onGenerateMore={handleGenerateMore}
+                  onPost={handleNewPost}
+                  onGenerateComments={handleGenerateComments}
+                  onDelete={handleDeletePaper}
+                  onDeletePost={handleDeletePost}
+                  generatingPostIds={generatingPostIds}
+                  newCommentIds={newCommentIds}
+                  replyNotifIds={replyNotifIds}
+                  onClearNewComment={(id: string) => {
+                    setNewCommentIds((prev) => {
+                      if (!prev.has(id)) return prev;
+                      const next = new Set(prev);
+                      next.delete(id);
+                      return next;
                     });
-                    setUpvotedPapers(voted);
-                    setDownvotedPapers(downed);
-                    setBookmarkedPapers(saved);
-                  }
-                  fetchCommentCounts();
-                  fetchYourCommentCounts();
-                  setActiveTab("feed");
-                }}
-              />
-            )}
-            {scroll.status !== "generating" && activeTab === "export" && (
-              <ExportView scrollId={scrollId} papers={papers} />
-            )}
-          </div>
-        </main>
+                    setReplyNotifIds((prev) => {
+                      if (!prev.has(id)) return prev;
+                      const next = new Set(prev);
+                      next.delete(id);
+                      return next;
+                    });
+                  }}
+                />
+              )}
+              {scroll.status !== "generating" && activeTab === "fine-tune" && (
+                <FineTuneView
+                  scrollId={scrollId}
+                  onRegenerated={async () => {
+                    const stored = await fetchScroll(scrollId);
+                    if (stored) {
+                      setScroll(stored.scroll);
+                      setPapers(stored.papers);
+                      setPolls(stored.polls || []);
+                      setUserPosts(stored.userPosts || []);
+                      const voted = new Set<string>();
+                      const downed = new Set<string>();
+                      const saved = new Set<string>();
+                      stored.papers.forEach((p) => {
+                        if (p.voted) voted.add(p.id);
+                        if (p.downvoted) downed.add(p.id);
+                        if (p.bookmarked) saved.add(p.id);
+                      });
+                      setUpvotedPapers(voted);
+                      setDownvotedPapers(downed);
+                      setBookmarkedPapers(saved);
+                    }
+                    fetchCommentCounts();
+                    fetchYourCommentCounts();
+                    setActiveTab("feed");
+                  }}
+                />
+              )}
+              {scroll.status !== "generating" && activeTab === "export" && (
+                <ExportView scrollId={scrollId} papers={papers} />
+              )}
+            </div>
+          </main>
 
-        {/* Right sidebar */}
-        <RightSidebar
-          scroll={scroll}
-          papers={papers}
-          upvotedPapers={upvotedPapers}
-          downvotedPapers={downvotedPapers}
-          bookmarkedPapers={bookmarkedPapers}
-          yourCommentCounts={yourCommentCounts}
-          userPosts={userPosts}
-          scrollId={scrollId}
-          showMobileTrigger={false}
-        />
+          {/* Right sidebar */}
+          <RightSidebar
+            scroll={scroll}
+            papers={papers}
+            upvotedPapers={upvotedPapers}
+            downvotedPapers={downvotedPapers}
+            bookmarkedPapers={bookmarkedPapers}
+            yourCommentCounts={yourCommentCounts}
+            userPosts={userPosts}
+            scrollId={scrollId}
+            showMobileTrigger={false}
+          />
         </div>
       </div>
 

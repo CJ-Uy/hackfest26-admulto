@@ -91,11 +91,11 @@ export function PaperCard({
 
       {/* Figure image (when available from open-access PDF) */}
       {paper.imageUrl && (
-        <div className="bg-muted mb-2 mx-4 overflow-hidden rounded-md shadow-sm">
+        <div className="bg-muted mx-4 mb-2 overflow-hidden rounded-md shadow-sm">
           <img
             src={paper.imageUrl}
             alt={`Figure from ${paper.title}`}
-            className="w-full max-h-120 object-cover object-top"
+            className="max-h-120 w-full object-cover object-top"
             loading="lazy"
           />
         </div>
@@ -108,7 +108,7 @@ export function PaperCard({
 
       {/* Reply notification badge */}
       {hasReplyNotif && (
-        <div className="mt-1.5 mx-4 flex items-center gap-1.5 rounded-md bg-blue-50 px-2.5 py-1.5 text-[12px] font-medium text-blue-600">
+        <div className="mx-4 mt-1.5 flex items-center gap-1.5 rounded-md bg-blue-50 px-2.5 py-1.5 text-[12px] font-medium text-blue-600">
           <MessageCircleReply className="h-3.5 w-3.5" />A researcher replied to
           your comment
         </div>
@@ -116,23 +116,23 @@ export function PaperCard({
 
       {/* Actions */}
       <div className="px-4 pb-3">
-      <CardActions
-        paperId={paper.id}
-        credibilityScore={paper.credibilityScore}
-        commentCount={commentCount}
-        citationCount={paper.citationCount}
-        apaCitation={paper.apaCitation}
-        initialVoted={paper.voted}
-        initialDownvoted={initialDownvoted ?? paper.downvoted}
-        initialBookmarked={initialBookmarked}
-        onCommentClick={navigateToDetail}
-        onUpvote={onUpvote}
-        onDownvote={onDownvote}
-        onBookmark={onBookmark}
-        onGenerateComments={onGenerateComments}
-        onDelete={onDelete}
-        hasNewComments={hasNewComments}
-      />
+        <CardActions
+          paperId={paper.id}
+          credibilityScore={paper.credibilityScore}
+          commentCount={commentCount}
+          citationCount={paper.citationCount}
+          apaCitation={paper.apaCitation}
+          initialVoted={paper.voted}
+          initialDownvoted={initialDownvoted ?? paper.downvoted}
+          initialBookmarked={initialBookmarked}
+          onCommentClick={navigateToDetail}
+          onUpvote={onUpvote}
+          onDownvote={onDownvote}
+          onBookmark={onBookmark}
+          onGenerateComments={onGenerateComments}
+          onDelete={onDelete}
+          hasNewComments={hasNewComments}
+        />
       </div>
     </article>
   );

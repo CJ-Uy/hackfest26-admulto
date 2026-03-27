@@ -80,7 +80,7 @@ export function RightSidebar({
 
       {/* Session header */}
       <div className="pt-3 pb-3">
-        <div className="bg-primary rounded-lg px-4 py-3 mb-3">
+        <div className="bg-primary mb-3 rounded-lg px-4 py-3">
           <h3 className="text-primary-foreground text-[15px] font-bold">
             {scroll.title}
           </h3>

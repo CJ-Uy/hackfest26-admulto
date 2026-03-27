@@ -199,7 +199,10 @@ export function HomeContent({ scrolls: initialScrolls }: HomeContentProps) {
                           </Link>
                         </div>
 
-                        <Link href="/onboarding" className="inline-block w-full md:hidden">
+                        <Link
+                          href="/onboarding"
+                          className="inline-block w-full md:hidden"
+                        >
                           <Button
                             className="h-10 w-full justify-center gap-2 px-4 text-[15px] font-semibold"
                             size="lg"

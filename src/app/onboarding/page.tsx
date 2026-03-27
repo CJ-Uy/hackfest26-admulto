@@ -60,34 +60,34 @@ function OnboardingContent() {
         <Sidebar showMobileTrigger={false} />
 
         <div className="flex min-w-0 flex-1 justify-center">
-        <main className="w-full max-w-215 min-w-0 flex-1 border-x border-border pb-24 md:pb-0">
-          <div className="border-border border-b px-5 pt-6 pb-5">
-            <div className="mb-2 flex items-center justify-between">
-              <h1 className="font-heading text-foreground text-[26px] font-bold tracking-tight">
-                Create a Schroll
-              </h1>
-              <Link href="/">
-                <Button variant="ghost" size="sm" className="gap-1.5">
-                  <ArrowLeft className="h-3.5 w-3.5" />
-                  Back
-                </Button>
-              </Link>
+          <main className="border-border w-full max-w-215 min-w-0 flex-1 border-x pb-24 md:pb-0">
+            <div className="border-border border-b px-5 pt-6 pb-5">
+              <div className="mb-2 flex items-center justify-between">
+                <h1 className="font-heading text-foreground text-[26px] font-bold tracking-tight">
+                  Create a Schroll
+                </h1>
+                <Link href="/">
+                  <Button variant="ghost" size="sm" className="gap-1.5">
+                    <ArrowLeft className="h-3.5 w-3.5" />
+                    Back
+                  </Button>
+                </Link>
+              </div>
+              <p className="text-muted-foreground text-[15px]">
+                Configure your research feed and start exploring.
+              </p>
             </div>
-            <p className="text-muted-foreground text-[15px]">
-              Configure your research feed and start exploring.
-            </p>
-          </div>
 
-          <div className="px-5 pb-6">
-            <div className="animate-fade-in w-full">
-              <TopicForm initialTopic={initialTopic} />
+            <div className="px-5 pb-6">
+              <div className="animate-fade-in w-full">
+                <TopicForm initialTopic={initialTopic} />
+              </div>
             </div>
-          </div>
-        </main>
+          </main>
 
-        <aside className="no-scrollbar hidden w-78 shrink-0 px-3 lg:sticky lg:top-12 lg:block lg:max-h-[calc(100vh-48px)] lg:overflow-y-auto">
-          {onboardingSidebarContent}
-        </aside>
+          <aside className="no-scrollbar hidden w-78 shrink-0 px-3 lg:sticky lg:top-12 lg:block lg:max-h-[calc(100vh-48px)] lg:overflow-y-auto">
+            {onboardingSidebarContent}
+          </aside>
         </div>
       </div>
 

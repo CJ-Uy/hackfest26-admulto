@@ -25,7 +25,13 @@ export async function GET(
   // Lightweight list of sibling papers for comment author-matching
   const siblingPapers = await db.query.papers.findMany({
     where: eq(papers.scrollId, paper.scrollId),
-    columns: { id: true, title: true, authors: true, doi: true, apaCitation: true },
+    columns: {
+      id: true,
+      title: true,
+      authors: true,
+      doi: true,
+      apaCitation: true,
+    },
   });
 
   const scrollPapers = siblingPapers.map((p) => ({

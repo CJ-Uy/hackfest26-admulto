@@ -6,8 +6,16 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 const avatarColors = [
-  "#FF4500", "#0079D3", "#46d160", "#FF8717", "#7193FF",
-  "#EA0027", "#00A6A5", "#CC3600", "#9B59B6", "#349E79",
+  "#FF4500",
+  "#0079D3",
+  "#46d160",
+  "#FF8717",
+  "#7193FF",
+  "#EA0027",
+  "#00A6A5",
+  "#CC3600",
+  "#9B59B6",
+  "#349E79",
 ];
 
 export function getAvatarColor(name: string): string {

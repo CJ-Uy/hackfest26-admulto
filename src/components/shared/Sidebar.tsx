@@ -104,7 +104,7 @@ export function SidebarContent({
 
       <div
         className={cn(
-          "flex-1 overflow-y-auto overflow-x-hidden",
+          "flex-1 overflow-x-hidden overflow-y-auto",
           collapsed ? "px-1.5" : "px-3",
         )}
       >
@@ -137,7 +137,11 @@ export function SidebarContent({
                     "flex min-w-0 flex-1 items-start gap-2",
                     collapsed && "justify-center",
                   )}
-                  title={collapsed ? `${session.title} (${session.paperCount} papers)` : undefined}
+                  title={
+                    collapsed
+                      ? `${session.title} (${session.paperCount} papers)`
+                      : undefined
+                  }
                 >
                   <ScrollText className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
                   {!collapsed && (
@@ -170,7 +174,12 @@ export function SidebarContent({
         )}
       </div>
 
-      <div className={cn("border-border border-t py-2", collapsed ? "px-1.5" : "px-3")}>
+      <div
+        className={cn(
+          "border-border border-t py-2",
+          collapsed ? "px-1.5" : "px-3",
+        )}
+      >
         <div className="flex items-center justify-between gap-1">
           <ThemeToggle />
           {onToggleCollapse && (
@@ -288,15 +297,14 @@ export function Sidebar({
       {/* Desktop sidebar */}
       <aside
         className={cn(
-          "scrollbar-ultra-thin hidden shrink-0 overflow-y-auto overflow-x-hidden border-r border-border transition-all duration-200 md:sticky md:top-14 md:flex md:h-[calc(100vh-56px)] md:flex-col",
-          mounted
-            ? collapsed
-              ? "w-14"
-              : "w-[312px]"
-            : "w-[312px]",
+          "scrollbar-ultra-thin border-border hidden shrink-0 overflow-x-hidden overflow-y-auto border-r transition-all duration-200 md:sticky md:top-14 md:flex md:h-[calc(100vh-56px)] md:flex-col",
+          mounted ? (collapsed ? "w-14" : "w-[312px]") : "w-[312px]",
         )}
       >
-        <SidebarContent collapsed={mounted && collapsed} onToggleCollapse={toggleCollapsed} />
+        <SidebarContent
+          collapsed={mounted && collapsed}
+          onToggleCollapse={toggleCollapsed}
+        />
       </aside>
     </SidebarCollapsedContext.Provider>
   );

@@ -18,11 +18,14 @@ function isPdfUrl(url: string | undefined): url is string {
     // Direct PDF file extension
     if (u.pathname.endsWith(".pdf")) return true;
     // arXiv PDF paths: /pdf/<id> or /pdf/<id>v<n>
-    if (u.hostname.includes("arxiv.org") && u.pathname.startsWith("/pdf/")) return true;
+    if (u.hostname.includes("arxiv.org") && u.pathname.startsWith("/pdf/"))
+      return true;
     // PubMed Central direct PDF
-    if (u.hostname.includes("ncbi.nlm.nih.gov") && u.pathname.includes("/pdf/")) return true;
+    if (u.hostname.includes("ncbi.nlm.nih.gov") && u.pathname.includes("/pdf/"))
+      return true;
     // Europe PMC
-    if (u.hostname.includes("europepmc.org") && u.pathname.includes("/pdf/")) return true;
+    if (u.hostname.includes("europepmc.org") && u.pathname.includes("/pdf/"))
+      return true;
     return false;
   } catch {
     return false;
@@ -93,7 +96,9 @@ async function searchOpenAlex(query: string, limit = 15): Promise<RawPaper[]> {
           r.primary_location?.source?.display_name || "Academic Publication";
         const doi = (r.doi as string)?.replace("https://doi.org/", "") || "";
 
-        const oaUrl = (r.open_access as AnyRecord)?.oa_url as string | undefined;
+        const oaUrl = (r.open_access as AnyRecord)?.oa_url as
+          | string
+          | undefined;
 
         return {
           id: (r.id as string) || `oa-${Math.random().toString(36).slice(2)}`,

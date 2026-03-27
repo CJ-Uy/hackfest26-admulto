@@ -107,9 +107,7 @@ export async function deletePdfs(keys: string[]): Promise<void> {
     const s3 = getS3Client();
     await Promise.all(
       keys.map((key) =>
-        s3.send(
-          new DeleteObjectCommand({ Bucket: R2_BUCKET_NAME, Key: key }),
-        ),
+        s3.send(new DeleteObjectCommand({ Bucket: R2_BUCKET_NAME, Key: key })),
       ),
     );
     return;
@@ -171,9 +169,7 @@ export async function deleteImages(keys: string[]): Promise<void> {
     const s3 = getS3Client();
     await Promise.all(
       keys.map((key) =>
-        s3.send(
-          new DeleteObjectCommand({ Bucket: R2_BUCKET_NAME, Key: key }),
-        ),
+        s3.send(new DeleteObjectCommand({ Bucket: R2_BUCKET_NAME, Key: key })),
       ),
     );
     return;

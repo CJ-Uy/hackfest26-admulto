@@ -118,7 +118,7 @@ export function RightSidebarSkeleton() {
     <aside className="no-scrollbar hidden w-[312px] shrink-0 px-3 lg:sticky lg:top-12 lg:block lg:max-h-[calc(100vh-48px)] lg:overflow-y-auto">
       <div className="space-y-3">
         {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="py-3 border-b border-border">
+          <div key={i} className="border-border border-b py-3">
             <Skeleton className="mb-3 h-4 w-28" />
             <div className="space-y-2">
               <Skeleton className="h-4 w-full" />

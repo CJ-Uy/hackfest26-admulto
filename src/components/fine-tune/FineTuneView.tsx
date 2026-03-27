@@ -198,7 +198,10 @@ export function FineTuneView({ scrollId, onRegenerated }: FineTuneViewProps) {
       const res = await fetch("/api/fine-tune/regenerate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ scrollId, answers: Object.fromEntries(answers) }),
+        body: JSON.stringify({
+          scrollId,
+          answers: Object.fromEntries(answers),
+        }),
       });
 
       if (!res.ok) {

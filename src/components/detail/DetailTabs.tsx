@@ -430,7 +430,10 @@ export function DetailTabs({
       <div key={c.id}>
         {/* Comment with left border for threading */}
         <div
-          className={cn("border-border/50 py-4 hover:bg-subtle/50 transition-colors", depth > 0 && "border-l-2")}
+          className={cn(
+            "border-border/50 hover:bg-subtle/50 py-4 transition-colors",
+            depth > 0 && "border-l-2",
+          )}
           style={
             depth > 0
               ? { paddingLeft: `${Math.min(depth, 5) * 1.25}rem` }
@@ -457,7 +460,11 @@ export function DetailTabs({
               {c.isGenerated ? (
                 <Bot className="h-3.5 w-3.5" />
               ) : c.author === "You" ? (
-                <SchrollarLogo showText={false} size="sm" className="text-primary-foreground" />
+                <SchrollarLogo
+                  showText={false}
+                  size="sm"
+                  className="text-primary-foreground"
+                />
               ) : (
                 c.author.charAt(0).toUpperCase()
               )}
@@ -465,7 +472,11 @@ export function DetailTabs({
             <div className="flex min-w-0 flex-1 items-center gap-1.5">
               {sourcePaper ? (
                 <a
-                  href={sourcePaper.doi.startsWith("http") ? sourcePaper.doi : `https://doi.org/${sourcePaper.doi}`}
+                  href={
+                    sourcePaper.doi.startsWith("http")
+                      ? sourcePaper.doi
+                      : `https://doi.org/${sourcePaper.doi}`
+                  }
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={(e: React.MouseEvent) => e.stopPropagation()}
@@ -506,7 +517,11 @@ export function DetailTabs({
             </button>
             {sourcePaper && (
               <a
-                href={sourcePaper.doi.startsWith("http") ? sourcePaper.doi : `https://doi.org/${sourcePaper.doi}`}
+                href={
+                  sourcePaper.doi.startsWith("http")
+                    ? sourcePaper.doi
+                    : `https://doi.org/${sourcePaper.doi}`
+                }
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-muted-foreground hover:text-primary hover:bg-subtle flex items-center gap-1 rounded px-2 py-0.5 text-[12px] font-medium transition-colors"
@@ -591,7 +606,7 @@ export function DetailTabs({
       )}
 
       {/* Separator between AI comments and user comments */}
-      {generated.length > 0 && <div className="border-border border-b mb-2" />}
+      {generated.length > 0 && <div className="border-border mb-2 border-b" />}
 
       {/* User comments */}
       <h3 className="text-foreground mb-2 pt-1 text-[15px] font-bold">
@@ -615,9 +630,13 @@ export function DetailTabs({
 
       {/* Integrated reply input */}
       {showReplyInput && (
-        <div className="border-primary/20 bg-subtle mt-4 flex items-center gap-2 rounded-lg border px-3.5 py-3 focus-within:border-primary/40 focus-within:shadow-[0_0_0_3px_rgba(74,108,247,0.1)] transition-all">
+        <div className="border-primary/20 bg-subtle focus-within:border-primary/40 mt-4 flex items-center gap-2 rounded-lg border px-3.5 py-3 transition-all focus-within:shadow-[0_0_0_3px_rgba(74,108,247,0.1)]">
           <div className="bg-primary text-primary-foreground flex h-7 w-7 shrink-0 items-center justify-center rounded-full">
-            <SchrollarLogo showText={false} size="sm" className="text-primary-foreground" />
+            <SchrollarLogo
+              showText={false}
+              size="sm"
+              className="text-primary-foreground"
+            />
           </div>
           <input
             value={mainReplyContent}

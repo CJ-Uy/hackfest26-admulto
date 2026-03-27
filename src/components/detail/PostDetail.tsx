@@ -50,10 +50,13 @@ export function PostDetail({
       </div>
 
       {/* Paper card — px-4 on individual sections while keeping image slightly inset */}
-      <div className="border-border border-b overflow-hidden">
+      <div className="border-border overflow-hidden border-b">
         {/* Author row */}
         <div className="mb-2 flex items-center gap-2.5 px-4 pt-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[13px] font-bold text-white" style={{ backgroundColor: getAvatarColor(paper.authors[0] || "U") }}>
+          <div
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[13px] font-bold text-white"
+            style={{ backgroundColor: getAvatarColor(paper.authors[0] || "U") }}
+          >
             {initial}
           </div>
           <div className="flex min-w-0 flex-1 items-baseline gap-1.5">
@@ -76,11 +79,11 @@ export function PostDetail({
 
         {/* Figure image (when available from open-access PDF) */}
         {paper.imageUrl && (
-          <div className="bg-muted mb-2 mx-4 overflow-hidden rounded-md shadow-sm">
+          <div className="bg-muted mx-4 mb-2 overflow-hidden rounded-md shadow-sm">
             <img
               src={paper.imageUrl}
               alt={`Figure from ${paper.title}`}
-              className="w-full max-h-120 object-cover object-top"
+              className="max-h-120 w-full object-cover object-top"
               loading="lazy"
             />
           </div>
@@ -97,7 +100,7 @@ export function PostDetail({
           target="_blank"
           rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
-          className="text-primary mt-2 px-4 inline-flex items-center gap-1 text-[14px] font-semibold hover:underline"
+          className="text-primary mt-2 inline-flex items-center gap-1 px-4 text-[14px] font-semibold hover:underline"
         >
           View Full Paper
           <ExternalLink className="h-3.5 w-3.5" />

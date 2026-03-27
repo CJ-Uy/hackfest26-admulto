@@ -8,7 +8,12 @@ import { join } from "path";
 import { extractImages, getDocumentProxy } from "unpdf";
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const UPNG = require("upng-js") as {
-  encode: (bufs: ArrayBuffer[], w: number, h: number, cnum: number) => ArrayBuffer;
+  encode: (
+    bufs: ArrayBuffer[],
+    w: number,
+    h: number,
+    cnum: number,
+  ) => ArrayBuffer;
 };
 
 const OUT_DIR = "/tmp/pdf-image-test";
@@ -37,17 +42,23 @@ async function checkOpenAlex(query: string) {
 // ── Step 2: Check Semantic Scholar for open-access PDF URLs ───────────────
 
 async function checkS2(query: string) {
-  console.log(`\n═══ STEP 2: Semantic Scholar openAccessPdf for "${query}" ═══`);
+  console.log(
+    `\n═══ STEP 2: Semantic Scholar openAccessPdf for "${query}" ═══`,
+  );
   const params = new URLSearchParams({
     query,
     limit: "5",
     fields: "title,openAccessPdf",
   });
-  const res = await fetch(`https://api.semanticscholar.org/graph/v1/paper/search?${params}`);
+  const res = await fetch(
+    `https://api.semanticscholar.org/graph/v1/paper/search?${params}`,
+  );
   const data = (await res.json()) as { data: Record<string, unknown>[] };
-  for (const r of (data.data ?? [])) {
+  for (const r of data.data ?? []) {
     console.log(`  Title: ${String(r.title).slice(0, 60)}`);
-    console.log(`  PDF URL: ${(r.openAccessPdf as Record<string,string> | null)?.url ?? "(none)"}`);
+    console.log(
+      `  PDF URL: ${(r.openAccessPdf as Record<string, string> | null)?.url ?? "(none)"}`,
+    );
     console.log();
   }
 }
@@ -99,7 +110,9 @@ async function testPdfExtraction(pdfUrl: string, label: string) {
 
     console.log(`  Page ${page}: ${images.length} image(s) found`);
     for (const img of images) {
-      console.log(`    → ${img.width}×${img.height} ch=${img.channels} key=${img.key}`);
+      console.log(
+        `    → ${img.width}×${img.height} ch=${img.channels} key=${img.key}`,
+      );
 
       if (img.width >= 200 && img.height >= 150) {
         foundAny = true;
@@ -116,19 +129,22 @@ async function testPdfExtraction(pdfUrl: string, label: string) {
               const src = i * channels;
               const dst = i * 4;
               if (channels === 1) {
-                rgba[dst] = rgba[dst+1] = rgba[dst+2] = img.data[src];
+                rgba[dst] = rgba[dst + 1] = rgba[dst + 2] = img.data[src];
               } else {
                 rgba[dst] = img.data[src];
-                rgba[dst+1] = img.data[src+1];
-                rgba[dst+2] = img.data[src+2];
+                rgba[dst + 1] = img.data[src + 1];
+                rgba[dst + 2] = img.data[src + 2];
               }
-              rgba[dst+3] = 255;
+              rgba[dst + 3] = 255;
             }
             rgbaBuffer = rgba.buffer;
           }
 
           const png = UPNG.encode([rgbaBuffer], img.width, img.height, 0);
-          const outPath = join(OUT_DIR, `${label.replace(/\W+/g, "_")}_p${page}_${img.key}.png`);
+          const outPath = join(
+            OUT_DIR,
+            `${label.replace(/\W+/g, "_")}_p${page}_${img.key}.png`,
+          );
           writeFileSync(outPath, Buffer.from(png));
           console.log(`    ✅ Saved PNG → ${outPath}`);
         } catch (encErr) {
@@ -156,7 +172,10 @@ async function main() {
   await checkS2(topic);
 
   // Known arXiv open-access PDFs (no .pdf suffix — the main bug we fixed)
-  await testPdfExtraction("https://arxiv.org/pdf/1706.03762", "attention-is-all-you-need");
+  await testPdfExtraction(
+    "https://arxiv.org/pdf/1706.03762",
+    "attention-is-all-you-need",
+  );
   await testPdfExtraction("https://arxiv.org/pdf/2303.08774", "gpt4-report");
 
   console.log(`\n═══ Done. Any saved PNGs are in ${OUT_DIR} ═══\n`);

@@ -7,7 +7,12 @@
 import { extractImages, getDocumentProxy } from "unpdf";
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const UPNG = require("upng-js") as {
-  encode: (bufs: ArrayBuffer[], w: number, h: number, cnum: number) => ArrayBuffer;
+  encode: (
+    bufs: ArrayBuffer[],
+    w: number,
+    h: number,
+    cnum: number,
+  ) => ArrayBuffer;
 };
 
 const MIN_WIDTH = 200;

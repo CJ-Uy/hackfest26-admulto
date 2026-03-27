@@ -473,7 +473,10 @@ export function TopicForm({ initialTopic }: TopicFormProps) {
 
       {/* ── Topic / Description ── */}
       <div>
-        <label htmlFor="topic" className="text-foreground mb-2 block text-[15px] font-semibold">
+        <label
+          htmlFor="topic"
+          className="text-foreground mb-2 block text-[15px] font-semibold"
+        >
           Main Topic{" "}
           {topicRequired ? (
             <span className="text-destructive">*</span>
@@ -500,7 +503,9 @@ export function TopicForm({ initialTopic }: TopicFormProps) {
           className="text-foreground mb-2 block text-[15px] font-semibold"
         >
           Description{" "}
-          <span className="text-muted-foreground text-[13px] font-normal">(optional)</span>
+          <span className="text-muted-foreground text-[13px] font-normal">
+            (optional)
+          </span>
         </label>
         <Textarea
           id="description"
@@ -515,7 +520,9 @@ export function TopicForm({ initialTopic }: TopicFormProps) {
       <div>
         <label className="text-foreground mb-2 block text-[15px] font-semibold">
           Subfields / Interests{" "}
-          <span className="text-muted-foreground text-[13px] font-normal">(optional)</span>
+          <span className="text-muted-foreground text-[13px] font-normal">
+            (optional)
+          </span>
         </label>
         <div className="flex gap-2">
           <Input
@@ -540,7 +547,11 @@ export function TopicForm({ initialTopic }: TopicFormProps) {
         {subfields.length > 0 && (
           <div className="mt-2.5 flex flex-wrap gap-2">
             {subfields.map((sf) => (
-              <Badge key={sf} variant="secondary" className="gap-1 pr-1.5 text-[13px] py-1">
+              <Badge
+                key={sf}
+                variant="secondary"
+                className="gap-1 py-1 pr-1.5 text-[13px]"
+              >
                 {sf}
                 <button
                   type="button"
@@ -830,7 +841,7 @@ export function TopicForm({ initialTopic }: TopicFormProps) {
       </div>
 
       {/* ── Estimated Time ── */}
-      <div className="bg-primary/5 border border-primary/10 flex items-center gap-2.5 rounded-lg px-4 py-3.5">
+      <div className="bg-primary/5 border-primary/10 flex items-center gap-2.5 rounded-lg border px-4 py-3.5">
         <Clock className="text-primary h-4 w-4 shrink-0" />
         <p className="text-foreground text-[14px]">
           Estimated time:{" "}
@@ -851,7 +862,7 @@ export function TopicForm({ initialTopic }: TopicFormProps) {
       <Button
         type="submit"
         size="lg"
-        className="w-full gap-2 h-12 text-[16px] font-semibold rounded-lg"
+        className="h-12 w-full gap-2 rounded-lg text-[16px] font-semibold"
         disabled={loading}
       >
         <Sparkles className="h-5 w-5" />

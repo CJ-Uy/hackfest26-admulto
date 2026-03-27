@@ -63,7 +63,9 @@ export async function POST(req: Request) {
       .select({ id: pollResponses.id })
       .from(pollResponses)
       .innerJoin(polls, eq(pollResponses.pollId, polls.id))
-      .where(and(eq(polls.scrollId, scrollId), eq(polls.category, "fine-tune")));
+      .where(
+        and(eq(polls.scrollId, scrollId), eq(polls.category, "fine-tune")),
+      );
 
     if (existingResponses.length === 0) {
       return Response.json(
