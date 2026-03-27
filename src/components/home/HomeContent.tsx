@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/dialog";
 import { deleteScroll } from "@/lib/scroll-store";
 import { toast } from "sonner";
+import schrollsLock from "../../../schrolls-lock.json";
 
 interface ScrollItem {
   id: string;
@@ -285,17 +286,19 @@ export function HomeContent({ scrolls: initialScrolls }: HomeContentProps) {
                         </div>
 
                         {/* Delete button */}
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setDeleteTarget(scroll);
-                          }}
-                          className="text-muted-foreground hover:text-destructive mt-1 shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
-                          aria-label={`Delete ${scroll.title}`}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                        {!schrollsLock.lockedIds.includes(scroll.id) && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeleteTarget(scroll);
+                            }}
+                            className="text-muted-foreground hover:text-destructive mt-1 shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
+                            aria-label={`Delete ${scroll.title}`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
                       </div>
                     </article>
                   ))}
