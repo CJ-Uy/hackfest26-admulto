@@ -34,6 +34,9 @@ importers:
       next-themes:
         specifier: ^0.4.6
         version: 0.4.6(react-dom@19.1.5(react@19.1.5))(react@19.1.5)
+      pako:
+        specifier: ^1.0.11
+        version: 1.0.11
       prettier:
         specifier: ^3.8.1
         version: 3.8.1
@@ -61,6 +64,9 @@ importers:
       unpdf:
         specifier: ^1.4.0
         version: 1.4.0
+      upng-js:
+        specifier: ^2.1.0
+        version: 2.1.0
     devDependencies:
       "@eslint/eslintrc":
         specifier: ^3
@@ -6661,6 +6667,12 @@ packages:
       }
     engines: { node: ">= 0.4" }
 
+  pako@1.0.11:
+    resolution:
+      {
+        integrity: sha512-4hLB8Py4zZce5s4yd9XzopqwVv/yGNhV1Bl8NTmCq1763HeK2+EwVTv+leGeL13Dnh2wfbqowVPXCIO0z4taYw==,
+      }
+
   p-limit@3.1.0:
     resolution:
       {
@@ -7852,6 +7864,12 @@ packages:
     peerDependenciesMeta:
       "@napi-rs/canvas":
         optional: true
+
+  upng-js@2.1.0:
+    resolution:
+      {
+        integrity: sha512-d3xzZzpMP64YkjP5pr8gNyvBt7dLk/uGI67EctzDuVp4lCZyVMo0aJO6l/VDlgbInJYDY6cnClLoBp29eKWI6g==,
+      }
 
   unpipe@1.0.0:
     resolution:
@@ -12937,6 +12955,8 @@ snapshots:
       object-keys: 1.1.1
       safe-push-apply: 1.0.0
 
+  pako@1.0.11: {}
+
   p-limit@3.1.0:
     dependencies:
       yocto-queue: 0.1.0
@@ -13690,6 +13710,8 @@ snapshots:
   universalify@2.0.1: {}
 
   unpdf@1.4.0: {}
+
+  upng-js@2.1.0: {}
 
   unpipe@1.0.0: {}
 

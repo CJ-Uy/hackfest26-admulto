@@ -7,6 +7,28 @@
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyRecord = Record<string, any>;
 
+/**
+ * Return true only for URLs that are likely to serve an actual PDF binary,
+ * not DOI redirect pages or HTML landing pages.
+ */
+function isPdfUrl(url: string | undefined): url is string {
+  if (!url) return false;
+  try {
+    const u = new URL(url);
+    // Direct PDF file extension
+    if (u.pathname.endsWith(".pdf")) return true;
+    // arXiv PDF paths: /pdf/<id> or /pdf/<id>v<n>
+    if (u.hostname.includes("arxiv.org") && u.pathname.startsWith("/pdf/")) return true;
+    // PubMed Central direct PDF
+    if (u.hostname.includes("ncbi.nlm.nih.gov") && u.pathname.includes("/pdf/")) return true;
+    // Europe PMC
+    if (u.hostname.includes("europepmc.org") && u.pathname.includes("/pdf/")) return true;
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 export interface RawPaper {
   id: string;
   title: string;
@@ -18,6 +40,7 @@ export interface RawPaper {
   citationCount: number;
   source: "openalex" | "crossref" | "semantic_scholar" | "web" | "pdf_upload";
   embedding?: number[]; // nomic-embed-text embedding, attached during search dedup
+  openAccessPdfUrl?: string; // open-access PDF URL for figure extraction
 }
 
 // ─── OpenAlex (primary — free, 100k req/day with polite pool) ───────────────
@@ -41,7 +64,7 @@ async function searchOpenAlex(query: string, limit = 15): Promise<RawPaper[]> {
       search: query.slice(0, 200),
       per_page: String(limit),
       select:
-        "id,title,authorships,publication_year,cited_by_count,primary_location,doi,abstract_inverted_index",
+        "id,title,authorships,publication_year,cited_by_count,primary_location,doi,abstract_inverted_index,open_access",
       mailto: "schrollar-app@example.com", // polite pool
     });
 
@@ -70,6 +93,8 @@ async function searchOpenAlex(query: string, limit = 15): Promise<RawPaper[]> {
           r.primary_location?.source?.display_name || "Academic Publication";
         const doi = (r.doi as string)?.replace("https://doi.org/", "") || "";
 
+        const oaUrl = (r.open_access as AnyRecord)?.oa_url as string | undefined;
+
         return {
           id: (r.id as string) || `oa-${Math.random().toString(36).slice(2)}`,
           title: r.title as string,
@@ -80,6 +105,7 @@ async function searchOpenAlex(query: string, limit = 15): Promise<RawPaper[]> {
           doi,
           citationCount: (r.cited_by_count as number) || 0,
           source: "openalex",
+          openAccessPdfUrl: isPdfUrl(oaUrl) ? oaUrl : undefined,
         };
       })
       .filter((p): p is RawPaper => p !== null);
@@ -178,7 +204,7 @@ async function searchSemanticScholar(
       query: query.slice(0, 200),
       limit: String(limit),
       fields:
-        "title,abstract,url,year,citationCount,authors,venue,externalIds,journal",
+        "title,abstract,url,year,citationCount,authors,venue,externalIds,journal,openAccessPdf",
     });
 
     const headers: Record<string, string> = {};
@@ -216,6 +242,10 @@ async function searchSemanticScholar(
           (r.journal as AnyRecord)?.name ||
           "Academic Publication";
 
+        const s2PdfUrl = (r.openAccessPdf as AnyRecord)?.url as
+          | string
+          | undefined;
+
         return {
           id:
             (r.paperId as string) ||
@@ -228,6 +258,7 @@ async function searchSemanticScholar(
           doi: (r.externalIds as AnyRecord)?.DOI || "",
           citationCount: (r.citationCount as number) || 0,
           source: "semantic_scholar",
+          openAccessPdfUrl: s2PdfUrl,
         };
       })
       .filter((p): p is RawPaper => p !== null);

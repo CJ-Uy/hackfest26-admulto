@@ -49,10 +49,10 @@ export function PostDetail({
         </button>
       </div>
 
-      {/* Paper card — matching feed card style (same px-4 py-3 as PaperCard) */}
-      <div className="border-border border-b px-4 py-3">
+      {/* Paper card — px-4 on individual sections so image can be full-width */}
+      <div className="border-border border-b overflow-hidden">
         {/* Author row */}
-        <div className="mb-2 flex items-center gap-2.5">
+        <div className="mb-2 flex items-center gap-2.5 px-4 pt-3">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[13px] font-bold text-white" style={{ backgroundColor: getAvatarColor(paper.authors[0] || "U") }}>
             {initial}
           </div>
@@ -70,12 +70,24 @@ export function PostDetail({
         </div>
 
         {/* Title */}
-        <h1 className="font-heading text-foreground mb-1 text-[20px] leading-snug font-bold">
+        <h1 className="font-heading text-foreground mb-1 px-4 text-[20px] leading-snug font-bold">
           {paper.title}
         </h1>
 
+        {/* Figure image (when available from open-access PDF) */}
+        {paper.imageUrl && (
+          <div className="bg-muted mb-2 w-full overflow-hidden">
+            <img
+              src={paper.imageUrl}
+              alt={`Figure from ${paper.title}`}
+              className="w-full max-h-120 object-cover object-top"
+              loading="lazy"
+            />
+          </div>
+        )}
+
         {/* Synthesis — full text, not clamped */}
-        <p className="text-muted-foreground text-[15px] leading-relaxed">
+        <p className="text-muted-foreground px-4 text-[15px] leading-relaxed">
           {paper.synthesis}
         </p>
 
@@ -85,23 +97,25 @@ export function PostDetail({
           target="_blank"
           rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
-          className="text-primary mt-2 inline-flex items-center gap-1 text-[14px] font-semibold hover:underline"
+          className="text-primary mt-2 px-4 inline-flex items-center gap-1 text-[14px] font-semibold hover:underline"
         >
           View Full Paper
           <ExternalLink className="h-3.5 w-3.5" />
         </a>
 
         {/* Actions — same as feed card */}
-        <CardActions
-          paperId={paper.id}
-          credibilityScore={paper.credibilityScore}
-          commentCount={paper.commentCount}
-          citationCount={paper.citationCount}
-          apaCitation={paper.apaCitation}
-          initialVoted={paper.voted}
-          initialDownvoted={paper.downvoted}
-          initialBookmarked={paper.bookmarked}
-        />
+        <div className="px-4 pb-3">
+          <CardActions
+            paperId={paper.id}
+            credibilityScore={paper.credibilityScore}
+            commentCount={paper.commentCount}
+            citationCount={paper.citationCount}
+            apaCitation={paper.apaCitation}
+            initialVoted={paper.voted}
+            initialDownvoted={paper.downvoted}
+            initialBookmarked={paper.bookmarked}
+          />
+        </div>
       </div>
 
       {/* Comments — includes reply input at bottom */}

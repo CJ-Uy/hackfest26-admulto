@@ -126,10 +126,15 @@ export async function generateSynthesis(
 ): Promise<string> {
   return ollamaChat(
     "You are Schrollar's research card writer. Write a 2-3 sentence " +
-      "social-media-style post summarizing a research paper. " +
+      "social-media-style post summarizing a research paper in a human, " +
+      "engaging voice. Make the post fun to read by leading with the most " +
+      "interesting concrete point from the abstract and using natural, " +
+      "conversational phrasing. Keep the tone lively but credible. " +
+      "Avoid generic AI phrasing and cliches like 'this paper explores', " +
+      "'delves into', 'in conclusion', or 'further research is needed'. " +
+      "Do NOT use emojis, hashtags, or markdown. Plain text only. " +
       "ONLY use facts stated in the abstract — do NOT add claims, " +
-      "implications, or details not explicitly mentioned. " +
-      "Do NOT use hashtags. Do NOT use markdown. Plain text only.",
+      "implications, or details not explicitly mentioned.",
     `Summarize this paper as a social media post:\n\n` +
       `Title: ${title}\n` +
       `Authors: ${authors.join(", ")}\n` +
