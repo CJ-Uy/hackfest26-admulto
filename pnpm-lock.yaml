@@ -61,6 +61,9 @@ importers:
       unpdf:
         specifier: ^1.4.0
         version: 1.4.0
+      upng-js:
+        specifier: ^2.1.0
+        version: 2.1.0
     devDependencies:
       "@eslint/eslintrc":
         specifier: ^3
@@ -7853,6 +7856,12 @@ packages:
       "@napi-rs/canvas":
         optional: true
 
+  upng-js@2.1.0:
+    resolution:
+      {
+        integrity: sha512-d3xzZzpMP64YkjP5pr8gNyvBt7dLk/uGI67EctzDuVp4lCZyVMo0aJO6l/VDlgbInJYDY6cnClLoBp29eKWI6g==,
+      }
+
   unpipe@1.0.0:
     resolution:
       {
@@ -13690,6 +13699,8 @@ snapshots:
   universalify@2.0.1: {}
 
   unpdf@1.4.0: {}
+
+  upng-js@2.1.0: {}
 
   unpipe@1.0.0: {}
 
