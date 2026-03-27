@@ -416,16 +416,11 @@ async function handleProcessPhase(
       }
     }
 
-    // Fallback: derive PDF URL from DOI when no open-access URL was found
+    // Fallback: derive PDF URL from DOI for arXiv papers without an OA URL
     if (!openAccessPdfUrl && nextPaper.doi) {
-      const doi = nextPaper.doi;
-      const arxivMatch =
-        doi.match(/10\.48550\/arXiv\.(.+)/i) ||
-        doi.match(/arxiv[:/](\d{4}\.\d+)/i);
+      const arxivMatch = nextPaper.doi.match(/10\.48550\/arXiv\.(.+)/i);
       if (arxivMatch) {
         openAccessPdfUrl = `https://arxiv.org/pdf/${arxivMatch[1]}`;
-      } else if (doi.startsWith("10.1101/")) {
-        openAccessPdfUrl = `https://www.biorxiv.org/content/${doi}.full.pdf`;
       }
     }
 

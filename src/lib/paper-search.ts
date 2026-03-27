@@ -24,13 +24,11 @@ function isPdfUrl(url: string | undefined): url is string {
     if (u.hostname.includes("ncbi.nlm.nih.gov") && path.includes("/pdf/")) return true;
     // Europe PMC
     if (u.hostname.includes("europepmc.org") && path.includes("/pdf/")) return true;
-    // bioRxiv / medRxiv full-text PDFs
+    // bioRxiv / medRxiv full-text PDFs (e.g. /content/10.1101/xxx.full.pdf)
     if (
       (u.hostname.includes("biorxiv.org") || u.hostname.includes("medrxiv.org")) &&
-      (path.includes(".pdf") || path.endsWith(".full"))
+      path.includes("/pdf/")
     ) return true;
-    // Any URL with /pdf in the path (institutional repos, SSRN, etc.)
-    if (path.includes("/pdf")) return true;
     return false;
   } catch {
     return false;
