@@ -2,7 +2,8 @@
  * Ensures every Nth paper in a scroll has an image by fetching a relevant
  * Wikipedia thumbnail for papers that are missing one.
  *
- * Called once after all papers are synthesized during feed generation.
+ * Uses Wikipedia's generator+search API to find related articles and batch-fetch
+ * thumbnails in a single request — much more reliable than exact title lookup.
  */
 
 import { uploadImage } from "@/lib/r2";
@@ -10,16 +11,21 @@ import { db } from "@/lib/db";
 import { papers } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 
-/** Image every N papers (1-indexed: 3rd, 6th, 9th…). */
+/** Ensure an image exists on every Nth paper (1-indexed: 3rd, 6th, 9th…). */
 const IMAGE_EVERY_N = 3;
 const WIKI_THUMB_SIZE = 800;
-const FETCH_TIMEOUT_MS = 8_000;
+const FETCH_TIMEOUT_MS = 10_000;
 
-// Common stop words to skip when building a Wikipedia keyword from a title
+// User-Agent required by Wikimedia API policy
+const USER_AGENT = "Schrollar/1.0 (research-paper-discovery-app; schrollar-app@example.com)";
+
+// Common stop words to skip when building a search keyword from a paper title
 const STOP_WORDS = new Set([
   "a", "an", "the", "of", "in", "on", "at", "to", "for", "with", "and",
   "or", "but", "is", "are", "was", "were", "be", "been", "by", "from",
   "its", "via", "into", "using", "based", "through", "between", "toward",
+  "novel", "new", "approach", "approaches", "method", "methods", "study",
+  "analysis", "review", "survey", "framework", "system", "model", "models",
 ]);
 
 /** Detect MIME type from buffer magic bytes. Falls back to image/jpeg. */
@@ -28,44 +34,61 @@ export function detectImageMime(buffer: ArrayBuffer): string {
   if (bytes[0] === 0x89 && bytes[1] === 0x50) return "image/png";
   if (bytes[0] === 0xff && bytes[1] === 0xd8) return "image/jpeg";
   if (bytes[0] === 0x47 && bytes[1] === 0x49) return "image/gif";
-  if (bytes[0] === 0x52 && bytes[1] === 0x49) return "image/webp"; // RIFF/WEBP
+  if (bytes[0] === 0x52 && bytes[1] === 0x49) return "image/webp";
   return "image/jpeg";
 }
 
 /**
- * Extract 3-4 meaningful content words from a paper title for Wikipedia search.
+ * Extract meaningful content words from a paper title for a Wikipedia search query.
+ * Returns progressively shorter fallback queries.
  */
-function titleToKeyword(title: string): string {
-  return title
+function titleToKeywords(title: string): string[] {
+  const words = title
     .replace(/[^a-zA-Z0-9\s]/g, " ")
     .split(/\s+/)
-    .filter((w) => w.length > 2 && !STOP_WORDS.has(w.toLowerCase()))
-    .slice(0, 4)
-    .join(" ");
+    .filter((w) => w.length > 2 && !STOP_WORDS.has(w.toLowerCase()));
+
+  const queries: string[] = [];
+  // Full query (up to 5 significant words)
+  if (words.length > 0) queries.push(words.slice(0, 5).join(" "));
+  // Shorter fallback (first 3)
+  if (words.length > 3) queries.push(words.slice(0, 3).join(" "));
+  // Minimal fallback (first 2)
+  if (words.length > 2) queries.push(words.slice(0, 2).join(" "));
+
+  return [...new Set(queries)].filter(Boolean);
 }
 
 /**
- * Fetch a Wikipedia page thumbnail for the given keyword.
- * Returns image bytes or null on failure.
+ * Search Wikipedia for articles related to a keyword using the generator API,
+ * which returns search results AND their thumbnails in a single request.
+ * Returns the first usable image buffer, or null.
  */
-async function fetchWikipediaImage(keyword: string): Promise<ArrayBuffer | null> {
+async function searchWikipediaImage(keyword: string): Promise<ArrayBuffer | null> {
   if (!keyword.trim()) return null;
 
   try {
+    // Single request: search for articles AND get their page images
     const params = new URLSearchParams({
       action: "query",
+      generator: "search",
+      gsrsearch: keyword,
+      gsrnamespace: "0",
+      gsrlimit: "5",
       prop: "pageimages",
-      format: "json",
       pithumbsize: String(WIKI_THUMB_SIZE),
-      titles: keyword,
-      redirects: "1",
+      format: "json",
       origin: "*",
     });
 
     const apiRes = await fetch(
       `https://en.wikipedia.org/w/api.php?${params}`,
-      { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) },
+      {
+        headers: { "User-Agent": USER_AGENT },
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      },
     );
+
     if (!apiRes.ok) return null;
 
     const data = (await apiRes.json()) as {
@@ -77,13 +100,16 @@ async function fetchWikipediaImage(keyword: string): Promise<ArrayBuffer | null>
     const pages = data.query?.pages;
     if (!pages) return null;
 
+    // Pages are returned in arbitrary order; iterate and take first with a thumbnail
     for (const page of Object.values(pages)) {
       const src = page.thumbnail?.source;
       if (!src) continue;
-      // Skip SVG thumbnails — they render poorly as card images
-      if (src.endsWith(".svg") || src.includes(".svg/")) continue;
+
+      // Skip SVG-based thumbnails (they're usually logos/icons, not informative photos)
+      if (src.includes(".svg")) continue;
 
       const imgRes = await fetch(src, {
+        headers: { "User-Agent": USER_AGENT },
         signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       });
       if (imgRes.ok) return imgRes.arrayBuffer();
@@ -96,33 +122,59 @@ async function fetchWikipediaImage(keyword: string): Promise<ArrayBuffer | null>
 }
 
 /**
+ * Try multiple keyword strategies derived from the paper title,
+ * returning the first successfully fetched image.
+ */
+async function fetchImageForTitle(title: string): Promise<ArrayBuffer | null> {
+  const queries = titleToKeywords(title);
+
+  for (const query of queries) {
+    const buffer = await searchWikipediaImage(query);
+    if (buffer && buffer.byteLength > 1000) return buffer; // sanity-check non-empty
+  }
+
+  return null;
+}
+
+/**
  * After synthesis, ensure every IMAGE_EVERY_N-th paper has an image.
+ * Papers at 1-indexed positions 3, 6, 9… that are missing an image get a
+ * Wikipedia thumbnail fetched and uploaded to R2.
  *
- * @param scrollId        The scroll being generated.
- * @param orderedPapers   Papers in their display order (same order inserted).
- * @param papersWithImages Set of paper IDs that already received an imageKey
- *                         during synthesis (from open-access PDF extraction).
+ * @param scrollId          The scroll being generated.
+ * @param orderedPapers     Papers in display order (same order as inserted).
+ * @param papersWithImages  Paper IDs that already received an imageKey during synthesis.
  */
 export async function fillScrollImages(
   scrollId: string,
   orderedPapers: Array<{ id: string; title: string }>,
   papersWithImages: Set<string>,
 ): Promise<void> {
-  // Papers at 0-indexed positions 2, 5, 8, … that don't yet have an image
+  // Target every Nth paper (0-indexed: 2, 5, 8, …) that has no image yet
   const targets = orderedPapers.filter(
     (p, i) => (i + 1) % IMAGE_EVERY_N === 0 && !papersWithImages.has(p.id),
   );
 
-  if (targets.length === 0) return;
+  if (targets.length === 0) {
+    console.log(`[image-fill] No missing images to fill for scroll ${scrollId}`);
+    return;
+  }
 
-  console.log(`[image-fill] Filling images for ${targets.length} papers in scroll ${scrollId}`);
+  console.log(
+    `[image-fill] Filling ${targets.length} images for scroll ${scrollId} (positions: ${
+      orderedPapers
+        .map((p, i) => ({ p, i }))
+        .filter(({ p, i }) => (i + 1) % IMAGE_EVERY_N === 0 && !papersWithImages.has(p.id))
+        .map(({ i }) => i + 1)
+        .join(", ")
+    })`,
+  );
 
   for (const paper of targets) {
     try {
-      const keyword = titleToKeyword(paper.title);
-      if (!keyword) continue;
+      console.log(`[image-fill] Fetching Wikipedia image for: "${paper.title.slice(0, 70)}"`);
+      const imageBuffer = await fetchImageForTitle(paper.title);
 
-      const imageBuffer = await fetchWikipediaImage(keyword);
       if (!imageBuffer) {
         console.log(`[image-fill] No Wikipedia image found for "${paper.title.slice(0, 60)}"`);
         continue;
@@ -135,7 +187,7 @@ export async function fillScrollImages(
       await uploadImage(imageBuffer, key, mime);
       await db.update(papers).set({ imageKey: key }).where(eq(papers.id, paper.id));
 
-      console.log(`[image-fill] ✅ Wikipedia image saved for "${paper.title.slice(0, 60)}"`);
+      console.log(`[image-fill] ✅ Image saved (${mime}) for "${paper.title.slice(0, 60)}"`);
     } catch (err) {
       console.warn(`[image-fill] Failed for paper ${paper.id}:`, err);
     }

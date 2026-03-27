@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { BadgeCheck, MessageCircleReply } from "lucide-react";
+import { BadgeCheck, Globe, MessageCircleReply } from "lucide-react";
 import type { Paper } from "@/lib/types";
 import { getAvatarColor } from "@/lib/utils";
 import { CardActions } from "./CardActions";
@@ -43,9 +43,13 @@ export function PaperCard({
 }: PaperCardProps) {
   const router = useRouter();
 
+  // Web-sourced papers store the URL in the doi field and have no authors
+  const isWebSource = paper.authors.length === 0 && !!paper.doi?.startsWith("http");
+
   const primaryAuthor = paper.authors[0] ?? "Unknown";
-  const authorDisplay =
-    paper.authors.length > 1
+  const authorDisplay = isWebSource
+    ? "Web Search"
+    : paper.authors.length > 1
       ? `${paper.authors[0]} & ${paper.authors[1]}`
       : paper.authors[0] || "Unknown";
   const initial = primaryAuthor.charAt(0).toUpperCase();
@@ -65,14 +69,20 @@ export function PaperCard({
     >
       {/* Author row */}
       <div className="mb-2 flex items-center gap-2.5 px-4 pt-3">
-        <div
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[13px] font-bold text-white"
-          style={{ backgroundColor: avatarColor }}
-        >
-          {initial}
-        </div>
+        {isWebSource ? (
+          <div className="bg-muted flex h-8 w-8 shrink-0 items-center justify-center rounded-full">
+            <Globe className="text-muted-foreground h-4 w-4" />
+          </div>
+        ) : (
+          <div
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[13px] font-bold text-white"
+            style={{ backgroundColor: avatarColor }}
+          >
+            {initial}
+          </div>
+        )}
         <div className="flex min-w-0 flex-1 items-baseline gap-1.5">
-          <span className="text-foreground truncate text-[15px] font-semibold">
+          <span className={`truncate text-[15px] font-semibold ${isWebSource ? "text-muted-foreground" : "text-foreground"}`}>
             {authorDisplay}
           </span>
           {paper.peerReviewed && (
