@@ -14,7 +14,7 @@ const MIN_WIDTH = 200;
 const MIN_HEIGHT = 150;
 const MAX_PDF_BYTES = 10 * 1024 * 1024; // 10 MB
 const FETCH_TIMEOUT_MS = 8_000;
-const MAX_PAGES = 15;
+const MAX_PAGES = 8;
 
 /**
  * Convert raw pixel data (1/3/4 channels) to RGBA ArrayBuffer.
@@ -101,6 +101,10 @@ export async function fetchPdfAndExtractFigure(
     });
 
     if (!res.ok) return null;
+
+    // Reject HTML pages (landing pages, paywalls) that aren't actual PDFs
+    const contentType = res.headers.get("content-type") ?? "";
+    if (!contentType.includes("application/pdf")) return null;
 
     const contentLength = Number(res.headers.get("content-length") ?? 0);
     if (contentLength > MAX_PDF_BYTES) return null;

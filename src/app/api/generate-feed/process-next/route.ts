@@ -416,14 +416,6 @@ async function handleProcessPhase(
       }
     }
 
-    // Fallback: derive PDF URL from DOI for arXiv papers without an OA URL
-    if (!openAccessPdfUrl && nextPaper.doi) {
-      const arxivMatch = nextPaper.doi.match(/10\.48550\/arXiv\.(.+)/i);
-      if (arxivMatch) {
-        openAccessPdfUrl = `https://arxiv.org/pdf/${arxivMatch[1]}`;
-      }
-    }
-
     const [synthesis, apaCitation] = await Promise.all([
       generateSynthesis(
         nextPaper.title,

@@ -15,20 +15,14 @@ function isPdfUrl(url: string | undefined): url is string {
   if (!url) return false;
   try {
     const u = new URL(url);
-    const path = u.pathname.toLowerCase();
     // Direct PDF file extension
-    if (path.endsWith(".pdf")) return true;
+    if (u.pathname.endsWith(".pdf")) return true;
     // arXiv PDF paths: /pdf/<id> or /pdf/<id>v<n>
-    if (u.hostname.includes("arxiv.org") && path.startsWith("/pdf/")) return true;
+    if (u.hostname.includes("arxiv.org") && u.pathname.startsWith("/pdf/")) return true;
     // PubMed Central direct PDF
-    if (u.hostname.includes("ncbi.nlm.nih.gov") && path.includes("/pdf/")) return true;
+    if (u.hostname.includes("ncbi.nlm.nih.gov") && u.pathname.includes("/pdf/")) return true;
     // Europe PMC
-    if (u.hostname.includes("europepmc.org") && path.includes("/pdf/")) return true;
-    // bioRxiv / medRxiv full-text PDFs (e.g. /content/10.1101/xxx.full.pdf)
-    if (
-      (u.hostname.includes("biorxiv.org") || u.hostname.includes("medrxiv.org")) &&
-      path.includes("/pdf/")
-    ) return true;
+    if (u.hostname.includes("europepmc.org") && u.pathname.includes("/pdf/")) return true;
     return false;
   } catch {
     return false;
