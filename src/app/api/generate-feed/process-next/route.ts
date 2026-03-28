@@ -145,41 +145,6 @@ async function handleSearchPhase(
   );
 
   try {
-    // ── Idempotency guard: skip search if papers already exist for this scroll ──
-    const [{ count: existingCount }] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(papers)
-      .where(eq(papers.scrollId, scrollId));
-
-    if (existingCount > 0) {
-      console.log(
-        `[process-next] Search phase already ran (${existingCount} papers exist), skipping to process`,
-      );
-      const processData: RawResultsProcess = {
-        phase: "process",
-        total: existingCount,
-        processed: 0,
-        config: { ...config },
-      };
-      await db
-        .update(scrolls)
-        .set({
-          rawResults: JSON.stringify(processData),
-          paperCount: existingCount,
-          progress: JSON.stringify({
-            step: "processing",
-            papersProcessed: 0,
-            total: existingCount,
-          }),
-        })
-        .where(eq(scrolls.id, scrollId));
-      return Response.json({
-        status: "generating",
-        progress: { step: "processing", papersProcessed: 0, total: existingCount },
-        done: false,
-      });
-    }
-
     // ── Extract PDFs if provided ──
     const pdfPapers: RawPaper[] = [];
     let pdfContextText = "";
@@ -322,6 +287,41 @@ async function handleSearchPhase(
           }),
         };
       });
+      // Pre-insert guard: if another concurrent call already inserted papers, skip.
+      const [{ count: existingNow }] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(papers)
+        .where(eq(papers.scrollId, scrollId));
+
+      if (existingNow > 0) {
+        console.log(
+          `[process-next] Papers already inserted by concurrent call (${existingNow}), skipping`,
+        );
+        const processData: RawResultsProcess = {
+          phase: "process",
+          total: existingNow,
+          processed: 0,
+          config,
+        };
+        await db
+          .update(scrolls)
+          .set({
+            rawResults: JSON.stringify(processData),
+            paperCount: existingNow,
+            progress: JSON.stringify({
+              step: "processing",
+              papersProcessed: 0,
+              total: existingNow,
+            }),
+          })
+          .where(eq(scrolls.id, scrollId));
+        return Response.json({
+          status: "generating",
+          progress: { step: "processing", papersProcessed: 0, total: existingNow },
+          done: false,
+        });
+      }
+
       // D1 HTTP API limits bound parameters to 100 per query.
       // Each paper row uses 16 params, so batch at 6 rows max.
       const CHUNK_SIZE = 6;
