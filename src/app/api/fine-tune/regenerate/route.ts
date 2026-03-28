@@ -325,30 +325,36 @@ export async function POST(req: Request) {
 
       // 7. Persist
       if (processedPapers.length > 0) {
-        const insertedPapers = await db
-          .insert(papers)
-          .values(
-            processedPapers.map((p, idx) => ({
-              scrollId,
-              externalId: p.id,
-              title: p.title,
-              authors: JSON.stringify(p.authors),
-              journal: p.journal,
-              year: p.year,
-              doi: p.doi,
-              peerReviewed: p.peerReviewed,
-              synthesis: p.synthesis,
-              credibilityScore: p.credibilityScore,
-              citationCount: p.citationCount,
-              commentCount: (paperComments.get(idx) || []).length,
-              apaCitation: p.apaCitation,
-              embedding: p.embedding ? JSON.stringify(p.embedding) : null,
-              groundingData: p.groundingData
-                ? JSON.stringify(p.groundingData)
-                : null,
-            })),
-          )
-          .returning();
+        // D1 HTTP API limits bound params to 100 per query.
+        // Each paper row uses ~17 params, so batch at 6 rows max.
+        const PAPER_CHUNK = 6;
+        const paperRows = processedPapers.map((p, idx) => ({
+          scrollId,
+          externalId: p.id,
+          title: p.title,
+          authors: JSON.stringify(p.authors),
+          journal: p.journal,
+          year: p.year,
+          doi: p.doi,
+          peerReviewed: p.peerReviewed,
+          synthesis: p.synthesis,
+          credibilityScore: p.credibilityScore,
+          citationCount: p.citationCount,
+          commentCount: (paperComments.get(idx) || []).length,
+          apaCitation: p.apaCitation,
+          embedding: p.embedding ? JSON.stringify(p.embedding) : null,
+          groundingData: p.groundingData
+            ? JSON.stringify(p.groundingData)
+            : null,
+        }));
+        const insertedPapers: { id: string; [key: string]: unknown }[] = [];
+        for (let i = 0; i < paperRows.length; i += PAPER_CHUNK) {
+          const chunk = await db
+            .insert(papers)
+            .values(paperRows.slice(i, i + PAPER_CHUNK))
+            .returning();
+          insertedPapers.push(...chunk);
+        }
 
         const allComments: {
           paperId: string;

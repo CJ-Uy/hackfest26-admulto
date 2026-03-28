@@ -159,7 +159,7 @@ export async function POST(req: Request) {
         }
       }
 
-      const total = Math.min(newAcademic.length, 8);
+      const total = Math.min(newAcademic.length, 5);
       await updateProgress(scrollId, "processing", {
         papersProcessed: 0,
         total,
@@ -171,7 +171,7 @@ export async function POST(req: Request) {
 
       for (
         let i = 0;
-        i < newAcademic.length && processedPapers.length < 8;
+        i < newAcademic.length && processedPapers.length < 5;
         i += CONCURRENCY
       ) {
         const batch = newAcademic.slice(i, i + CONCURRENCY);
@@ -204,14 +204,14 @@ export async function POST(req: Request) {
       }
 
       // 4. Supplement with web results to fill remaining slots
-      if (processedPapers.length < 8) {
+      if (processedPapers.length < 5) {
         const eligibleWeb = webResults.filter(
           (r) =>
             r.snippet &&
             r.snippet.length >= 20 &&
             !ctx.existingTitles.has(r.title.toLowerCase()),
         );
-        const remaining = 8 - processedPapers.length;
+        const remaining = 5 - processedPapers.length;
         const webPapers = await processInBatches(
           eligibleWeb,
           processWebResult,

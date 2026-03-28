@@ -145,6 +145,41 @@ async function handleSearchPhase(
   );
 
   try {
+    // ── Idempotency guard: skip search if papers already exist for this scroll ──
+    const [{ count: existingCount }] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(papers)
+      .where(eq(papers.scrollId, scrollId));
+
+    if (existingCount > 0) {
+      console.log(
+        `[process-next] Search phase already ran (${existingCount} papers exist), skipping to process`,
+      );
+      const processData: RawResultsProcess = {
+        phase: "process",
+        total: existingCount,
+        processed: 0,
+        config: { ...config },
+      };
+      await db
+        .update(scrolls)
+        .set({
+          rawResults: JSON.stringify(processData),
+          paperCount: existingCount,
+          progress: JSON.stringify({
+            step: "processing",
+            papersProcessed: 0,
+            total: existingCount,
+          }),
+        })
+        .where(eq(scrolls.id, scrollId));
+      return Response.json({
+        status: "generating",
+        progress: { step: "processing", papersProcessed: 0, total: existingCount },
+        done: false,
+      });
+    }
+
     // ── Extract PDFs if provided ──
     const pdfPapers: RawPaper[] = [];
     let pdfContextText = "";
@@ -236,9 +271,9 @@ async function handleSearchPhase(
       (a, b) => (b.citationCount || 0) - (a.citationCount || 0),
     );
 
-    // Build final list: up to 12 academic + fill with web
-    const targetAcademic = Math.min(academicPapers.length, 12);
-    const targetWeb = Math.min(webPapersList.length, 12 - targetAcademic);
+    // Build final list: up to 9 academic + fill with web
+    const targetAcademic = Math.min(academicPapers.length, 9);
+    const targetWeb = Math.min(webPapersList.length, 9 - targetAcademic);
 
     const academicTitles = new Set(
       academicPapers.slice(0, targetAcademic).map((p) => p.title.toLowerCase()),
