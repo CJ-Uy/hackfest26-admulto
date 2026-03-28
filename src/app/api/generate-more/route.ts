@@ -25,16 +25,25 @@ import { OLLAMA_CONCURRENCY } from "@/lib/ollama";
 
 const CONCURRENCY = OLLAMA_CONCURRENCY;
 
-/** Best-effort progress update — never throws so rate-limit errors don't kill generation. */
+/** Best-effort progress update — never throws so rate-limit errors don't kill generation.
+ *  Preserves generatingMore + startedAt so the stream endpoint's stale-recovery
+ *  uses the correct reference time instead of the original scroll createdAt. */
 async function updateProgress(
   scrollId: string,
   step: string,
   extra: Record<string, number> = {},
+  startedAt?: string,
 ) {
   try {
     await db
       .update(scrolls)
-      .set({ progress: JSON.stringify({ step, ...extra }) })
+      .set({
+        progress: JSON.stringify({
+          step,
+          ...extra,
+          ...(startedAt ? { generatingMore: true, startedAt } : {}),
+        }),
+      })
       .where(eq(scrolls.id, scrollId));
   } catch (err) {
     console.warn(`[updateProgress] Failed (non-fatal): ${step}`, err);
@@ -48,12 +57,18 @@ export async function POST(req: Request) {
     return Response.json({ error: "scrollId required" }, { status: 400 });
   }
 
-  // Mark as generating more
+  // Mark as generating more — include startedAt so the stream endpoint
+  // doesn't auto-recover this as a stale scroll (createdAt is old).
+  const startedAt = new Date().toISOString();
   await db
     .update(scrolls)
     .set({
       status: "generating",
-      progress: JSON.stringify({ step: "searching" }),
+      progress: JSON.stringify({
+        step: "searching",
+        generatingMore: true,
+        startedAt,
+      }),
     })
     .where(eq(scrolls.id, scrollId));
 
@@ -148,7 +163,7 @@ export async function POST(req: Request) {
       await updateProgress(scrollId, "processing", {
         papersProcessed: 0,
         total,
-      });
+      }, startedAt);
 
       // 3. Process new papers
       let papersProcessed = 0;
@@ -185,7 +200,7 @@ export async function POST(req: Request) {
         await updateProgress(scrollId, "processing", {
           papersProcessed: Math.min(papersProcessed, total),
           total,
-        });
+        }, startedAt);
       }
 
       // 4. Supplement with web results to fill remaining slots
@@ -205,37 +220,43 @@ export async function POST(req: Request) {
         processedPapers.push(...webPapers);
       }
 
-      await updateProgress(scrollId, "exporting");
+      await updateProgress(scrollId, "exporting", {}, startedAt);
 
       // 5. Generate comments for new papers
       const paperComments = await generateCommentsForPapers(processedPapers);
 
       // 6. Persist new papers and comments
       if (processedPapers.length > 0) {
-        const insertedPapers = await db
-          .insert(papers)
-          .values(
-            processedPapers.map((p, idx) => ({
-              scrollId,
-              externalId: p.id,
-              title: p.title,
-              authors: JSON.stringify(p.authors),
-              journal: p.journal,
-              year: p.year,
-              doi: p.doi,
-              peerReviewed: p.peerReviewed,
-              synthesis: p.synthesis,
-              credibilityScore: p.credibilityScore,
-              citationCount: p.citationCount,
-              commentCount: (paperComments.get(idx) || []).length,
-              apaCitation: p.apaCitation,
-              embedding: p.embedding ? JSON.stringify(p.embedding) : null,
-              groundingData: p.groundingData
-                ? JSON.stringify(p.groundingData)
-                : null,
-            })),
-          )
-          .returning();
+        // D1 HTTP API limits bound params to 100 per query.
+        // Each paper row uses ~17 params, so batch at 6 rows max (matching generate-feed).
+        const PAPER_CHUNK = 6;
+        const paperRows = processedPapers.map((p, idx) => ({
+          scrollId,
+          externalId: p.id,
+          title: p.title,
+          authors: JSON.stringify(p.authors),
+          journal: p.journal,
+          year: p.year,
+          doi: p.doi,
+          peerReviewed: p.peerReviewed,
+          synthesis: p.synthesis,
+          credibilityScore: p.credibilityScore,
+          citationCount: p.citationCount,
+          commentCount: (paperComments.get(idx) || []).length,
+          apaCitation: p.apaCitation,
+          embedding: p.embedding ? JSON.stringify(p.embedding) : null,
+          groundingData: p.groundingData
+            ? JSON.stringify(p.groundingData)
+            : null,
+        }));
+        const insertedPapers: { id: string; [key: string]: unknown }[] = [];
+        for (let i = 0; i < paperRows.length; i += PAPER_CHUNK) {
+          const chunk = await db
+            .insert(papers)
+            .values(paperRows.slice(i, i + PAPER_CHUNK))
+            .returning();
+          insertedPapers.push(...chunk);
+        }
 
         // Insert comments
         const allComments: {

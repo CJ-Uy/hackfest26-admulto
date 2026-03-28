@@ -28,10 +28,16 @@ export async function GET(
       return Response.json({ error: "Schroll not found" }, { status: 404 });
     }
 
+    const parsedProgress = scroll.progress ? JSON.parse(scroll.progress) : null;
+
     // Auto-recover stale "generating" scrolls that already have papers
     if (scroll.status === "generating" && scroll.createdAt) {
-      const createdMs = new Date(scroll.createdAt + "Z").getTime();
-      const ageMs = Date.now() - createdMs;
+      // For generate-more operations, use the startedAt timestamp from progress
+      // instead of createdAt (which is the original scroll creation time).
+      const referenceTime = parsedProgress?.startedAt
+        ? new Date(parsedProgress.startedAt).getTime()
+        : new Date(scroll.createdAt + "Z").getTime();
+      const ageMs = Date.now() - referenceTime;
 
       if (ageMs > STALE_TIMEOUT_MS) {
         // Check if any papers were saved incrementally
@@ -58,11 +64,9 @@ export async function GET(
       }
     }
 
-    const progress = scroll.progress ? JSON.parse(scroll.progress) : null;
-
     return Response.json({
       status: scroll.status,
-      progress,
+      progress: parsedProgress,
     });
   } catch (err) {
     console.error("Stream poll error:", err);
